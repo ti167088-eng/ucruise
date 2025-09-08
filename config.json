@@ -1,13 +1,13 @@
 {
   "optimization_mode": "route_efficiency",
   "max_fill_distance_km": 4.0,
-  "merge_distance_km": 2.0,
+  "merge_distance_km": 2.5,
   "road_network": {
-    "max_search_radius_km": 4.0,
-    "fallback_search_radius_km": 5.0,
-    "max_detour_ratio": 2.0,
-    "cache_size_limit": 50,
-    "cache_cleanup_threshold": 40,
+    "max_search_radius_km": 5.0,
+    "fallback_search_radius_km": 10.0,
+    "max_detour_ratio": 3.0,
+    "cache_size_limit": 50000,
+    "cache_cleanup_threshold": 40000,
     "coherence_weights": {
       "directional_penalty": 0.3,
       "backtrack_penalty": 0.4,
@@ -31,7 +31,7 @@
     "monotonic_tolerance_km": 0.2,
     "max_monotonic_violations_per_route": 1,
     "monotonic_violation_penalty": 5.0,
-    "emergency_assignment_max_distance_km": 4.0,
+    "emergency_assignment_max_distance_km": 8.0,
     "require_bearing_match_cross_corridor": true
   },
   "dbscan_eps_km": 1.2,
@@ -65,13 +65,13 @@
     "route_efficiency": {
       "max_bearing_difference": 12,
       "max_allowed_turning_score": 20,
-      "max_fill_distance_km": 2,
+      "max_fill_distance_km": 3.5,
       "merge_distance_km": 2.0,
-      "zigzag_penalty_weight": 7.0,
+      "zigzag_penalty_weight": 5.0,
       "utilization_penalty_per_seat": 0.5,
       "aggressive_merging": false,
       "capacity_weight": 1.0,
-      "direction_weight": 6.0
+      "direction_weight": 4.0
     }
   }
 }
