@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import os
 from assignment import run_assignment
 from logger_config import get_logger  # Import the logger
@@ -101,6 +102,14 @@ def get_routes():
     else:
         return {"status": "false", "message": "No routes data available. Run assignment first.", "data": []}
 
+@app.get("/visualize")
+def get_visualization():
+    """Serve the visualization dashboard"""
+    if os.path.exists("visualize.html"):
+        return FileResponse("visualize.html", media_type="text/html")
+    else:
+        return HTMLResponse("<h1>Visualization not found</h1><p>visualize.html file is missing.</p>", status_code=404)
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=3000)

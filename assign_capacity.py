@@ -512,6 +512,8 @@ def assign_best_driver_to_cluster_capacity_focused(cluster_users,
             'vehicle_type': int(best_driver['capacity']),
             'latitude': float(best_driver['latitude']),
             'longitude': float(best_driver['longitude']),
+            'first_name': str(best_driver.get('first_name', '')),
+            'last_name': str(best_driver.get('last_name', '')),
             'assigned_users': []
         }
 
@@ -532,12 +534,15 @@ def assign_best_driver_to_cluster_capacity_focused(cluster_users,
                 'user_id': str(user['user_id']),
                 'lat': float(user['latitude']),
                 'lng': float(user['longitude']),
-                'office_distance': float(user.get('office_distance', 0))
+                'office_distance': float(user.get('office_distance', 0)),
+                'first_name': str(user.get('first_name', '')),
+                'last_name': str(user.get('last_name', '')),
+                'email': str(user.get('email', '')),
+                'shift_type': str(user.get('shift_type', '')),
+                'sub_user_id': str(user.get('sub_user_id', '')),
+                'staff_language': str(user.get('staff_language', '') if user.get('staff_language') else ''),
+                'schedule_date': str(user.get('schedule_date', '') if user.get('schedule_date') else '')
             }
-            if pd.notna(user.get('first_name')):
-                user_data['first_name'] = str(user['first_name'])
-            if pd.notna(user.get('email')):
-                user_data['email'] = str(user['email'])
 
             route['assigned_users'].append(user_data)
             assigned_user_ids.add(user['user_id'])

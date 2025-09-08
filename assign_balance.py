@@ -531,6 +531,8 @@ def assign_best_driver_balanced(cluster_users, available_drivers, used_driver_id
             'vehicle_type': int(best_driver['capacity']),
             'latitude': float(best_driver['latitude']),
             'longitude': float(best_driver['longitude']),
+            'first_name': str(best_driver.get('first_name', '')),
+            'last_name': str(best_driver.get('last_name', '')),
             'assigned_users': []
         }
         
@@ -1279,7 +1281,7 @@ def balanced_route_merging(routes, driver_df, office_lat, office_lon):
         # Consider underutilized routes for merging
         underutilized_routes = [
             (i, r) for i, r in enumerate(current_routes)
-            if r.get('utilization', 1) < 0.75 and len(r['assigned_users']) > 0
+            if r.get('utilization', 1.0) < 0.75 and len(r['assigned_users']) > 0
         ]
         
         for orig_i, route_a in underutilized_routes:
