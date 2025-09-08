@@ -14,12 +14,6 @@ from dotenv import load_dotenv
 import warnings
 import multiprocessing as mp
 from concurrent.futures import ThreadPoolExecutor
-
-# Import modular utilities
-from core.geometry import haversine_distance, calculate_bearing, bearing_difference, normalize_bearing_difference, coords_to_km
-from core.clustering import dbscan_clustering_metric, kmeans_clustering_metric, estimate_clusters
-from core.validation import validate_input_data
-from data.config import get_config
 from logger_config import get_logger, start_session
 
 # Start new session with cleared logs
@@ -480,10 +474,157 @@ def prepare_user_driver_dataframes(data):
     return user_df, driver_df
 
 
-# The haversine_distance, calculate_bearing, bearing_difference, normalize_bearing_difference, coords_to_km functions are now imported from core.geometry
-# The dbscan_clustering_metric, kmeans_clustering_metric, estimate_clusters functions are now imported from core.clustering
-# The validate_input_data function is now imported from core.validation
-# The get_config function is now imported from data.config
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Calculate the great circle distance between two points on Earth"""
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(
+        dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    c = 2 * math.asin(math.sqrt(a))
+
+    # Radius of earth in kilometers
+    r = 6371
+    return c * r
+
+
+def bearing_difference(b1, b2):
+    """Compute minimum difference between two bearings"""
+    diff = abs(b1 - b2) % 360
+    return min(diff, 360 - diff)
+
+
+def calculate_bearing_vectorized(lat1, lon1, lat2, lon2):
+    """Vectorized calculation of bearing from point A to B in degrees"""
+    lat1, lat2 = np.radians(lat1), np.radians(lat2)
+    dlon = np.radians(lon2 - lon1)
+    x = np.sin(dlon) * np.cos(lat2)
+    y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(
+        dlon)
+    return (np.degrees(np.arctan2(x, y)) + 360) % 360
+
+
+def calculate_bearing(lat1, lon1, lat2, lon2):
+    """Calculate bearing from point A to B in degrees"""
+    lat1, lat2 = map(math.radians, [lat1, lat2])
+    dlon = math.radians(lon2 - lon1)
+    x = math.sin(dlon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(
+        lat2) * math.cos(dlon)
+    return (math.degrees(math.atan2(x, y)) + 360) % 360
+
+
+def calculate_bearings_and_features(user_df, office_lat, office_lon):
+    """Calculate bearings and add geographical features - OFFICE TO USER direction"""
+    user_df = user_df.copy()
+
+    # Calculate bearing FROM OFFICE TO USER
+    user_df['bearing_from_office'] = calculate_bearing_vectorized(
+        office_lat, office_lon, user_df['latitude'], user_df['longitude'])
+    user_df['bearing_sin'] = np.sin(np.radians(user_df['bearing_from_office']))
+    user_df['bearing_cos'] = np.cos(np.radians(user_df['bearing_from_office']))
+
+    return user_df
+
+
+def coords_to_km(lat, lon, office_lat, office_lon):
+    """Convert lat/lon coordinates to km from office using local approximation"""
+    lat_km = (lat - office_lat) * _config['LAT_TO_KM']
+    lon_km = (lon - office_lon) * _config['LON_TO_KM']
+    return lat_km, lon_km
+
+
+def dbscan_clustering_metric(user_df, eps_km, min_samples, office_lat,
+                             office_lon):
+    """Perform DBSCAN clustering using proper metric coordinates"""
+    # Convert coordinates to km from office
+    coords_km = []
+    for _, user in user_df.iterrows():
+        lat_km, lon_km = coords_to_km(user['latitude'], user['longitude'],
+                                      office_lat, office_lon)
+        coords_km.append([lat_km, lon_km])
+
+    coords_km = np.array(coords_km)
+
+    # Use DBSCAN with eps in km (no scaling needed now)
+    dbscan = DBSCAN(eps=eps_km, min_samples=min_samples)
+    labels = dbscan.fit_predict(coords_km)
+
+    # Handle noise points: assign to nearest cluster if possible
+    noise_mask = labels == -1
+    if noise_mask.any():
+        valid_labels = labels[~noise_mask]
+        if len(valid_labels) > 0:
+            # Find nearest cluster for each noise point
+            for i in np.where(noise_mask)[0]:
+                noise_point = coords_km[i]
+                distances = cdist([noise_point], coords_km[~noise_mask])[0]
+                nearest_cluster_idx = np.argmin(distances)
+                labels[i] = valid_labels[nearest_cluster_idx]
+        else:
+            # If all points are noise, assign to a single cluster
+            labels[:] = 0
+    return labels
+
+
+def kmeans_clustering_metric(user_df, n_clusters, office_lat, office_lon):
+    """Perform KMeans clustering using metric coordinates"""
+    # Convert coordinates to km from office
+    coords_km = []
+    user_ids = []
+    for _, user in user_df.iterrows():
+        lat_km, lon_km = coords_to_km(user['latitude'], user['longitude'],
+                                      office_lat, office_lon)
+        coords_km.append([lat_km, lon_km])
+        user_ids.append(user['user_id'])
+
+    # Sort by user_id for deterministic ordering
+    sorted_data = sorted(zip(user_ids, coords_km), key=lambda x: x[0])
+    coords_km = np.array([item[1] for item in sorted_data])
+
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(coords_km)
+
+    # Map labels back to original order
+    label_map = {
+        user_id: label
+        for (user_id, _), label in zip(sorted_data, labels)
+    }
+    return [label_map[user_id] for user_id in user_df['user_id']]
+
+
+def estimate_clusters(user_df, config, office_lat, office_lon):
+    """Estimate optimal number of clusters using silhouette score with metric coordinates"""
+    # Convert coordinates to km from office
+    coords_km = []
+    for _, user in user_df.iterrows():
+        lat_km, lon_km = coords_to_km(user['latitude'], user['longitude'],
+                                      office_lat, office_lon)
+        coords_km.append([lat_km, lon_km])
+
+    coords_km = np.array(coords_km)
+
+    max_clusters = min(10, len(user_df) // 2)
+    if max_clusters < 2:
+        return 1
+
+    scores = []
+    for n_clusters in range(2, max_clusters + 1):
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        cluster_labels = kmeans.fit_predict(coords_km)
+        if len(set(cluster_labels)) > 1:
+            score = silhouette_score(coords_km, cluster_labels)
+            scores.append((n_clusters, score))
+
+    if not scores:
+        return 1
+
+    best_n_clusters = max(scores, key=lambda item: item[1])[0]
+    return best_n_clusters
+
 
 # STEP 1: DIRECTION-AWARE GEOGRAPHIC CLUSTERING
 def create_geographic_clusters(user_df, office_lat, office_lon, config):
@@ -1188,7 +1329,13 @@ def calculate_sequence_distance(sequence, driver_pos, office_pos):
     return total
 
 
-# The normalize_bearing_difference function is now imported from core.geometry
+def normalize_bearing_difference(diff):
+    """Normalize bearing difference to [-180, 180] range"""
+    while diff > 180:
+        diff -= 360
+    while diff < -180:
+        diff += 360
+    return diff
 
 
 def apply_route_splitting(routes, available_drivers, used_driver_ids,
@@ -1710,7 +1857,7 @@ def calculate_tortuosity_ratio_improved(users, driver_pos, office_pos):
 def global_optimization(routes, user_df, assigned_user_ids, driver_df,
                         office_lat, office_lon):
     """
-    Step 5: Global optimization with single-route fixing and route quality management
+    Step 5: Global optimization with improved single-route fixing and route quality management
     """
     logger = get_logger()
     logger.info("🌍 Step 5: Enhanced Global optimization...")
@@ -3036,9 +3183,8 @@ def find_best_driver_for_cluster_improved(cluster_users, available_drivers,
         priority_penalty = driver.get('priority', 1) * 0.5
 
         # Combined score
-        score = distance + (
-            bearing_diff * 0.05
-        ) - utilization_bonus  # 0.05 km per degree
+        score = distance + (bearing_diff *
+                            0.05) - utilization_bonus  # 0.05 km per degree
 
         if score < best_score:
             best_score = score

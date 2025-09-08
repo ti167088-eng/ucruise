@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from services.assignment_service import AssignmentService # Corrected import path
-from logger_config import get_logger
+from assignment import run_assignment
+from logger_config import get_logger  # Import the logger
 
 app = FastAPI()
 
@@ -30,7 +30,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str):
         logger.info(f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}")
 
         # Use automatic API-based routing like run_and_view.py
-        result = AssignmentService().run_assignment(source_id, parameter, string_param) # Instantiated the service and called run_assignment
+        result = run_assignment(source_id, parameter, string_param)
 
         logger.info(f"🔍 Assignment result type: {type(result)}")
         logger.info(f"🔍 Assignment result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
@@ -95,22 +95,11 @@ def assign_drivers(source_id: str, parameter: int, string_param: str):
         return error_response
 
 @app.get("/routes")
-async def get_routes():
-    try:
-        service = AssignmentService()
-        result = service.run_assignment("UC_unify_dev", 1, "Evening%20shift")
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/routes/{optimization_mode}")
-async def get_routes_optimized(optimization_mode: str):
-    try:
-        service = AssignmentService()
-        result = service.run_assignment("UC_unify_dev", 1, "Evening%20shift", optimization_mode=optimization_mode)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def get_routes():
+    if os.path.exists("drivers_and_routes.json"):
+        return FileResponse("drivers_and_routes.json", media_type="application/json")
+    else:
+        return {"status": "false", "message": "No routes data available. Run assignment first.", "data": []}
 
 if __name__ == "__main__":
     import uvicorn
