@@ -2,7 +2,11 @@ import os
 import json
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("python-dotenv not installed, skipping .env loading")
 from assignment import run_assignment
 from logger_config import get_logger
 
@@ -155,7 +159,7 @@ def main():
     logger.info("="*60)
     
     # Configuration
-    source_id = "UC_logisticllp"  # Update this to match your API format
+    source_id = "UC_unify_dev"  # Update this to match your API format
     parameter = 1
     string_param = "Evening%20shift"  # Use plain text, let requests handle URL encoding
     
@@ -189,53 +193,18 @@ def main():
         assignment_result = run_assignment(source_id, parameter, string_param)
         assignment_end_time = datetime.now()
         assignment_duration = (assignment_end_time - assignment_start_time).total_seconds()
-        
+
         logger.info(f"Assignment completed in {assignment_duration:.2f} seconds")
-        logger.info(f"Assignment Status: {assignment_result.get('status', 'unknown')}")
-        
-        # Check if API had any drivers
-        api_data = api_capture.get('response', {}).get('data', {})
-        total_drivers_in_api = (
-            len(api_data.get('driversUnassigned', [])) + 
-            len(api_data.get('driversAssigned', []))
-        )
-        
-        if total_drivers_in_api == 0:
-            logger.warning(f"⚠️ NO DRIVERS IN API RESPONSE - Assignment will fail")
-            logger.warning(f"This explains why assignment returned 0 routes")
-        
-        if assignment_result.get('status') == 'true':
-            routes = assignment_result.get('data', [])
-            unassigned_users = assignment_result.get('unassignedUsers', [])
-            unassigned_drivers = assignment_result.get('unassignedDrivers', [])
-            
-            logger.info(f"Routes Created: {len(routes)}")
-            logger.info(f"Users Assigned: {sum(len(route.get('assigned_users', [])) for route in routes)}")
-            logger.info(f"Users Unassigned: {len(unassigned_users)}")
-            logger.info(f"Drivers Used: {len(routes)}")
-            logger.info(f"Drivers Unused: {len(unassigned_drivers)}")
-            
-            if len(routes) == 0 and total_drivers_in_api == 0:
-                logger.info("✅ Assignment correctly handled case with no drivers available")
+
+        if assignment_result and assignment_result.get("status") == "true":
+            logger.info(f"✅ Assignment successful!")
+            logger.info(f"Routes created: {len(assignment_result.get('data', []))}")
         else:
-            logger.error(f"Assignment Error: {assignment_result.get('details', 'Unknown error')}")
-            
-            # Check if error is related to no drivers
-            error_details = assignment_result.get('details', '')
-            if 'division by zero' in error_details.lower() or total_drivers_in_api == 0:
-                logger.info("💡 This error is likely caused by having no drivers in the API response")
-    
+            logger.error("❌ Assignment failed or returned invalid result")
+
     except Exception as e:
-        assignment_end_time = datetime.now()
-        assignment_duration = (assignment_end_time - assignment_start_time).total_seconds()
-        logger.error(f"Assignment failed after {assignment_duration:.2f} seconds: {e}")
-        
-        assignment_result = {
-            "status": "false",
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "data": []
-        }
+        logger.error(f"Assignment failed with error: {e}")
+        assignment_result = None
     
     # Step 3: Compile complete test report
     logger.info("="*60)
