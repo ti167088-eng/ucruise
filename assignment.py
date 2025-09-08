@@ -323,22 +323,8 @@ def load_env_and_fetch_data(source_id: str,
     }
 
     logger.info(f"📡 Making API call to: {API_URL}")
-    logger.info(f"📡 Headers: {headers}")
-
-    try:
-        resp = requests.get(API_URL, headers=headers, timeout=30)
-        logger.info(f"📡 Response status: {resp.status_code}")
-        logger.info(f"📡 Response headers: {dict(resp.headers)}")
-        logger.info(f"📡 Response text length: {len(resp.text)}")
-        logger.info(f"📡 Response text preview: {resp.text[:500]}")
-
-        resp.raise_for_status()
-    except requests.exceptions.Timeout:
-        raise ValueError(f"API request timed out after 30 seconds. URL: {API_URL}")
-    except requests.exceptions.ConnectionError:
-        raise ValueError(f"Failed to connect to API. URL: {API_URL}")
-    except requests.exceptions.HTTPError as e:
-        raise ValueError(f"API returned HTTP error {resp.status_code}: {resp.text}")
+    resp = requests.get(API_URL, headers=headers)
+    resp.raise_for_status()
 
     # Check if response body is empty
     if len(resp.text.strip()) == 0:
@@ -350,11 +336,7 @@ def load_env_and_fetch_data(source_id: str,
 
     try:
         payload = resp.json()
-        logger.info(f"📡 Parsed JSON payload keys: {list(payload.keys()) if isinstance(payload, dict) else 'Not a dict'}")
-        logger.info(f"📡 Payload: {json.dumps(payload, indent=2)[:1000]}")
     except json.JSONDecodeError as e:
-        logger.error(f"📡 Failed to parse JSON: {e}")
-        logger.error(f"📡 Raw response: {resp.text}")
         raise ValueError(
             f"API returned invalid JSON. "
             f"Status: {resp.status_code}, "
@@ -362,27 +344,12 @@ def load_env_and_fetch_data(source_id: str,
             f"Response body: '{resp.text[:200]}...', "
             f"JSON Error: {str(e)}")
 
-    # Check if payload is null
-    if payload is None:
-        raise ValueError(f"API returned null/None response. URL: {API_URL}")
-
-    if not isinstance(payload, dict):
-        raise ValueError(f"API returned non-object response: {type(payload)}. Response: {payload}")
-
-    if not payload.get("status"):
-        logger.warning(f"📡 No 'status' field in response: {payload}")
-
-    if "data" not in payload:
-        logger.warning(f"📡 No 'data' field in response: {payload}")
-        raise ValueError(f"Unexpected response format: 'data' missing. Available keys: {list(payload.keys())}")
+    if not payload.get("status") or "data" not in payload:
+        raise ValueError(
+            "Unexpected response format: 'status' or 'data' missing")
 
     # Use the provided parameters
     data = payload["data"]
-
-    # Check if data is null
-    if data is None:
-        raise ValueError(f"API returned null data field. Full response: {payload}")
-
     data["_parameter"] = parameter
     data["_string_param"] = string_param
 
@@ -399,11 +366,11 @@ def load_env_and_fetch_data(source_id: str,
     ride_settings = data.get("ride_settings", {})
     pic_priority = ride_settings.get("pic_priority")
     drop_priority = ride_settings.get("drop_priority")
-
+    
     # Determine algorithm based on ride_settings priority value
     algorithm_priority = pic_priority if pic_priority is not None else drop_priority
     data["_algorithm_priority"] = algorithm_priority
-
+    
     # Log the data structure for debugging
     logger.info(f"📊 API Response structure:")
     logger.info(f"   - users: {len(data.get('users', []))}")
@@ -440,20 +407,10 @@ def prepare_user_driver_dataframes(data):
             float(user.get('longitude', 0.0)),
             'first_name':
             str(user.get('first_name', '')),
-            'last_name':
-            str(user.get('last_name', '')),
             'email':
             str(user.get('email', '')),
             'office_distance':
-            float(user.get('office_distance', 0.0)),
-            'shift_type':
-            str(user.get('shift_type', '')),
-            'sub_user_id':
-            str(user.get('sub_user_id', '')),
-            'staff_language':
-            str(user.get('staff_language', '') if user.get('staff_language') else ''),
-            'schedule_date':
-            str(user.get('schedule_date', '') if user.get('schedule_date') else '')
+            float(user.get('office_distance', 0.0))
         })
 
     user_df = pd.DataFrame(user_data)
@@ -476,17 +433,6 @@ def prepare_user_driver_dataframes(data):
             'longitude': float(driver.get('longitude', 0.0)),
             'capacity': int(driver.get('capacity', 1)),
             'vehicle_id': str(driver.get('vehicle_id', '')),
-            'first_name': str(driver.get('first_name', '')),
-            'last_name': str(driver.get('last_name', '')),
-            'email': str(driver.get('email', '')),
-            'profile_image': str(driver.get('profile_image', '') if driver.get('profile_image') else ''),
-            'sub_user_id': str(driver.get('sub_user_id', '')),
-            'vehicle_name': str(driver.get('vehicle_name', '')),
-            'vehicle_no': str(driver.get('vehicle_no', '')),
-            'chasis_no': str(driver.get('chasis_no', '')),
-            'color': str(driver.get('color', '')),
-            'registration_no': str(driver.get('registration_no', '')),
-            'shift_type_id': int(driver.get('shift_type_id', 1)),
             'priority': i + 1  # Simple priority based on order
         })
 
@@ -790,7 +736,7 @@ def create_bearing_aware_subclusters(geo_cluster_users, user_df,
 
     current_cluster_users = []
 
-    for idx, user in sorted_users.iterrows():
+    for idx, (user_idx, user) in enumerate(sorted_users.iterrows()):
         # Check if adding this user would violate bearing constraints
         if current_cluster_users:
             bearing_spread = calculate_bearing_spread(
@@ -805,7 +751,7 @@ def create_bearing_aware_subclusters(geo_cluster_users, user_df,
                 sub_cluster_counter += 1
                 current_cluster_users = []
 
-        current_cluster_users.append((idx, user))
+        current_cluster_users.append((user_idx, user))
 
     # Assign remaining users
     if current_cluster_users:
@@ -1063,17 +1009,6 @@ def assign_best_driver_to_cluster(cluster_users, available_drivers,
             'vehicle_type': int(best_driver['capacity']),
             'latitude': float(best_driver['latitude']),
             'longitude': float(best_driver['longitude']),
-            'first_name': str(best_driver.get('first_name', '')),
-            'last_name': str(best_driver.get('last_name', '')),
-            'email': str(best_driver.get('email', '')),
-            'profile_image': str(best_driver.get('profile_image', '')),
-            'sub_user_id': str(best_driver.get('sub_user_id', '')),
-            'vehicle_name': str(best_driver.get('vehicle_name', '')),
-            'vehicle_no': str(best_driver.get('vehicle_no', '')),
-            'chasis_no': str(best_driver.get('chasis_no', '')),
-            'color': str(best_driver.get('color', '')),
-            'registration_no': str(best_driver.get('registration_no', '')),
-            'shift_type_id': int(best_driver.get('shift_type_id', 1)),
             'assigned_users': []
         }
 
@@ -1097,15 +1032,13 @@ def assign_best_driver_to_cluster(cluster_users, available_drivers,
                 'user_id': str(user['user_id']),
                 'lat': float(user['latitude']),
                 'lng': float(user['longitude']),
-                'office_distance': float(user.get('office_distance', 0)),
-                'first_name': str(user.get('first_name', '')),
-                'last_name': str(user.get('last_name', '')),
-                'email': str(user.get('email', '')),
-                'shift_type': str(user.get('shift_type', '')),
-                'sub_user_id': str(user.get('sub_user_id', '')),
-                'staff_language': str(user.get('staff_language', '') if user.get('staff_language') else ''),
-                'schedule_date': str(user.get('schedule_date', '') if user.get('schedule_date') else '')
+                'office_distance': float(user.get('office_distance', 0))
             }
+
+            if pd.notna(user.get('first_name')):
+                user_data['first_name'] = str(user['first_name'])
+            if pd.notna(user.get('email')):
+                user_data['email'] = str(user['email'])
 
             route['assigned_users'].append(user_data)
 
@@ -1313,6 +1246,7 @@ def calculate_sequence_turning_score_improved(sequence, driver_pos,
                 bearing_differences.append(bearing_diff)
             prev_bearing = current_bearing
             continue
+
         # Bearing from previous to current
         prev_pos = (sequence[i - 1]['latitude'], sequence[i - 1]['longitude'])
         current_pos = (sequence[i]['latitude'], sequence[i]['longitude'])
@@ -1320,7 +1254,7 @@ def calculate_sequence_turning_score_improved(sequence, driver_pos,
                                             current_pos[0], current_pos[1])
 
         if i == len(sequence) - 1:
-            # Last user to office
+            # Last user: bearing from current to office
             next_bearing = calculate_bearing(current_pos[0], current_pos[1],
                                              office_pos[0], office_pos[1])
         else:
@@ -1491,8 +1425,6 @@ def create_sub_route_improved(original_route, users, available_drivers,
             'vehicle_type': int(best_driver['capacity']),
             'latitude': float(best_driver['latitude']),
             'longitude': float(best_driver['longitude']),
-            'first_name': str(best_driver.get('first_name', '')),
-            'last_name': str(best_driver.get('last_name', '')),
             'assigned_users': users
         }
 
@@ -1657,8 +1589,7 @@ def calculate_route_turning_score_improved(users, driver_pos, office_pos):
                 # Single user: bearing from user to office
                 next_bearing = calculate_bearing(users[i]['lat'],
                                                  users[i]['lng'],
-                                                 office_pos[0],
-                                                 office_pos[1])
+                                                 office_pos[0], office_pos[1])
                 bearing_diff = bearing_difference(current_bearing,
                                                   next_bearing)
                 bearing_differences.append(bearing_diff)
@@ -2092,7 +2023,8 @@ def fix_single_user_routes_improved(routes, user_df, assigned_user_ids,
             multi_user_routes.append(route)
 
     logger.info(
-        f"    📊 Found {len(single_user_routes)} single-user routes to optimize")
+        f"    📊 Found {len(single_user_routes)} single-user routes to optimize"
+    )
 
     # Strategy 1: Merge single users into compatible multi-user routes
     routes_to_keep = []
@@ -2616,7 +2548,8 @@ def enhanced_route_splitting(routes, driver_df, office_lat, office_lon):
 
     if routes_split > 0:
         logger.info(
-            f"    ✂️ Successfully split {routes_split} routes with enhanced logic")
+            f"    ✂️ Successfully split {routes_split} routes with enhanced logic"
+        )
 
     return improved_routes
 
@@ -2657,8 +2590,7 @@ def intelligent_route_splitting_improved(route, available_drivers, office_lat,
                                                    coords_km)
 
 
-def split_by_bearing_clusters_improved(route, available_drivers,
-                                       used_driver_ids, office_lat,
+def split_by_bearing_clusters_improved(route, available_drivers, office_lat,
                                        office_lon, coords_km, bearings):
     """Split by bearing using metric coordinates"""
     users = route['assigned_users']
@@ -2724,8 +2656,6 @@ def create_split_routes_improved(original_route, user_groups,
                     'vehicle_type': int(suitable_driver['capacity']),
                     'latitude': float(suitable_driver['latitude']),
                     'longitude': float(suitable_driver['longitude']),
-                    'first_name': str(suitable_driver.get('first_name', '')),
-                    'last_name': str(suitable_driver.get('last_name', '')),
                     'assigned_users': group
                 }
                 split_routes.append(new_route)
@@ -3088,8 +3018,6 @@ def handle_remaining_users_improved(unassigned_users_df, driver_df, routes,
                             'vehicle_type': int(best_driver['capacity']),
                             'latitude': float(best_driver['latitude']),
                             'longitude': float(best_driver['longitude']),
-                            'first_name': str(best_driver.get('first_name', '')),
-                            'last_name': str(best_driver.get('last_name', '')),
                             'assigned_users': route_users
                         }
 
@@ -3139,8 +3067,6 @@ def handle_remaining_users_improved(unassigned_users_df, driver_df, routes,
                         'vehicle_type': int(best_driver['capacity']),
                         'latitude': float(best_driver['latitude']),
                         'longitude': float(best_driver['longitude']),
-                        'first_name': str(best_driver.get('first_name', '')),
-                        'last_name': str(best_driver.get('last_name', '')),
                         'assigned_users': [user_data]
                     }
 
@@ -3225,9 +3151,8 @@ def find_best_driver_for_cluster_improved(cluster_users, available_drivers,
         priority_penalty = driver.get('priority', 1) * 0.5
 
         # Combined score
-        score = distance + (
-            bearing_diff * 0.05
-        ) - utilization_bonus  # 0.05 km per degree
+        score = distance + (bearing_diff *
+                            0.05) - utilization_bonus  # 0.05 km per degree
 
         if score < best_score:
             best_score = score
@@ -3242,7 +3167,7 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     Main assignment function that automatically routes to the appropriate algorithm
     based on ride_settings priority value from the API response:
     - Priority 1 → assign_capacity.py (Capacity Optimization)
-    - Priority 2 → assign_balance.py (Balanced Optimization)
+    - Priority 2 → assign_balance.py (Balanced Optimization) 
     - Priority 3 → assign_route.py (Road-Aware Routing)
     - Default → assignment.py (Route Efficiency)
     """
@@ -3272,10 +3197,10 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
         progress.start_stage("Data Loading & Algorithm Detection",
                              "Loading data from API and detecting algorithm...")
         data = load_env_and_fetch_data(source_id, parameter, string_param)
-
+        
         # Get the algorithm priority from ride_settings
         algorithm_priority = data.get("_algorithm_priority")
-
+        
         # Route to appropriate algorithm based on priority
         if algorithm_priority == 1:
             logger.info("🎪 Routing to CAPACITY OPTIMIZATION (assign_capacity.py)")
@@ -3337,6 +3262,8 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
         progress.start_stage("Data Loading & Validation",
                              "Loading data from API...")
         data = load_env_and_fetch_data(source_id, parameter, string_param)
+
+        progress.update_stage_progress("Validating data structure...")
 
         # Edge case handling
         users = data.get('users', [])
@@ -3483,18 +3410,7 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
                 'capacity': int(driver.get('capacity', 0)),
                 'vehicle_id': str(driver.get('vehicle_id', '')),
                 'latitude': float(driver.get('latitude', 0.0)),
-                'longitude': float(driver.get('longitude', 0.0)),
-                'first_name': str(driver.get('first_name', '')),
-                'last_name': str(driver.get('last_name', '')),
-                'email': str(driver.get('email', '')),
-                'profile_image': str(driver.get('profile_image', '')),
-                'sub_user_id': str(driver.get('sub_user_id', '')),
-                'vehicle_name': str(driver.get('vehicle_name', '')),
-                'vehicle_no': str(driver.get('vehicle_no', '')),
-                'chasis_no': str(driver.get('chasis_no', '')),
-                'color': str(driver.get('color', '')),
-                'registration_no': str(driver.get('registration_no', '')),
-                'shift_type_id': int(driver.get('shift_type_id', 1))
+                'longitude': float(driver.get('longitude', 0.0))
             }
             unassigned_drivers.append(driver_data)
 
@@ -3766,7 +3682,7 @@ def _get_all_drivers_as_unassigned(data):
 
     unassigned_drivers = []
     for driver in all_drivers:
-        driver_data = {
+        unassigned_drivers.append({
             'driver_id':
             str(driver.get('id', '')),
             'capacity':
@@ -3777,8 +3693,7 @@ def _get_all_drivers_as_unassigned(data):
             float(driver.get('latitude', 0.0)),
             'longitude':
             float(driver.get('longitude', 0.0))
-        }
-        unassigned_drivers.append(driver_data)
+        })
     return unassigned_drivers
 
 
