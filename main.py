@@ -1,11 +1,14 @@
+# Updated the assign_drivers function to support multiple optimization modes
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
 from assignment import run_assignment
-from logger_config import get_logger  # Import the logger
+from assign_route import run_road_aware_assignment
+from assign_capacity import run_assignment_capacity
+from assign_balance import run_assignment_balance
+import os
 
 app = FastAPI()
 
@@ -26,74 +29,62 @@ def health_check():
 
 @app.post("/assign-drivers/{source_id}/{parameter}/{string_param}")
 def assign_drivers(source_id: str, parameter: int, string_param: str):
-    logger = get_logger()  # Initialize the logger
     try:
-        logger.info(f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}")
+        from logger_config import get_logger
+        logger = get_logger()
 
         # Use automatic API-based routing like run_and_view.py
-        result = run_assignment(source_id, parameter, string_param)
-
-        logger.info(f"🔍 Assignment result type: {type(result)}")
-        logger.info(f"🔍 Assignment result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
-
-        if result is None:
-            logger.error("❌ Assignment returned None")
-            return {"status": "false", "details": "Assignment returned None", "data": [], "parameter": parameter, "string_param": string_param}
-
-        if not isinstance(result, dict):
-            logger.error(f"❌ Assignment returned non-dict: {type(result)}")
-            return {"status": "false", "details": f"Assignment returned {type(result)}", "data": [], "parameter": parameter, "string_param": string_param}
-
-        # Ensure we have the required fields
-        if "status" not in result:
-            logger.warning("⚠️ No 'status' field in result, adding default")
-            result["status"] = "true"
+        logger.info(f"🤖 Using AUTOMATIC algorithm detection from API response")
+        logger.info(f"📋 Parameters: {parameter}, String: {string_param}")
         
-        if "data" not in result:
-            logger.warning("⚠️ No 'data' field in result, adding empty array")
-            result["data"] = []
+        # The run_assignment function will automatically route to the correct algorithm
+        # based on _algorithm_priority from the API response:
+        # Priority 1 → assign_capacity.py (Capacity Optimization)
+        # Priority 2 → assign_balance.py (Balanced Optimization) 
+        # Priority 3 → assign_route.py (Road-Aware Routing)
+        # Default → assignment.py (Route Efficiency)
+        
+        result = run_assignment(source_id, parameter, string_param)
+        optimization_mode = result.get("optimization_mode", "auto_detected")
 
-        # Add parameter info if missing
-        if "parameter" not in result:
+        # Ensure the result includes the optimization mode used
+        if isinstance(result, dict):
+            result["optimization_mode_used"] = optimization_mode
             result["parameter"] = parameter
-        if "string_param" not in result:
             result["string_param"] = string_param
 
-        if result.get("status") == "true":
-            logger.info(f"✅ Assignment successful. Routes: {len(result.get('data', []))}")
-            routes_data = result.get("data", [])
-            
-            # Dump the full result to a file for debugging
-            full_response_file = f"full_response_{source_id}_{parameter}.json"
-            with open(full_response_file, "w") as f:
-                import json
-                json.dump(result, f, indent=2)
-            logger.info(f"📁 Full response dumped to: {full_response_file}")
-            
-            # Also save routes for visualization compatibility
-            if routes_data:
-                with open("drivers_and_routes.json", "w") as f:
-                    json.dump(routes_data, f, indent=2)
-                logger.info("📁 Routes saved to drivers_and_routes.json")
-        else:
-            logger.error(f"❌ Assignment failed: {result.get('details', 'Unknown error')}")
+        # Save results to appropriate file based on optimization mode
+        if result["status"] == "true":
+            filename_map = {
+                "route_efficiency": "drivers_and_routes.json",
+                "capacity_optimization": "drivers_and_routes_capacity.json", 
+                "balanced_optimization": "drivers_and_routes_balance.json",
+                "road_aware_route_optimization": "drivers_and_routes_road_aware.json",
+                "route_efficiency_default": "drivers_and_routes.json"
+            }
 
-        # Log the final response being sent
-        logger.info(f"📤 Sending response: status={result.get('status')}, data_count={len(result.get('data', []))}")
-        
+            filename = filename_map.get(optimization_mode, "drivers_and_routes.json")
+
+            with open(filename, "w") as f:
+                import json
+                json.dump(result["data"], f, indent=2)
+
+            logger.info(f"✅ Results saved to {filename}")
+
         return result
 
     except Exception as e:
-        logger.error(f"❌ Server error: {e}", exc_info=True)
-        error_response = {
+        from logger_config import get_logger
+        logger = get_logger()
+        logger.critical(f"Server error in assign_drivers: {e}")
+        return {
             "status": "false", 
             "details": f"Server error: {str(e)}", 
             "data": [], 
             "parameter": parameter, 
-            "string_param": string_param
+            "string_param": string_param,
+            "optimization_mode_used": "error"
         }
-        logger.info(f"📤 Sending error response: {error_response}")
-        return error_response
 
 @app.get("/routes")
 def get_routes():
@@ -102,14 +93,26 @@ def get_routes():
     else:
         return {"status": "false", "message": "No routes data available. Run assignment first.", "data": []}
 
-@app.get("/visualize")
+@app.get("/visualize", response_class=HTMLResponse)
 def get_visualization():
-    """Serve the visualization dashboard"""
-    if os.path.exists("visualize.html"):
-        return FileResponse("visualize.html", media_type="text/html")
-    else:
-        return HTMLResponse("<h1>Visualization not found</h1><p>visualize.html file is missing.</p>", status_code=404)
+    return FileResponse("visualize.html")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3000)
+@app.get("/")
+def root():
+    return {
+        "message": "Driver Assignment API with Multiple Optimization Modes",
+        "endpoints": [
+            "/assign-drivers/{source_id}/{parameter}/{string_param}",
+            "/routes", 
+            "/visualize", 
+            "/health"
+        ],
+        "optimization_modes": {
+            "automatic_detection": "System automatically selects algorithm based on API ride_settings priority",
+            "priority_1": "Capacity Optimization (assign_capacity.py) - Maximizes seat utilization",
+            "priority_2": "Balanced Optimization (assign_balance.py) - 50/50 route efficiency + capacity",
+            "priority_3": "Road-Aware Routing (assign_route.py) - Uses road network data",
+            "default": "Route Efficiency (assignment.py) - Prioritizes straight routes"
+        },
+        "usage": "Algorithm is automatically selected from API response _algorithm_priority value"
+    }

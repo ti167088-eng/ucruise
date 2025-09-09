@@ -1,0 +1,875 @@
+{
+  "test_metadata": {
+    "test_name": "API Request/Response Capture Test",
+    "timestamp": "2025-09-05T11:42:33.677410",
+    "source_id": "UC_logisticllp",
+    "parameter": 1,
+    "string_param": "Evening%20shift",
+    "test_duration_seconds": 2.649417
+  },
+  "api_data_capture": {
+    "request": {
+      "url": "http://unifygroup.in/uc/api/routeautomation/dailyAutomationCluster/UC_logisticllp/1/Evening%20shift",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer 17090|DUbD6akNJzu03yxjwY4lqZUHe7yj9vfOB6FyFOLS6da43342",
+        "Content-Type": "application/json"
+      },
+      "timestamp": "2025-09-05T11:42:31.027574",
+      "source_id": "UC_logisticllp",
+      "parameter": 1,
+      "string_param": "Evening%20shift"
+    },
+    "response": {
+      "status_code": 200,
+      "response_time_seconds": 0.752446,
+      "content_type": "application/json",
+      "content_length": 9352,
+      "data": {
+        "status": true,
+        "db": "UC_logisticllp",
+        "message": "Groups saved successfully.",
+        "data": {
+          "company": {
+            "id": 1,
+            "address": "World Tech Tower, \u0932\u0916\u094d\u0928\u094c\u0930 \u092a\u093f\u0902\u0921 \u092e\u093e\u0930\u094d\u0917, Phase 8B, Industrial Area, Sector 74, Mohali, Punjab, India",
+            "latitude": "30.7061996",
+            "longitude": "76.6845922"
+          },
+          "users": [
+            {
+              "id": 2383,
+              "first_name": "Priyanka Bhatia",
+              "last_name": null,
+              "email": "grace.wilson@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "5.147",
+              "sub_user_id": 2383,
+              "latitude": "30.7102616",
+              "longitude": "76.7214608",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2391,
+              "first_name": "Kirandeep Kaur",
+              "last_name": null,
+              "email": "test@gmail.com",
+              "shift_type": "1",
+              "office_distance": "5.26",
+              "sub_user_id": 2391,
+              "latitude": "30.6711366",
+              "longitude": "76.7215556",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2457,
+              "first_name": "Abhishek",
+              "last_name": null,
+              "email": "avi@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "10.194",
+              "sub_user_id": 2457,
+              "latitude": "30.7505972",
+              "longitude": "76.6312165",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2467,
+              "first_name": "Hridesh Kumar",
+              "last_name": null,
+              "email": "matt@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "9.543",
+              "sub_user_id": 2467,
+              "latitude": "30.7069528",
+              "longitude": "76.7529498",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2473,
+              "first_name": "Anmol Sharma",
+              "last_name": null,
+              "email": "Anmol@dummy.com",
+              "shift_type": "1",
+              "office_distance": "6.946",
+              "sub_user_id": 2473,
+              "latitude": "30.7442252",
+              "longitude": "76.6614863",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2474,
+              "first_name": "Jaspal Singh Takkar",
+              "last_name": null,
+              "email": "jas@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "19.35",
+              "sub_user_id": 2474,
+              "latitude": "30.6364521",
+              "longitude": "76.8155946",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2475,
+              "first_name": "Krish Raj",
+              "last_name": null,
+              "email": "Krish@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "5.004",
+              "sub_user_id": 2475,
+              "latitude": "30.7320213",
+              "longitude": "76.6911172",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2481,
+              "first_name": "Vikas Kumar Thakur",
+              "last_name": null,
+              "email": "viky@unifylogisticsolutions.com",
+              "shift_type": "0",
+              "office_distance": "4.202",
+              "sub_user_id": 2481,
+              "latitude": "30.7066882",
+              "longitude": "76.6543566",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2482,
+              "first_name": "Nandini Verma",
+              "last_name": null,
+              "email": "naya.williams@unifylogisticsolutions.com",
+              "shift_type": "0",
+              "office_distance": "4.425",
+              "sub_user_id": 2482,
+              "latitude": "30.7066882",
+              "longitude": "76.6543566",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2483,
+              "first_name": "Chumphila Bhutia",
+              "last_name": null,
+              "email": "Chum.taylor@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "5.591",
+              "sub_user_id": 2483,
+              "latitude": "30.7498676",
+              "longitude": "76.6411094",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2484,
+              "first_name": "Ashray Amrate",
+              "last_name": null,
+              "email": "logan@unifylogisticsolutions.com",
+              "shift_type": "1",
+              "office_distance": "9.884",
+              "sub_user_id": 2484,
+              "latitude": "30.7395761",
+              "longitude": "76.6466769",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2587,
+              "first_name": "Riya",
+              "last_name": "Chauhan",
+              "email": "riyachauhan@gmail.com",
+              "shift_type": "0",
+              "office_distance": "12.804",
+              "sub_user_id": 2587,
+              "latitude": "30.7678352",
+              "longitude": "76.6302656",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2588,
+              "first_name": "Om",
+              "last_name": "Sahu",
+              "email": "OmSahu@gmail.com",
+              "shift_type": "1",
+              "office_distance": "4.652",
+              "sub_user_id": 2588,
+              "latitude": "30.7333213",
+              "longitude": "76.6951525",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2589,
+              "first_name": "Jagjeet",
+              "last_name": "Kaur",
+              "email": "jagjeetkaur@gmail.com",
+              "shift_type": "1",
+              "office_distance": "7.527",
+              "sub_user_id": 2589,
+              "latitude": "30.7319649",
+              "longitude": "76.6640944",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2592,
+              "first_name": "Pankaj",
+              "last_name": null,
+              "email": "pankaj@gmail.com",
+              "shift_type": "1",
+              "office_distance": "9.147",
+              "sub_user_id": 2592,
+              "latitude": "30.7461367",
+              "longitude": "76.6391288",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2604,
+              "first_name": "Aadi",
+              "last_name": "sharma",
+              "email": "Aadisharma@gmail.com",
+              "shift_type": "1",
+              "office_distance": "12.465",
+              "sub_user_id": 2604,
+              "latitude": "30.7168089",
+              "longitude": "76.7786791",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 2605,
+              "first_name": "inderpreet",
+              "last_name": "kaur",
+              "email": "inderpreetkaur@gmail.com",
+              "shift_type": "1",
+              "office_distance": "9.495",
+              "sub_user_id": 2605,
+              "latitude": "30.7106641",
+              "longitude": "76.7542394",
+              "staff_language": null,
+              "schedule_date": null
+            }
+          ],
+          "drivers": {
+            "driversAssigned": [
+              {
+                "id": 2533,
+                "first_name": "Olivia",
+                "last_name": null,
+                "email": "olivia.green@example.com",
+                "profile_image": null,
+                "sub_user_id": 2533,
+                "latitude": "30.7498676",
+                "longitude": "76.6411094",
+                "vehicle_id": 28,
+                "vehicle_name": "Tata Intra",
+                "vehicle_no": "MH14XY1234",
+                "capacity": 7,
+                "chasis_no": "CH9081726354",
+                "color": "Silver",
+                "registration_no": "REG888",
+                "shift_type_id": 1
+              },
+              {
+                "id": 2534,
+                "first_name": "Ethan",
+                "last_name": null,
+                "email": "ethan.walker@example.com",
+                "profile_image": null,
+                "sub_user_id": 2534,
+                "latitude": "30.6425496",
+                "longitude": "76.8173359",
+                "vehicle_id": 29,
+                "vehicle_name": "Piaggio Ape",
+                "vehicle_no": "DL8CAF7654",
+                "capacity": 7,
+                "chasis_no": "CH1029384756",
+                "color": "#b13939",
+                "registration_no": "REG999",
+                "shift_type_id": 2
+              },
+              {
+                "id": 2535,
+                "first_name": "Ralph",
+                "last_name": null,
+                "email": "ralph.edwards@example.com",
+                "profile_image": null,
+                "sub_user_id": 2535,
+                "latitude": "30.7498676",
+                "longitude": "76.6411094",
+                "vehicle_id": 30,
+                "vehicle_name": "Tata Ace",
+                "vehicle_no": "MH12AB1234",
+                "capacity": 7,
+                "chasis_no": "CH1234567890",
+                "color": "#823030",
+                "registration_no": "REG123",
+                "shift_type_id": 1
+              },
+              {
+                "id": 2538,
+                "first_name": "Nina",
+                "last_name": null,
+                "email": "nina.patel@example.com",
+                "profile_image": null,
+                "sub_user_id": 2538,
+                "latitude": "30.7498676",
+                "longitude": "76.6411094",
+                "vehicle_id": 33,
+                "vehicle_name": "Ashok Leyland",
+                "vehicle_no": "GJ1CD7623",
+                "capacity": 5,
+                "chasis_no": "CH6789012345",
+                "color": "#6e2121",
+                "registration_no": "REG321",
+                "shift_type_id": 1
+              },
+              {
+                "id": 2539,
+                "first_name": "Marcus",
+                "last_name": null,
+                "email": "marcus.lee@example.com",
+                "profile_image": null,
+                "sub_user_id": 2539,
+                "latitude": "30.7498676",
+                "longitude": "76.6411094",
+                "vehicle_id": 34,
+                "vehicle_name": "67bqwdhb",
+                "vehicle_no": "TN22BB8899",
+                "capacity": 5,
+                "chasis_no": "CH7890123456",
+                "color": "#983a3a",
+                "registration_no": "REG654",
+                "shift_type_id": 1
+              },
+              {
+                "id": 2572,
+                "first_name": "Alejandro",
+                "last_name": null,
+                "email": "alejandro@yopmail.com",
+                "profile_image": null,
+                "sub_user_id": 2572,
+                "latitude": "30.7293111",
+                "longitude": "76.6946872",
+                "vehicle_id": 36,
+                "vehicle_name": "BMW2",
+                "vehicle_no": "BR11BH8331",
+                "capacity": 5,
+                "chasis_no": "6256",
+                "color": "#b63535",
+                "registration_no": "123",
+                "shift_type_id": 2
+              },
+              {
+                "id": 2573,
+                "first_name": "Breanna",
+                "last_name": null,
+                "email": "breanna@yopmail.com",
+                "profile_image": null,
+                "sub_user_id": 2573,
+                "latitude": "30.6969081",
+                "longitude": "76.7323704",
+                "vehicle_id": 37,
+                "vehicle_name": "BMW2",
+                "vehicle_no": "BR11BH834",
+                "capacity": 7,
+                "chasis_no": "67UT31",
+                "color": "#733f3f",
+                "registration_no": "1212",
+                "shift_type_id": 2
+              },
+              {
+                "id": 2574,
+                "first_name": "Aaron",
+                "last_name": null,
+                "email": "aaron@yopmail.com",
+                "profile_image": null,
+                "sub_user_id": 2574,
+                "latitude": "30.7333148",
+                "longitude": "76.7794179",
+                "vehicle_id": 38,
+                "vehicle_name": "BMW2",
+                "vehicle_no": "BR11BH834",
+                "capacity": 7,
+                "chasis_no": "67UT34",
+                "color": "#974e4e",
+                "registration_no": "8339",
+                "shift_type_id": 2
+              },
+              {
+                "id": 2576,
+                "first_name": "Alva",
+                "last_name": null,
+                "email": "alva@yopmail.com",
+                "profile_image": null,
+                "sub_user_id": 2576,
+                "latitude": "30.6425496",
+                "longitude": "76.8173359",
+                "vehicle_id": 40,
+                "vehicle_name": "Tata Punch",
+                "vehicle_no": "BR11BH834",
+                "capacity": 7,
+                "chasis_no": "67UT31",
+                "color": "#793e3e",
+                "registration_no": "121212",
+                "shift_type_id": 2
+              },
+              {
+                "id": 2577,
+                "first_name": "Zohan",
+                "last_name": null,
+                "email": "zohan@yopmail.com",
+                "profile_image": null,
+                "sub_user_id": 2577,
+                "latitude": "30.6425496",
+                "longitude": "76.8173359",
+                "vehicle_id": 41,
+                "vehicle_name": "Tata Nexon",
+                "vehicle_no": "BR11BH8349",
+                "capacity": 5,
+                "chasis_no": "67UT31",
+                "color": "#865050",
+                "registration_no": "8339",
+                "shift_type_id": 2
+              },
+              {
+                "id": 321543,
+                "first_name": "tests",
+                "last_name": null,
+                "email": "testd1256@gmail.com",
+                "profile_image": null,
+                "sub_user_id": 321543,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 44,
+                "vehicle_name": "Innovas",
+                "vehicle_no": "4234",
+                "capacity": 2,
+                "chasis_no": "7845",
+                "color": "#f32020",
+                "registration_no": "343r3",
+                "shift_type_id": 1
+              }
+            ],
+            "driversUnassigned": [
+              {
+                "id": 2536,
+                "first_name": "Amanda",
+                "last_name": null,
+                "email": "amanda.cole@example.com",
+                "profile_image": null,
+                "sub_user_id": 2536,
+                "latitude": "30.7333148",
+                "longitude": "76.7794179",
+                "vehicle_id": 31,
+                "vehicle_name": "Mahindra Bolero",
+                "vehicle_no": "DL4CAF5032",
+                "capacity": 5,
+                "chasis_no": "CH0987654321",
+                "color": "#31a07f",
+                "registration_no": "REG456",
+                "shift_type_id": 2
+              },
+              {
+                "id": 2537,
+                "first_name": "Jordan",
+                "last_name": null,
+                "email": "jordan.smith@example.com",
+                "profile_image": null,
+                "sub_user_id": 2537,
+                "latitude": "30.6942091",
+                "longitude": "76.8605650",
+                "vehicle_id": 32,
+                "vehicle_name": "Eicher Pro",
+                "vehicle_no": "KA05MK7832",
+                "capacity": 7,
+                "chasis_no": "CH5678901234",
+                "color": "#3d408f",
+                "registration_no": "REG789",
+                "shift_type_id": 2
+              }
+            ]
+          },
+          "shift": {
+            "id": 8,
+            "shift_name": "Evening Shift",
+            "shift_time": {
+              "start": "13:30",
+              "end": "03:30"
+            },
+            "shift_days": {
+              "SUN": "0",
+              "MON": "1",
+              "TUE": "1",
+              "WED": "1",
+              "THU": "1",
+              "FRI": "1",
+              "SAT": "0"
+            },
+            "created_at": "2025-04-02T14:08:45.000000Z",
+            "updated_at": "2025-08-13T07:08:51.000000Z",
+            "shift_finishs_next_day": 1
+          },
+          "ride_settings": {
+            "pic_priority": 3
+          }
+        }
+      }
+    }
+  },
+  "assignment_execution": {
+    "start_time": "2025-09-05T11:42:31.027997",
+    "end_time": "2025-09-05T11:42:33.677136",
+    "duration_seconds": 2.649139,
+    "result": {
+      "status": "true",
+      "execution_time": 1.2644014358520508,
+      "data": [
+        {
+          "driver_id": "321543",
+          "vehicle_id": "44",
+          "vehicle_type": 2,
+          "latitude": 30.7046486,
+          "longitude": 76.7178726,
+          "assigned_users": [
+            {
+              "user_id": "2383",
+              "lat": 30.7102616,
+              "lng": 76.7214608,
+              "office_distance": 5.147,
+              "first_name": "Priyanka Bhatia",
+              "email": "grace.wilson@unifylogisticsolutions.com"
+            }
+          ],
+          "centroid": [
+            30.7102616,
+            76.7214608
+          ],
+          "utilization": 0.5,
+          "turning_score": 0,
+          "tortuosity_ratio": 1.0,
+          "direction_consistency": 1.0
+        },
+        {
+          "driver_id": "2573",
+          "vehicle_id": "37",
+          "vehicle_type": 7,
+          "latitude": 30.6969081,
+          "longitude": 76.7323704,
+          "assigned_users": [
+            {
+              "user_id": "2391",
+              "lat": 30.6711366,
+              "lng": 76.7215556,
+              "office_distance": 5.26,
+              "first_name": "Kirandeep Kaur",
+              "email": "test@gmail.com"
+            }
+          ],
+          "centroid": [
+            30.6711366,
+            76.7215556
+          ],
+          "utilization": 0.14285714285714285,
+          "turning_score": 0,
+          "tortuosity_ratio": 1.0,
+          "direction_consistency": 1.0
+        },
+        {
+          "driver_id": "2538",
+          "vehicle_id": "33",
+          "vehicle_type": 5,
+          "latitude": 30.746080560000003,
+          "longitude": 76.64392358,
+          "assigned_users": [
+            {
+              "user_id": "2473",
+              "lat": 30.7442252,
+              "lng": 76.6614863,
+              "office_distance": 6.946,
+              "first_name": "Anmol Sharma",
+              "email": "Anmol@dummy.com"
+            },
+            {
+              "user_id": "2483",
+              "lat": 30.7498676,
+              "lng": 76.6411094,
+              "office_distance": 5.591,
+              "first_name": "Chumphila Bhutia",
+              "email": "Chum.taylor@unifylogisticsolutions.com"
+            },
+            {
+              "user_id": "2457",
+              "lat": 30.7505972,
+              "lng": 76.6312165,
+              "office_distance": 10.194,
+              "first_name": "Abhishek",
+              "email": "avi@unifylogisticsolutions.com"
+            },
+            {
+              "user_id": "2592",
+              "lat": 30.7461367,
+              "lng": 76.6391288,
+              "office_distance": 9.147,
+              "first_name": "Pankaj",
+              "email": "pankaj@gmail.com"
+            },
+            {
+              "user_id": "2484",
+              "lat": 30.7395761,
+              "lng": 76.6466769,
+              "office_distance": 9.884,
+              "first_name": "Ashray Amrate",
+              "email": "logan@unifylogisticsolutions.com"
+            }
+          ],
+          "centroid": [
+            30.746080560000003,
+            76.64392358
+          ],
+          "utilization": 1.0,
+          "turning_score": 69.23017982320916,
+          "tortuosity_ratio": 2.0015348842234304,
+          "direction_consistency": 0.6666666666666666
+        },
+        {
+          "driver_id": "2536",
+          "vehicle_id": "31",
+          "vehicle_type": 7,
+          "latitude": 30.711475266666667,
+          "longitude": 76.7619561,
+          "assigned_users": [
+            {
+              "user_id": "2467",
+              "lat": 30.7069528,
+              "lng": 76.7529498,
+              "office_distance": 9.543,
+              "first_name": "Hridesh Kumar",
+              "email": "matt@unifylogisticsolutions.com"
+            },
+            {
+              "user_id": "2605",
+              "lat": 30.7106641,
+              "lng": 76.7542394,
+              "office_distance": 9.495,
+              "first_name": "inderpreet",
+              "email": "inderpreetkaur@gmail.com"
+            },
+            {
+              "user_id": "2604",
+              "lat": 30.7168089,
+              "lng": 76.7786791,
+              "office_distance": 12.465,
+              "first_name": "Aadi",
+              "email": "Aadisharma@gmail.com"
+            }
+          ],
+          "centroid": [
+            30.711475266666667,
+            76.7619561
+          ],
+          "utilization": 0.42857142857142855,
+          "turning_score": 121.70568503399882,
+          "tortuosity_ratio": 1.7432360654268095,
+          "direction_consistency": 0.5
+        },
+        {
+          "driver_id": "2577",
+          "vehicle_id": "41",
+          "vehicle_type": 5,
+          "latitude": 30.6425496,
+          "longitude": 76.8173359,
+          "assigned_users": [
+            {
+              "user_id": "2474",
+              "lat": 30.6364521,
+              "lng": 76.8155946,
+              "office_distance": 19.35,
+              "first_name": "Jaspal Singh Takkar",
+              "email": "jas@unifylogisticsolutions.com"
+            }
+          ],
+          "centroid": [
+            30.6364521,
+            76.8155946
+          ],
+          "utilization": 0.2,
+          "turning_score": 0,
+          "tortuosity_ratio": 1.0,
+          "direction_consistency": 1.0
+        },
+        {
+          "driver_id": "2572",
+          "vehicle_id": "36",
+          "vehicle_type": 5,
+          "latitude": 30.7293111,
+          "longitude": 76.6946872,
+          "assigned_users": [
+            {
+              "user_id": "2475",
+              "lat": 30.7320213,
+              "lng": 76.6911172,
+              "office_distance": 5.004,
+              "first_name": "Krish Raj",
+              "email": "Krish@unifylogisticsolutions.com"
+            },
+            {
+              "user_id": "2588",
+              "lat": 30.7333213,
+              "lng": 76.6951525,
+              "office_distance": 4.652,
+              "first_name": "Om",
+              "email": "OmSahu@gmail.com"
+            }
+          ],
+          "centroid": [
+            30.7326713,
+            76.69313485
+          ],
+          "utilization": 0.4,
+          "turning_score": 123.5292653201496,
+          "tortuosity_ratio": 1.1708807880686138,
+          "direction_consistency": 0.3333333333333333
+        },
+        {
+          "driver_id": "2533",
+          "vehicle_id": "28",
+          "vehicle_type": 7,
+          "latitude": 30.7498676,
+          "longitude": 76.6411094,
+          "assigned_users": [
+            {
+              "user_id": "2482",
+              "lat": 30.7066882,
+              "lng": 76.6543566,
+              "office_distance": 4.425,
+              "first_name": "Nandini Verma",
+              "email": "naya.williams@unifylogisticsolutions.com"
+            },
+            {
+              "user_id": "2481",
+              "lat": 30.7066882,
+              "lng": 76.6543566,
+              "office_distance": 4.202,
+              "first_name": "Vikas Kumar Thakur",
+              "email": "viky@unifylogisticsolutions.com"
+            }
+          ],
+          "centroid": [
+            30.7066882,
+            76.6543566
+          ],
+          "utilization": 0.2857142857142857,
+          "turning_score": 128.14596395982284,
+          "tortuosity_ratio": 1.0,
+          "direction_consistency": 0.3333333333333333
+        },
+        {
+          "driver_id": "2535",
+          "vehicle_id": "30",
+          "vehicle_type": 7,
+          "latitude": 30.7498676,
+          "longitude": 76.6411094,
+          "assigned_users": [
+            {
+              "user_id": "2587",
+              "lat": 30.7678352,
+              "lng": 76.6302656,
+              "office_distance": 12.804,
+              "first_name": "Riya",
+              "email": "riyachauhan@gmail.com"
+            }
+          ],
+          "centroid": [
+            30.7678352,
+            76.6302656
+          ],
+          "utilization": 0.14285714285714285,
+          "turning_score": 0,
+          "tortuosity_ratio": 1.0,
+          "direction_consistency": 1.0
+        },
+        {
+          "driver_id": "2574",
+          "vehicle_id": "38",
+          "vehicle_type": 7,
+          "latitude": 30.7333148,
+          "longitude": 76.7794179,
+          "assigned_users": [
+            {
+              "user_id": "2589",
+              "lat": 30.7319649,
+              "lng": 76.6640944,
+              "office_distance": 7.527,
+              "first_name": "Jagjeet",
+              "email": "jagjeetkaur@gmail.com"
+            }
+          ],
+          "centroid": [
+            30.7319649,
+            76.6640944
+          ],
+          "utilization": 0.14285714285714285,
+          "turning_score": 0,
+          "tortuosity_ratio": 1.0,
+          "direction_consistency": 1.0
+        }
+      ],
+      "unassignedUsers": [],
+      "unassignedDrivers": [
+        {
+          "driver_id": "2537",
+          "capacity": 7,
+          "vehicle_id": "32",
+          "latitude": 30.6942091,
+          "longitude": 76.860565
+        },
+        {
+          "driver_id": "2534",
+          "capacity": 7,
+          "vehicle_id": "29",
+          "latitude": 30.6425496,
+          "longitude": 76.8173359
+        },
+        {
+          "driver_id": "2539",
+          "capacity": 5,
+          "vehicle_id": "34",
+          "latitude": 30.7498676,
+          "longitude": 76.6411094
+        },
+        {
+          "driver_id": "2576",
+          "capacity": 7,
+          "vehicle_id": "40",
+          "latitude": 30.6425496,
+          "longitude": 76.8173359
+        }
+      ],
+      "clustering_analysis": {
+        "method": "route_optimized_adaptive",
+        "clusters": 3
+      },
+      "optimization_mode": "route_optimization",
+      "parameter": 1
+    }
+  },
+  "summary": {
+    "api_request_successful": true,
+    "assignment_successful": true,
+    "total_api_response_size": 9352,
+    "routes_generated": 9,
+    "users_from_api": 0,
+    "drivers_from_api": 0,
+    "api_has_drivers": false
+  }
+}

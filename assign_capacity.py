@@ -512,8 +512,6 @@ def assign_best_driver_to_cluster_capacity_focused(cluster_users,
             'vehicle_type': int(best_driver['capacity']),
             'latitude': float(best_driver['latitude']),
             'longitude': float(best_driver['longitude']),
-            'first_name': str(best_driver.get('first_name', '')),
-            'last_name': str(best_driver.get('last_name', '')),
             'assigned_users': []
         }
 
@@ -534,15 +532,12 @@ def assign_best_driver_to_cluster_capacity_focused(cluster_users,
                 'user_id': str(user['user_id']),
                 'lat': float(user['latitude']),
                 'lng': float(user['longitude']),
-                'office_distance': float(user.get('office_distance', 0)),
-                'first_name': str(user.get('first_name', '')),
-                'last_name': str(user.get('last_name', '')),
-                'email': str(user.get('email', '')),
-                'shift_type': str(user.get('shift_type', '')),
-                'sub_user_id': str(user.get('sub_user_id', '')),
-                'staff_language': str(user.get('staff_language', '') if user.get('staff_language') else ''),
-                'schedule_date': str(user.get('schedule_date', '') if user.get('schedule_date') else '')
+                'office_distance': float(user.get('office_distance', 0))
             }
+            if pd.notna(user.get('first_name')):
+                user_data['first_name'] = str(user['first_name'])
+            if pd.notna(user.get('email')):
+                user_data['email'] = str(user['email'])
 
             route['assigned_users'].append(user_data)
             assigned_user_ids.add(user['user_id'])
@@ -987,7 +982,7 @@ def run_assignment_capacity(source_id: str,
         if duplicates:
             logger.info(f"🔧 Removed {len(duplicates)} duplicate assignments")
 
-        result = {
+        return {
             "status": "true",
             "execution_time": execution_time,
             "data": routes,
@@ -996,23 +991,17 @@ def run_assignment_capacity(source_id: str,
             "clustering_analysis": clustering_results,
             "optimization_mode": "capacity_optimization",
             "parameter": parameter,
-            "string_param": string_param
         }
-
-        logger.info(f"🚀 CAPACITY OPTIMIZATION returning result with {len(routes)} routes")
-        logger.info(f"📊 Response structure: {list(result.keys())}")
-
-        return result
 
     except requests.exceptions.RequestException as req_err:
         logger.error(f"API request failed: {req_err}")
-        return {"status": "false", "details": str(req_err), "data": [], "parameter": parameter, "string_param": string_param}
+        return {"status": "false", "details": str(req_err), "data": []}
     except ValueError as val_err:
         logger.error(f"Data validation error: {val_err}")
-        return {"status": "false", "details": str(val_err), "data": [], "parameter": parameter, "string_param": string_param}
+        return {"status": "false", "details": str(val_err), "data": []}
     except Exception as e:
         logger.error(f"Assignment failed: {e}", exc_info=True)
-        return {"status": "false", "details": str(e), "data": [], "parameter": parameter, "string_param": string_param}
+        return {"status": "false", "details": str(e), "data": []}
 
 
 def final_pass_merge_capacity_focused(routes, config, office_lat, office_lon):
