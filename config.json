@@ -63,15 +63,37 @@
   "merge_tortuosity_improvement_required": true,
   "mode_configs": {
     "route_efficiency": {
-      "max_bearing_difference": 12,
-      "max_allowed_turning_score": 20,
-      "max_fill_distance_km": 3.5,
-      "merge_distance_km": 2.0,
-      "zigzag_penalty_weight": 5.0,
-      "utilization_penalty_per_seat": 0.5,
-      "aggressive_merging": false,
+      "max_bearing_difference": 15,
+      "max_allowed_turning_score": 25,
+      "max_fill_distance_km": 4.0,
+      "merge_distance_km": 2.5,
+      "zigzag_penalty_weight": 0.5,
+      "utilization_penalty_per_seat": 1.0,
+      "aggressive_merging": true,
       "capacity_weight": 1.0,
       "direction_weight": 4.0
+    },
+    "balanced_optimization": {
+      "max_bearing_difference": 30,
+      "max_allowed_turning_score": 40,
+      "max_fill_distance_km": 6.0,
+      "merge_distance_km": 3.5,
+      "zigzag_penalty_weight": 2.0,
+      "utilization_penalty_per_seat": 3.0,
+      "aggressive_merging": false,
+      "capacity_weight": 2.5,
+      "direction_weight": 2.5
+    },
+    "capacity_optimization": {
+      "max_bearing_difference": 15,
+      "max_allowed_turning_score": 25,
+      "max_fill_distance_km": 4.0,
+      "merge_distance_km": 2.5,
+      "zigzag_penalty_weight": 0.5,
+      "utilization_penalty_per_seat": 1.0,
+      "aggressive_merging": true,
+      "capacity_weight": 5.0,
+      "direction_weight": 1.0
     }
   }
 }
