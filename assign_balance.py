@@ -21,6 +21,9 @@ warnings.filterwarnings('ignore')
 # Setup logging first
 logger = get_logger()
 
+# File context for logging
+FILE_CONTEXT = "ASSIGN_BALANCE.PY (BALANCED OPTIMIZATION)"
+
 # Import road_network module for route coherence scoring
 try:
     import road_network as road_network_module
@@ -82,9 +85,11 @@ except ImportError:
 # Load and validate configuration with balanced optimization settings
 def load_and_validate_config():
     """Load configuration with balanced optimization settings for assign_balance"""
+    logger.step_start("STEP 1: LOAD AND VALIDATE CONFIGURATION", FILE_CONTEXT)
     try:
         with open('config.json') as f:
             cfg = json.load(f)
+            logger.info("Configuration loaded from config.json")
     except (FileNotFoundError, json.JSONDecodeError) as e:
         logger.warning(f"Could not load config.json, using defaults. Error: {e}")
         cfg = {}
@@ -223,8 +228,7 @@ OFFICE_LON = _config['OFFICE_LON']
 
 def run_balanced_route_assignment(source_id, parameter=1, string_param=""):
     """Main function for balanced route optimization assignment"""
-    logger.info("🚀 Starting BALANCED ROUTE OPTIMIZATION assignment...")
-
+    logger.step_start("STEP 1: DATA LOADING AND PREPARATION", FILE_CONTEXT)
     try:
         # Load and validate data
         data = load_env_and_fetch_data(source_id, parameter, string_param)
@@ -254,23 +258,29 @@ def run_balanced_route_assignment(source_id, parameter=1, string_param=""):
                 "clustering_analysis": {"method": "none", "clusters": 0}
             }
 
-        # Step 1: Create geographic clusters
+        logger.step_start("STEP 2: GEOGRAPHIC CLUSTERING", FILE_CONTEXT)
+        # Step 2: Create geographic clusters
         user_df = create_geographic_clusters(user_df, office_lat, office_lon, _config)
 
-        # Step 2: Create capacity subclusters
+        logger.step_start("STEP 2A: CAPACITY SUBCLUSTERING", FILE_CONTEXT)
+        # Step 3: Create capacity subclusters
         user_df = create_capacity_subclusters(user_df, office_lat, office_lon, _config)
 
-        # Step 3: Balanced route optimized driver assignment
+        logger.step_start("STEP 3: BALANCED ROUTE-OPTIMIZED DRIVER ASSIGNMENT", FILE_CONTEXT)
+        # Step 4: Balanced route optimized driver assignment
         routes, assigned_user_ids = assign_drivers_balanced_route_optimized(user_df, driver_df, office_lat, office_lon)
 
-        # Step 4: Local optimization
+        logger.step_start("STEP 4: LOCAL OPTIMIZATION", FILE_CONTEXT)
+        # Step 5: Local optimization
         routes = local_optimization(routes, office_lat, office_lon)
 
-        # Step 5: Global optimization
+        logger.step_start("STEP 5: GLOBAL OPTIMIZATION", FILE_CONTEXT)
+        # Step 6: Global optimization
         unassigned_users_df = user_df[~user_df['user_id'].isin(assigned_user_ids)]
         routes, unassigned_list = global_optimization(routes, user_df, assigned_user_ids, driver_df, office_lat, office_lon)
 
-        # Step 6: Enhanced route splitting and merging
+        logger.step_start("STEP 6: ENHANCED ROUTE SPLITTING AND MERGING", FILE_CONTEXT)
+        # Step 7: Enhanced route splitting and merging
         routes = enhanced_route_splitting(routes, driver_df, office_lat, office_lon)
         routes = quality_preserving_route_merging(routes, _config, office_lat, office_lon)
 
@@ -302,7 +312,8 @@ def assign_drivers_balanced_route_optimized(user_df, driver_df, office_lat, offi
     """
     Balanced route optimized driver assignment: Optimal balance between capacity and route efficiency
     """
-    logger.info("🎯 Step 3: Balanced route optimized driver assignment...")
+    logger = get_logger()
+    logger.step_start("STEP 3: BALANCED ROUTE-OPTIMIZED DRIVER ASSIGNMENT", FILE_CONTEXT)
 
     routes = []
     assigned_user_ids = set()
@@ -510,6 +521,8 @@ def assign_drivers_balanced_route_optimized(user_df, driver_df, office_lat, offi
             remaining_users = remaining_users[~remaining_users['user_id'].isin(assigned_ids)]
 
             route = optimize_route_sequence_improved(route, office_lat, office_lon)
+            update_route_metrics_improved(route, office_lat, office_lon)
+
             utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
             logger.info(f"  🎯 Route {route['driver_id']}: Added {len(users_to_add)} users, now {len(route['assigned_users'])}/{route['vehicle_type']} ({utilization:.1f}%)")
 
@@ -790,12 +803,13 @@ def run_balanced_assignment(source_id, parameter=1, string_param=""):
     import traceback
     from datetime import datetime
     
-    try:
-        logger.info("🚀 Starting BALANCED ROUTE OPTIMIZATION Assignment")
-        logger.info(f"📋 Source ID: {source_id}")
-        logger.info(f"⏰ Started at: {datetime.now().strftime('%H:%M:%S')}")
-        logger.info("=" * 60)
+    logger = get_logger()
+    logger.info("=" * 80, FILE_CONTEXT)
+    logger.info(f"🚀 STARTING BALANCED ROUTE OPTIMIZATION ASSIGNMENT", FILE_CONTEXT)
+    logger.info(f"📋 Source ID: {source_id} | Started at: {datetime.now().strftime('%H:%M:%S')}", FILE_CONTEXT)
+    logger.info("=" * 80, FILE_CONTEXT)
 
+    try:
         # Use the existing function that's already defined
         return run_balanced_route_assignment(source_id, parameter, string_param)
 
