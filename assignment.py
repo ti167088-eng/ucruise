@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import warnings
 import multiprocessing as mp
 from concurrent.futures import ThreadPoolExecutor
-from utils.logger_config import get_logger, start_session
+from logger_config import get_logger, start_session
 
 # Start new session with cleared logs
 logger = start_session()
@@ -22,8 +22,8 @@ logger = start_session()
 warnings.filterwarnings('ignore')
 
 # Import custom logging and progress tracking
-from utils.logger_config import get_logger
-from utils.progress_tracker import get_progress_tracker
+from logger_config import get_logger
+from progress_tracker import get_progress_tracker
 
 # File context for logging
 FILE_CONTEXT = "ASSIGNMENT.PY (ROUTE EFFICIENCY)"
@@ -481,7 +481,7 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
     """Calculate bearing from point A to B in degrees"""
     lat1, lat2 = map(math.radians, [lat1, lat2])
     dlon = math.radians(lon2 - lon1)
-    x = math.sin(dlon) * np.cos(lat2)
+    x = math.sin(dlon) * math.cos(lat2)
     y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(
         lat2) * math.cos(dlon)
     return (math.degrees(math.atan2(x, y)) + 360) % 360
@@ -1134,10 +1134,6 @@ def calculate_optimal_sequence_improved(driver_pos, cluster_users, office_pos):
     users_list = cluster_users.to_dict('records') if hasattr(
         cluster_users, 'to_dict') else list(cluster_users)
 
-    # Handle empty list case
-    if not users_list:
-        return []
-
     # Calculate main route bearing (driver to office)
     main_route_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
                                            office_pos[0], office_pos[1])
@@ -1166,11 +1162,8 @@ def calculate_optimal_sequence_improved(driver_pos, cluster_users, office_pos):
     users_list.sort(key=geodesic_projection_score, reverse=True)
 
     # Apply improved 2-opt with strict direction constraints
-    optimized_sequence = apply_strict_direction_aware_2opt(users_list, driver_pos,
+    return apply_strict_direction_aware_2opt(users_list, driver_pos,
                                              office_pos, main_route_bearing)
-    
-    # Ensure we always return a valid sequence
-    return optimized_sequence if optimized_sequence is not None else users_list
 
 
 def apply_strict_direction_aware_2opt(sequence, driver_pos, office_pos,
@@ -1178,10 +1171,6 @@ def apply_strict_direction_aware_2opt(sequence, driver_pos, office_pos,
     """Apply 2-opt improvements with strict bearing-based constraints"""
     if len(sequence) <= 2:
         return sequence
-
-    # Handle empty sequence case
-    if not sequence:
-        return []
 
     improved = True
     max_iterations = 3
@@ -1194,47 +1183,42 @@ def apply_strict_direction_aware_2opt(sequence, driver_pos, office_pos,
         improved = False
         iteration += 1
 
-        try:
-            best_distance = calculate_sequence_distance(sequence, driver_pos,
-                                                        office_pos)
-            best_turning_score = calculate_sequence_turning_score_improved(
-                sequence, driver_pos, office_pos)
+        best_distance = calculate_sequence_distance(sequence, driver_pos,
+                                                    office_pos)
+        best_turning_score = calculate_sequence_turning_score_improved(
+            sequence, driver_pos, office_pos)
 
-            for i in range(len(sequence) - 1):
-                for j in range(i + 2, len(sequence)):
-                    # Try 2-opt swap
-                    new_sequence = sequence[:i +
-                                            1] + sequence[i + 1:j +
-                                                          1][::-1] + sequence[j +
-                                                                              1:]
+        for i in range(len(sequence) - 1):
+            for j in range(i + 2, len(sequence)):
+                # Try 2-opt swap
+                new_sequence = sequence[:i +
+                                        1] + sequence[i + 1:j +
+                                                      1][::-1] + sequence[j +
+                                                                          1:]
 
-                    # Calculate new metrics
-                    new_distance = calculate_sequence_distance(
-                        new_sequence, driver_pos, office_pos)
-                    new_turning_score = calculate_sequence_turning_score_improved(
-                        new_sequence, driver_pos, office_pos)
+                # Calculate new metrics
+                new_distance = calculate_sequence_distance(
+                    new_sequence, driver_pos, office_pos)
+                new_turning_score = calculate_sequence_turning_score_improved(
+                    new_sequence, driver_pos, office_pos)
 
-                    # Strict acceptance criteria: both distance AND direction must improve or maintain quality
-                    distance_improved = new_distance < best_distance * 0.995  # At least 0.5% improvement
-                    turning_acceptable = new_turning_score <= max(
-                        best_turning_score, max_turning_threshold)
+                # Strict acceptance criteria: both distance AND direction must improve or maintain quality
+                distance_improved = new_distance < best_distance * 0.995  # At least 0.5% improvement
+                turning_acceptable = new_turning_score <= max(
+                    best_turning_score, max_turning_threshold)
 
-                    # For strict direction compliance, require combined improvement
-                    combined_improvement = (best_distance - new_distance) + (
-                        best_turning_score - new_turning_score) * 0.1
+                # For strict direction compliance, require combined improvement
+                combined_improvement = (best_distance - new_distance) + (
+                    best_turning_score - new_turning_score) * 0.1
 
-                    if distance_improved and turning_acceptable and combined_improvement > 0.01:
-                        sequence = new_sequence
-                        best_distance = new_distance
-                        best_turning_score = new_turning_score
-                        improved = True
-                        break
-                if improved:
+                if distance_improved and turning_acceptable and combined_improvement > 0.01:
+                    sequence = new_sequence
+                    best_distance = new_distance
+                    best_turning_score = new_turning_score
+                    improved = True
                     break
-        except Exception as e:
-            logger = get_logger()
-            logger.warning(f"Error in 2-opt optimization: {e}")
-            break
+            if improved:
+                break
 
     return sequence
 
@@ -1534,12 +1518,6 @@ def optimize_route_sequence_improved(route, office_lat, office_lon):
     optimized_sequence = calculate_optimal_sequence_improved(
         driver_pos, users_for_sequencing, office_pos)
 
-    # Handle case where optimized_sequence is None
-    if optimized_sequence is None:
-        logger = get_logger()
-        logger.warning(f"Sequence optimization failed for route {route['driver_id']}, keeping original order")
-        return route
-
     # Convert back to original format
     final_sequence = []
     for seq_user in optimized_sequence:
@@ -1609,8 +1587,7 @@ def calculate_route_turning_score_improved(users, driver_pos, office_pos):
                 # Single user: bearing from user to office
                 next_bearing = calculate_bearing(users[i]['lat'],
                                                  users[i]['lng'],
-                                                 office_pos[0],
-                                                 office_pos[1])
+                                                 office_pos[0], office_pos[1])
                 bearing_diff = bearing_difference(current_bearing,
                                                   next_bearing)
                 bearing_differences.append(bearing_diff)
@@ -1882,7 +1859,7 @@ def global_optimization(routes, user_df, assigned_user_ids, driver_df,
     # Handle remaining unassigned users
     remaining_unassigned_users_df = user_df[~user_df['user_id'].
                                             isin(assigned_user_ids)]
-    unassigned_users = handle_remaining_users_improved(
+    unassigned_list = handle_remaining_users_improved(
         remaining_unassigned_users_df, driver_df, routes, office_lat,
         office_lon)
 
@@ -1891,11 +1868,11 @@ def global_optimization(routes, user_df, assigned_user_ids, driver_df,
         logger.info(
             f"  📋 Adding {len(failed_outlier_reassignments)} failed outlier reassignments to unassigned list"
         )
-        unassigned_users.extend(failed_outlier_reassignments)
+        unassigned_list.extend(failed_outlier_reassignments)
 
     logger.step_complete("STEP 5: GLOBAL OPTIMIZATION", FILE_CONTEXT,
                          f"- {len(routes)} final routes")
-    return routes, unassigned_users
+    return routes, unassigned_list
 
 
 # STEP 6: FINAL-PASS MERGE ALGORITHM
@@ -3180,10 +3157,69 @@ def find_best_driver_for_cluster_improved(cluster_users, available_drivers,
 # MAIN ASSIGNMENT FUNCTION
 def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     """
-    Legacy wrapper for backward compatibility.
-    Routes to route efficiency assignment.
+    Main assignment function that automatically routes to the appropriate algorithm
+    based on ride_settings priority value from the API response:
+    - Priority 1 → assign_capacity.py (Capacity Optimization)
+    - Priority 2 → assign_balance.py (Balanced Optimization)
+    - Priority 3 → assign_route.py (Road-Aware Routing)
+    - Default → assignment.py (Route Efficiency)
     """
-    return run_route_efficiency_assignment(source_id, parameter, string_param)
+    start_time = time.time()
+
+    # Clear any cached data files to ensure fresh assignment
+    cache_files = [
+        "drivers_and_routes.json",
+        "drivers_and_routes_capacity.json",
+        "drivers_and_routes_balance.json",
+        "drivers_and_routes_road_aware.json"
+    ]
+
+    for cache_file in cache_files:
+        if os.path.exists(cache_file):
+            os.remove(cache_file)
+
+    # Initialize logging and progress tracking
+    logger = get_logger()
+    progress = get_progress_tracker()
+
+    logger.info(f"Starting assignment for source_id: {source_id}")
+    logger.info(f"Parameters: {parameter}, String: {string_param}")
+
+    try:
+        # STAGE 1: Data Loading & API Response Analysis
+        progress.start_stage("Data Loading & Algorithm Detection",
+                             "Loading data from API and detecting algorithm...")
+        data = load_env_and_fetch_data(source_id, parameter, string_param)
+
+        # Get the algorithm priority from ride_settings
+        algorithm_priority = data.get("_algorithm_priority")
+
+        # Route to appropriate algorithm based on priority
+        if algorithm_priority == 1:
+            logger.info("🎪 Routing to CAPACITY OPTIMIZATION (assign_capacity.py)")
+            from assign_capacity import run_assignment_capacity
+            return run_assignment_capacity(source_id, parameter, string_param)
+        elif algorithm_priority == 2:
+            logger.info("⚖️ Routing to BALANCED OPTIMIZATION (assign_balance.py)")
+            from assign_balance import run_assignment_balance
+            return run_assignment_balance(source_id, parameter, string_param)
+        elif algorithm_priority == 3:
+            logger.info("🗺️ Routing to ROAD-AWARE ROUTING (assign_route.py)")
+            from assign_route import run_road_aware_assignment
+            return run_road_aware_assignment(source_id, parameter, string_param)
+        else:
+            logger.info("🎯 Using default ROUTE EFFICIENCY algorithm (assignment.py)")
+            # Continue with route efficiency algorithm (original assignment.py logic)
+            return run_route_efficiency_assignment(source_id, parameter,
+                                                   string_param)
+
+    except Exception as e:
+        logger.error(f"Error in algorithm routing: {e}", exc_info=True)
+        # Fallback to route efficiency
+        logger.info("🔄 Falling back to ROUTE EFFICIENCY algorithm")
+        return run_route_efficiency_assignment(source_id, parameter,
+                                               string_param)
+
 
 def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     """

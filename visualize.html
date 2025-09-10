@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RouteFlow - Smart Driver Assignment Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dark Theme Color Palette */
+            --primary-500: #6366f1;
+            --primary-600: #4f46e5;
+            --primary-700: #4338ca;
+            --primary-50: #1e1b4b;
+            --primary-100: #312e81;
+            
+            --success-500: #10b981;
+            --success-100: #064e3b;
+            --warning-500: #f59e0b;
+            --warning-100: #451a03;
+            --error-500: #ef4444;
+            --error-100: #450a0a;
+            
+            --gray-50: #0f172a;
+            --gray-100: #1e293b;
+            --gray-200: #334155;
+            --gray-300: #475569;
+            --gray-400: #64748b;
+            --gray-500: #94a3b8;
+            --gray-600: #cbd5e1;
+            --gray-700: #e2e8f0;
+            --gray-800: #f1f5f9;
+            --gray-900: #f8fafc;
+            
+            --surface-white: #0f172a;
+            --surface-gray: #1e293b;
+            
+            /* Enhanced Shadows for Dark Theme */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+            
+            /* Radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            
+            /* Spacing */
+            --space-xs: 0.5rem;
+            --space-sm: 0.75rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 2.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--gray-800);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            background: var(--surface-white);
+            border-right: 1px solid var(--gray-200);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .sidebar-header {
+            padding: var(--space-xl);
+            border-bottom: 1px solid var(--gray-200);
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xs);
+        }
+
+        .logo i {
+            font-size: 24px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        .tagline {
+            font-size: 13px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: var(--space-lg);
+        }
+
+        .section {
+            margin-bottom: var(--space-xl);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .section-title i {
+            font-size: 14px;
+            color: var(--primary-500);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: var(--space-xs);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            border: 1.5px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            transition: all 0.2s ease;
+            background: var(--surface-gray);
+            color: var(--gray-800);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 3px var(--primary-100);
+        }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right var(--space-sm) center;
+            background-repeat: no-repeat;
+            background-size: 16px 12px;
+            padding-right: var(--space-2xl);
+        }
+
+        .range-input {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--gray-200);
+            outline: none;
+            appearance: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-500);
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Buttons */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-xs);
+            padding: var(--space-sm) var(--space-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            width: 100%;
+            margin-bottom: var(--space-xs);
+        }
+
+        .btn-primary {
+            background: var(--primary-500);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-600);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--surface-gray);
+            color: var(--gray-700);
+            border: 1.5px solid var(--gray-200);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xs);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md);
+        }
+
+        .stat-card {
+            background: var(--surface-gray);
+            padding: var(--space-lg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--space-xs);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        /* Analytics Cards */
+        .analytics-card {
+            background: var(--surface-gray);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .analytics-header {
+            padding: var(--space-lg);
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+        }
+
+        .analytics-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .analytics-body {
+            padding: var(--space-lg);
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-sm) 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            font-weight: 400;
+        }
+
+        .metric-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        /* Map Container */
+        .map-container {
+            position: relative;
+            background: var(--surface-gray);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .map-header {
+            background: var(--surface-white);
+            padding: var(--space-lg) var(--space-xl);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .map-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .map-controls {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .map-btn {
+            padding: var(--space-xs) var(--space-md);
+            background: var(--surface-gray);
+            border: 1.5px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-700);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .map-btn:hover {
+            background: var(--gray-100);
+            border-color: var(--primary-500);
+            color: var(--primary-600);
+        }
+
+        .map-btn.active {
+            background: var(--primary-500);
+            border-color: var(--primary-500);
+            color: white;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+            border: none;
+        }
+
+        /* Floating Elements */
+        .floating-legend {
+            position: absolute;
+            bottom: var(--space-xl);
+            left: var(--space-xl);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            padding: var(--space-lg);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+            min-width: 250px;
+        }
+
+        .legend-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: var(--space-md);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            margin-bottom: var(--space-sm);
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .route-info-popup {
+            position: absolute;
+            top: var(--space-xl);
+            right: var(--space-xl);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            padding: var(--space-lg);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+            max-width: 300px;
+            display: none;
+        }
+
+        /* Loading States */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary-500);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--space-md);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        /* Progress Bars */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: var(--space-xs);
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-success { background: var(--success-500); }
+        .progress-warning { background: var(--warning-500); }
+        .progress-error { background: var(--error-500); }
+
+        /* Alerts */
+        .alert {
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            margin-bottom: var(--space-sm);
+        }
+
+        .alert-success {
+            background: var(--success-100);
+            color: var(--success-500);
+            border-left: 3px solid var(--success-500);
+        }
+
+        .alert-warning {
+            background: var(--warning-100);
+            color: var(--warning-500);
+            border-left: 3px solid var(--warning-500);
+        }
+
+        .alert-error {
+            background: var(--error-100);
+            color: var(--error-500);
+            border-left: 3px solid var(--error-500);
+        }
+
+        /* Enhanced Cluster Colors with Better Differentiation */
+        .cluster-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-xs);
+            margin-top: var(--space-md);
+        }
+
+        .cluster-color {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: 3px solid rgba(255, 255, 255, 0.4);
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .cluster-color:hover {
+            transform: scale(1.2);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .cluster-color.active {
+            transform: scale(1.15);
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .cluster-color.active::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 320px 1fr;
+            }
+            
+            .sidebar {
+                font-size: 13px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .sidebar {
+                max-height: 50vh;
+            }
+            
+            .floating-legend,
+            .route-info-popup {
+                position: relative;
+                margin: var(--space-md);
+            }
+        }
+
+        /* Custom Scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--gray-100);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--gray-300);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-400);
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 12px; }
+        .text-xs { font-size: 11px; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .opacity-75 { opacity: 0.75; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading route analytics...</div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-route"></i>
+                    <h1>RouteFlow</h1>
+                </div>
+                <div class="tagline">Smart Driver Assignment Platform</div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Quick Stats -->
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        Overview
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalRoutes">0</div>
+                            <div class="stat-label">Active Routes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalUsers">0</div>
+                            <div class="stat-label">Users Assigned</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="avgUtilization">0%</div>
+                            <div class="stat-label">Avg Utilization</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalDrivers">0</div>
+                            <div class="stat-label">Active Drivers</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-filter"></i>
+                        Filters
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="searchInput">Search Routes or Users</label>
+                        <input type="text" id="searchInput" class="form-input" placeholder="Enter ID, name, or keyword..." oninput="handleSearch()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="clusterSelect">Route Selection</label>
+                        <select id="clusterSelect" class="form-input form-select" onchange="filterCluster()">
+                            <option value="all">All Routes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="utilizationRange">
+                            Min Utilization: <span id="utilizationValue" class="font-semibold">0%</span>
+                        </label>
+                        <input type="range" id="utilizationRange" class="range-input" min="0" max="100" value="0" oninput="filterByUtilization()">
+                    </div>
+                </div>
+
+                <!-- Display Controls -->
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-eye"></i>
+                        Display Options
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="toggleUsers()" id="toggleUsersBtn">
+                            <i class="fas fa-users"></i> Users
+                        </button>
+                        <button class="btn btn-secondary" onclick="toggleDrivers()" id="toggleDriversBtn">
+                            <i class="fas fa-car"></i> Drivers
+                        </button>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="toggleRouteLines()" id="toggleRouteLinesBtn">
+                            <i class="fas fa-route"></i> Real Routes
+                        </button>
+                        <button class="btn btn-secondary" onclick="toggleHeatmap()" id="toggleHeatmapBtn">
+                            <i class="fas fa-fire"></i> Heatmap
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" onclick="showOptimalPaths()" id="showOptimalBtn">
+                        <i class="fas fa-magic"></i> Show Optimal Paths
+                    </button>
+                </div>
+
+                <!-- Performance Analytics -->
+                <div class="section">
+                    <div class="analytics-card">
+                        <div class="analytics-header">
+                            <div class="analytics-title">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Performance Metrics
+                            </div>
+                        </div>
+                        <div class="analytics-body">
+                            <div class="metric-row">
+                                <span class="metric-label">Assignment Rate</span>
+                                <span class="metric-value" id="assignmentRate">0%</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Capacity Utilization</span>
+                                <span class="metric-value" id="capacityUtilization">0%</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Avg Distance</span>
+                                <span class="metric-value" id="avgDistance">0 km</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Efficiency Score</span>
+                                <span class="metric-value" id="efficiencyScore">0/10</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route Quality -->
+                <div class="section">
+                    <div class="analytics-card">
+                        <div class="analytics-header">
+                            <div class="analytics-title">
+                                <i class="fas fa-award"></i>
+                                Route Quality
+                            </div>
+                        </div>
+                        <div class="analytics-body">
+                            <div class="metric-row">
+                                <span class="metric-label">High Efficiency (≥80%)</span>
+                                <span class="metric-value" id="highEfficiencyRoutes">0</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Medium Efficiency (50-79%)</span>
+                                <span class="metric-value" id="mediumEfficiencyRoutes">0</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Low Efficiency (<50%)</span>
+                                <span class="metric-value" id="lowEfficiencyRoutes">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Efficiency Alerts -->
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        System Alerts
+                    </div>
+                    <div id="alertsContainer">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> System initialized successfully
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-download"></i>
+                        Export & Reports
+                    </div>
+                    <button class="btn btn-primary" onclick="exportAnalytics()">
+                        <i class="fas fa-file-csv"></i> Export Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="generateReport()">
+                        <i class="fas fa-file-pdf"></i> Generate Report
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportMapImage()">
+                        <i class="fas fa-camera"></i> Capture Map
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Map Area -->
+        <div class="map-container">
+            <div class="map-header">
+                <h2 class="map-title">Live Route Visualization</h2>
+                <div class="map-controls">
+                    <button class="map-btn" onclick="centerOnOffice()">
+                        <i class="fas fa-home"></i> Center on Office
+                    </button>
+                    <button class="map-btn" onclick="fitAllRoutes()">
+                        <i class="fas fa-expand"></i> Fit All Routes
+                    </button>
+                    <button class="map-btn" onclick="refreshData()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div id="map"></div>
+
+            <!-- Floating Legend -->
+            <div class="floating-legend">
+                <div class="legend-title">Map Legend</div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: linear-gradient(45deg, #ef4444, #dc2626);">
+                        🏢
+                    </div>
+                    <span>Office Headquarters</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: linear-gradient(45deg, #3b82f6, #2563eb);">
+                        🚗
+                    </div>
+                    <span>Driver Positions</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: linear-gradient(45deg, #10b981, #059669);">
+                        👤
+                    </div>
+                    <span>User Locations</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: linear-gradient(45deg, #f59e0b, #d97706);">
+                        🛣️
+                    </div>
+                    <span>Sequential Routes (Driver → Users → Office)</span>
+                </div>
+                <div class="cluster-palette" id="clusterPalette"></div>
+            </div>
+
+            <!-- Route Info Popup -->
+            <div class="route-info-popup" id="routeInfoPopup">
+                <div id="routeInfoContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = "/routes";
+        const OFFICE_LOCATION = { lat: 30.6810489, lng: 76.7260711 };
+        
+        // Enhanced Color Palette with Better Differentiation
+        const ROUTE_COLORS = [
+            '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57',
+            '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43',
+            '#ee5a24', '#0abde3', '#10ac84', '#8395a7', '#222f3e',
+            '#c8d6e5', '#576574', '#a4b0be', '#2f3542', '#40407a'
+        ];
+
+        // Global Variables
+        let map;
+        let directionsService;
+        let allRoutes = [];
+        let markers = {
+            office: null,
+            drivers: [],
+            users: [],
+            routes: [] // For sequential route markers
+        };
+        let heatmap = null;
+        let routeRenderers = [];
+        let optimalPaths = [];
+        
+        // Display States
+        let displayState = {
+            users: true,
+            drivers: true,
+            routeLines: true,
+            heatmap: false,
+            optimalPaths: false
+        };
+
+        // Initialize Application
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: OFFICE_LOCATION,
+                zoom: 12,
+                styles: [
+                    {
+                        elementType: "geometry",
+                        stylers: [{ color: "#1e293b" }]
+                    },
+                    {
+                        elementType: "labels.text.stroke",
+                        stylers: [{ color: "#0f172a" }]
+                    },
+                    {
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#94a3b8" }]
+                    },
+                    {
+                        featureType: "administrative.locality",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#cbd5e1" }]
+                    },
+                    {
+                        featureType: "poi",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#64748b" }]
+                    },
+                    {
+                        featureType: "poi.park",
+                        elementType: "geometry",
+                        stylers: [{ color: "#334155" }]
+                    },
+                    {
+                        featureType: "poi.park",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#64748b" }]
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry",
+                        stylers: [{ color: "#475569" }]
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry.stroke",
+                        stylers: [{ color: "#334155" }]
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#94a3b8" }]
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "geometry",
+                        stylers: [{ color: "#64748b" }]
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "geometry.stroke",
+                        stylers: [{ color: "#475569" }]
+                    },
+                    {
+                        featureType: "road.highway",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#cbd5e1" }]
+                    },
+                    {
+                        featureType: "transit",
+                        elementType: "geometry",
+                        stylers: [{ color: "#334155" }]
+                    },
+                    {
+                        featureType: "transit.station",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#64748b" }]
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "geometry",
+                        stylers: [{ color: "#0f172a" }]
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#64748b" }]
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "labels.text.stroke",
+                        stylers: [{ color: "#0f172a" }]
+                    }
+                ],
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true
+            });
+
+            // Initialize directions service
+            directionsService = new google.maps.DirectionsService();
+
+            // Create office marker
+            createOfficeMarker();
+            
+            // Load route data
+            loadRouteData();
+        }
+
+        function createOfficeMarker() {
+            markers.office = new google.maps.Marker({
+                position: OFFICE_LOCATION,
+                map: map,
+                title: "Office Headquarters",
+                icon: {
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                        <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="24" cy="24" r="20" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+                            <text x="24" y="30" font-family="Arial" font-size="16" text-anchor="middle" fill="white">🏢</text>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(48, 48),
+                    anchor: new google.maps.Point(24, 24)
+                },
+                zIndex: 1000
+            });
+
+            const officeInfoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="padding: 15px; font-family: Inter, sans-serif; background: #0f172a; color: #f1f5f9; border-radius: 8px; min-width: 200px;">
+                        <h3 style="margin: 0 0 10px 0; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
+                            🏢 Office Headquarters
+                        </h3>
+                        <p style="margin: 0; color: #94a3b8; font-size: 13px;">Central dispatch location</p>
+                        <p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px;">
+                            📍 ${OFFICE_LOCATION.lat.toFixed(6)}, ${OFFICE_LOCATION.lng.toFixed(6)}
+                        </p>
+                    </div>
+                `
+            });
+
+            markers.office.addListener("click", () => {
+                closeAllInfoWindows();
+                officeInfoWindow.open(map, markers.office);
+            });
+        }
+
+        async function loadRouteData() {
+            try {
+                const response = await fetch(API_URL);
+                const routes = await response.json();
+                
+                if (Array.isArray(routes)) {
+                    allRoutes = routes;
+                    hideLoading();
+                    updateUI();
+                    renderMap();
+                } else {
+                    throw new Error('Invalid route data format');
+                }
+            } catch (error) {
+                console.error('Error loading route data:', error);
+                hideLoading();
+                showAlert('error', 'Failed to load route data. Please check if the server is running.');
+            }
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function updateUI() {
+            populateRouteDropdown();
+            updateStats();
+            updateAnalytics();
+            createClusterPalette();
+        }
+
+        function populateRouteDropdown() {
+            const select = document.getElementById("clusterSelect");
+            select.innerHTML = '<option value="all">All Routes</option>';
+            
+            allRoutes.forEach((route, index) => {
+                const option = document.createElement("option");
+                option.value = index;
+                option.text = `Route ${index + 1} - ${route.assigned_users.length} users (${((route.assigned_users.length / route.vehicle_type) * 100).toFixed(0)}% util)`;
+                select.appendChild(option);
+            });
+        }
+
+        function createClusterPalette() {
+            const container = document.getElementById('clusterPalette');
+            container.innerHTML = '';
+            
+            allRoutes.forEach((route, index) => {
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'cluster-color';
+                colorDiv.style.background = `linear-gradient(45deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -20)})`;
+                colorDiv.title = `Route ${index + 1} - Click to highlight`;
+                colorDiv.textContent = index + 1;
+                colorDiv.onclick = () => highlightRoute(index);
+                container.appendChild(colorDiv);
+            });
+        }
+
+        function renderMap() {
+            clearMap();
+            
+            let totalUsers = 0;
+            let heatmapData = [];
+
+            allRoutes.forEach((route, index) => {
+                const color = ROUTE_COLORS[index % ROUTE_COLORS.length];
+                renderRoute(route, index, color);
+                
+                route.assigned_users.forEach(user => {
+                    totalUsers++;
+                    heatmapData.push(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
+                });
+            });
+
+            if (displayState.heatmap && heatmapData.length > 0) {
+                createHeatmap(heatmapData);
+            }
+
+            updateDisplayButtons();
+        }
+
+        function renderRoute(route, index, color) {
+            const driverLat = parseFloat(route.latitude);
+            const driverLng = parseFloat(route.longitude);
+            const utilization = route.assigned_users.length / route.vehicle_type;
+
+            // Create enhanced driver marker
+            if (displayState.drivers) {
+                const driverMarker = new google.maps.Marker({
+                    position: { lat: driverLat, lng: driverLng },
+                    map: map,
+                    title: `Driver ${route.driver_id}`,
+                    icon: {
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                            <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="grad${index}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:${adjustBrightness(color, -30)};stop-opacity:1" />
+                                    </linearGradient>
+                                    <filter id="shadow${index}">
+                                        <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+                                    </filter>
+                                </defs>
+                                <circle cx="28" cy="28" r="24" fill="url(#grad${index})" stroke="#ffffff" stroke-width="4" filter="url(#shadow${index})"/>
+                                <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white" font-weight="bold">🚗</text>
+                                <text x="28" y="46" font-family="Arial" font-size="10" text-anchor="middle" fill="white" font-weight="bold">${index + 1}</text>
+                            </svg>
+                        `),
+                        scaledSize: new google.maps.Size(56, 56),
+                        anchor: new google.maps.Point(28, 28)
+                    },
+                    zIndex: 500
+                });
+
+                const driverInfo = createDriverInfoWindow(route, index, utilization);
+                driverMarker.addListener("click", () => {
+                    closeAllInfoWindows();
+                    driverInfo.open(map, driverMarker);
+                    showRouteInfo(route, index);
+                });
+
+                markers.drivers.push({ marker: driverMarker, infoWindow: driverInfo });
+            }
+
+            // Create enhanced user markers
+            route.assigned_users.forEach((user, userIndex) => {
+                const userLat = parseFloat(user.lat);
+                const userLng = parseFloat(user.lng);
+
+                if (displayState.users) {
+                    const userMarker = new google.maps.Marker({
+                        position: { lat: userLat, lng: userLng },
+                        map: map,
+                        title: `User ${user.user_id}`,
+                        icon: {
+                            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="usergrad${index}_${userIndex}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:${adjustBrightness(color, -20)};stop-opacity:1" />
+                                        </linearGradient>
+                                        <filter id="usershadow${index}_${userIndex}">
+                                            <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.3"/>
+                                        </filter>
+                                    </defs>
+                                    <circle cx="16" cy="16" r="12" fill="url(#usergrad${index}_${userIndex})" stroke="#ffffff" stroke-width="2" filter="url(#usershadow${index}_${userIndex})"/>
+                                    <text x="16" y="20" font-family="Arial" font-size="12" text-anchor="middle" fill="white">👤</text>
+                                </svg>
+                            `),
+                            scaledSize: new google.maps.Size(32, 32),
+                            anchor: new google.maps.Point(16, 16)
+                        },
+                        zIndex: 300
+                    });
+
+                    const userInfo = createUserInfoWindow(user, route, index);
+                    userMarker.addListener("click", () => {
+                        closeAllInfoWindows();
+                        userInfo.open(map, userMarker);
+                    });
+
+                    markers.users.push({ marker: userMarker, infoWindow: userInfo });
+                }
+            });
+
+            // Create sequential route for this driver after processing all users
+            if (displayState.routeLines && route.assigned_users.length > 0) {
+                createSequentialRoute(route, color, index);
+            }
+
+            // Create optimal path if enabled
+            if (displayState.optimalPaths) {
+                createOptimalPath(route, color);
+            }
+        }
+
+        function createDriverInfoWindow(route, index, utilization) {
+            const efficiencyRating = utilization >= 0.8 ? '🟢 Excellent' : utilization >= 0.6 ? '🟡 Good' : '🔴 Needs Improvement';
+            const utilizationPercent = (utilization * 100).toFixed(1);
+            
+            const content = `
+                <div style="font-family: Inter, sans-serif; min-width: 300px; padding: 20px; background: #0f172a; color: #f1f5f9; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #334155;">
+                        <div style="width: 40px; height: 40px; background: linear-gradient(45deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -30)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                            🚗
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; color: #f1f5f9; font-size: 18px;">Driver ${route.driver_id}</h3>
+                            <p style="margin: 0; color: #94a3b8; font-size: 13px;">Route ${index + 1}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; gap: 10px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #94a3b8; font-size: 13px;">🚙 Vehicle:</span>
+                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${route.vehicle_id}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #94a3b8; font-size: 13px;">👥 Capacity:</span>
+                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${route.vehicle_type} passengers</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #94a3b8; font-size: 13px;">✅ Assigned:</span>
+                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${route.assigned_users.length} users</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #94a3b8; font-size: 13px;">📊 Utilization:</span>
+                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${utilizationPercent}%</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #94a3b8; font-size: 13px;">⚡ Efficiency:</span>
+                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${efficiencyRating}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 11px; color: #94a3b8;">Utilization Progress</span>
+                            <span style="font-size: 11px; color: #94a3b8;">${utilizationPercent}%</span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
+                            <div style="height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f97316 50%, #22c55e 100%); width: ${utilizationPercent}%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    
+                    <p style="margin: 0; font-size: 11px; color: #64748b; text-align: center;">
+                        Click users to see their details • Real driving routes shown
+                    </p>
+                </div>
+            `;
+            
+            return new google.maps.InfoWindow({ content });
+        }
+
+        function createUserInfoWindow(user, route, routeIndex) {
+            const distanceToDriver = haversineDistance(
+                route.latitude, route.longitude,
+                user.lat, user.lng
+            );
+            
+            const content = `
+                <div style="font-family: Inter, sans-serif; min-width: 280px; padding: 18px; background: #0f172a; color: #f1f5f9; border-radius: 12px; border: 1px solid #334155;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #334155;">
+                        <div style="width: 36px; height: 36px; background: linear-gradient(45deg, ${ROUTE_COLORS[routeIndex % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[routeIndex % ROUTE_COLORS.length], -20)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                            👤
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; color: #f1f5f9; font-size: 16px;">User ${user.user_id}</h4>
+                            <p style="margin: 0; color: #94a3b8; font-size: 12px;">Route ${routeIndex + 1}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; gap: 8px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8; font-size: 12px;">📛 Name:</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 12px;">${user.first_name || 'N/A'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8; font-size: 12px;">🏢 Office Distance:</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 12px;">${user.office_distance} km</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8; font-size: 12px;">🚗 To Driver:</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 12px;">${distanceToDriver.toFixed(1)} km</span>
+                        </div>
+                        ${user.email ? `
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8; font-size: 12px;">📧 Email:</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${user.email}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div style="background: #1e293b; padding: 12px; border-radius: 8px; text-align: center;">
+                        <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                            📍 ${parseFloat(user.lat).toFixed(4)}, ${parseFloat(user.lng).toFixed(4)}
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            return new google.maps.InfoWindow({ content });
+        }
+
+        function createSequentialRoute(route, color, routeIndex) {
+            if (route.assigned_users.length === 0) return;
+
+            // Create waypoints array starting from driver
+            const waypoints = [];
+
+            // Add all user locations as waypoints
+            route.assigned_users.forEach(user => {
+                waypoints.push({
+                    location: { lat: parseFloat(user.lat), lng: parseFloat(user.lng) },
+                    stopover: true
+                });
+            });
+
+            // Create directions request: Driver -> Users -> Office
+            const directionsRenderer = new google.maps.DirectionsRenderer({
+                suppressMarkers: true,
+                preserveViewport: true,
+                polylineOptions: {
+                    strokeColor: color,
+                    strokeOpacity: 0.8,
+                    strokeWeight: 6,
+                    zIndex: 300
+                },
+            });
+            directionsRenderer.setMap(map);
+
+            // Build the sequential route
+            const request = {
+                origin: { lat: parseFloat(route.latitude), lng: parseFloat(route.longitude) },
+                destination: OFFICE_LOCATION, // End at office
+                waypoints: waypoints,
+                optimizeWaypoints: true, // Let Google optimize the order
+                travelMode: google.maps.TravelMode.DRIVING,
+                avoidHighways: false,
+                avoidTolls: false
+            };
+
+            directionsService.route(request, (response, status) => {
+                if (status === "OK") {
+                    directionsRenderer.setDirections(response);
+
+                    // Add route markers to show sequence
+                    const legs = response.routes[0].legs;
+                    legs.forEach((leg, legIndex) => {
+                        if (legIndex < legs.length) {
+                            // Add sequence number markers at each stop
+                            const sequenceMarker = new google.maps.Marker({
+                                position: leg.start_location,
+                                map: map,
+                                icon: {
+                                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="12" cy="12" r="10" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+                                            <text x="12" y="16" font-family="Arial" font-size="12" text-anchor="middle" fill="white" font-weight="bold">${legIndex + 1}</text>
+                                        </svg>
+                                    `),
+                                    scaledSize: new google.maps.Size(24, 24),
+                                    anchor: new google.maps.Point(12, 12)
+                                },
+                                title: `Stop ${legIndex + 1} in Route ${routeIndex + 1}`,
+                                zIndex: 400
+                            });
+
+                            markers.routes.push(sequenceMarker);
+                        }
+                    });
+
+                    console.log(`✅ Sequential route created for Driver ${route.driver_id} with ${route.assigned_users.length} stops`);
+                } else {
+                    console.warn(`Sequential route failed for Driver ${route.driver_id}:`, status);
+                    // Fallback to straight lines if directions fail
+                    createFallbackSequentialRoute(route, color);
+                }
+            });
+
+            routeRenderers.push({ renderer: directionsRenderer, polyline: null });
+        }
+
+        function createFallbackSequentialRoute(route, color) {
+            // Create simple polyline route as fallback
+            const routePath = [
+                { lat: parseFloat(route.latitude), lng: parseFloat(route.longitude) } // Start at driver
+            ];
+
+            // Add all user locations
+            route.assigned_users.forEach(user => {
+                routePath.push({ lat: parseFloat(user.lat), lng: parseFloat(user.lng) });
+            });
+
+            // End at office
+            routePath.push(OFFICE_LOCATION);
+
+            const fallbackRoute = new google.maps.Polyline({
+                path: routePath,
+                geodesic: true,
+                strokeColor: color,
+                strokeOpacity: 0.7,
+                strokeWeight: 4,
+                zIndex: 250,
+                icons: [{
+                    icon: {
+                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                        scale: 3,
+                        fillColor: color,
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 1
+                    },
+                    offset: '100%',
+                    repeat: '30px'
+                }]
+            });
+
+            fallbackRoute.setMap(map);
+            routeRenderers.push({ renderer: null, polyline: fallbackRoute });
+        }
+
+        function createOptimalPath(route, color) {
+            if (route.assigned_users.length < 2) return;
+
+            // Create TSP-like optimal path through all users
+            const points = [
+                { lat: parseFloat(route.latitude), lng: parseFloat(route.longitude), type: 'driver' },
+                ...route.assigned_users.map(user => ({
+                    lat: parseFloat(user.lat),
+                    lng: parseFloat(user.lng),
+                    type: 'user',
+                    id: user.user_id
+                }))
+            ];
+
+            // Simple nearest neighbor algorithm for demonstration
+            const path = [points[0]]; // Start with driver
+            const remaining = points.slice(1);
+
+            while (remaining.length > 0) {
+                const current = path[path.length - 1];
+                let nearest = remaining[0];
+                let nearestIndex = 0;
+                let minDistance = haversineDistance(current.lat, current.lng, nearest.lat, nearest.lng);
+
+                for (let i = 1; i < remaining.length; i++) {
+                    const distance = haversineDistance(current.lat, current.lng, remaining[i].lat, remaining[i].lng);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearest = remaining[i];
+                        nearestIndex = i;
+                    }
+                }
+
+                path.push(nearest);
+                remaining.splice(nearestIndex, 1);
+            }
+
+            // Add office as final destination
+            path.push({ lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng, type: 'office' });
+
+            const optimalPath = new google.maps.Polyline({
+                path: path.map(p => ({ lat: p.lat, lng: p.lng })),
+                geodesic: true,
+                strokeColor: color,
+                strokeOpacity: 0.9,
+                strokeWeight: 6,
+                zIndex: 400,
+                icons: [{
+                    icon: {
+                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                        scale: 3,
+                        fillColor: color,
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 1
+                    },
+                    offset: '100%',
+                    repeat: '50px'
+                }]
+            });
+
+            optimalPath.setMap(map);
+            optimalPaths.push(optimalPath);
+        }
+
+        function createHeatmap(data) {
+            heatmap = new google.maps.visualization.HeatmapLayer({
+                data: data,
+                map: map,
+                radius: 30,
+                opacity: 0.8,
+                gradient: [
+                    'rgba(0, 255, 255, 0)',
+                    'rgba(0, 255, 255, 1)',
+                    'rgba(0, 191, 255, 1)',
+                    'rgba(0, 127, 255, 1)',
+                    'rgba(0, 63, 255, 1)',
+                    'rgba(0, 0, 255, 1)',
+                    'rgba(0, 0, 223, 1)',
+                    'rgba(0, 0, 191, 1)',
+                    'rgba(0, 0, 159, 1)',
+                    'rgba(0, 0, 127, 1)',
+                    'rgba(63, 0, 91, 1)',
+                    'rgba(127, 0, 63, 1)',
+                    'rgba(191, 0, 31, 1)',
+                    'rgba(255, 0, 0, 1)'
+                ]
+            });
+        }
+
+        function updateStats() {
+            const totalRoutes = allRoutes.length;
+            const totalUsers = allRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
+            const totalDrivers = allRoutes.length;
+            
+            const utilizations = allRoutes.map(route => route.assigned_users.length / route.vehicle_type);
+            const avgUtilization = utilizations.length ? 
+                (utilizations.reduce((a, b) => a + b, 0) / utilizations.length * 100).toFixed(1) : 0;
+
+            document.getElementById('totalRoutes').textContent = totalRoutes;
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('avgUtilization').textContent = avgUtilization + '%';
+            document.getElementById('totalDrivers').textContent = totalDrivers;
+        }
+
+        function updateAnalytics() {
+            const totalUsers = allRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
+            const totalCapacity = allRoutes.reduce((sum, route) => sum + route.vehicle_type, 0);
+            
+            // Performance metrics
+            const assignmentRate = totalUsers && totalCapacity ? Math.min(100, (totalUsers / totalCapacity * 100)).toFixed(1) : 0;
+            const capacityUtilization = totalCapacity ? (totalUsers / totalCapacity * 100).toFixed(1) : 0;
+            
+            // Distance calculations
+            let totalDistance = 0;
+            let connectionCount = 0;
+            allRoutes.forEach(route => {
+                route.assigned_users.forEach(user => {
+                    totalDistance += haversineDistance(route.latitude, route.longitude, user.lat, user.lng);
+                    connectionCount++;
+                });
+            });
+            const avgDistance = connectionCount ? (totalDistance / connectionCount).toFixed(1) : 0;
+            
+            // Efficiency score (0-10)
+            const efficiencyScore = calculateEfficiencyScore(allRoutes).toFixed(1);
+            
+            // Route quality breakdown
+            const highEfficiency = allRoutes.filter(r => (r.assigned_users.length / r.vehicle_type) >= 0.8).length;
+            const mediumEfficiency = allRoutes.filter(r => {
+                const util = r.assigned_users.length / r.vehicle_type;
+                return util >= 0.5 && util < 0.8;
+            }).length;
+            const lowEfficiency = allRoutes.filter(r => (r.assigned_users.length / r.vehicle_type) < 0.5).length;
+
+            // Update UI
+            document.getElementById('assignmentRate').textContent = assignmentRate + '%';
+            document.getElementById('capacityUtilization').textContent = capacityUtilization + '%';
+            document.getElementById('avgDistance').textContent = avgDistance + ' km';
+            document.getElementById('efficiencyScore').textContent = efficiencyScore + '/10';
+            document.getElementById('highEfficiencyRoutes').textContent = highEfficiency;
+            document.getElementById('mediumEfficiencyRoutes').textContent = mediumEfficiency;
+            document.getElementById('lowEfficiencyRoutes').textContent = lowEfficiency;
+
+            // Generate alerts
+            generateSystemAlerts({
+                assignmentRate: parseFloat(assignmentRate),
+                capacityUtilization: parseFloat(capacityUtilization),
+                avgDistance: parseFloat(avgDistance),
+                efficiencyScore: parseFloat(efficiencyScore),
+                lowEfficiency
+            });
+        }
+
+        function calculateEfficiencyScore(routes) {
+            if (routes.length === 0) return 0;
+
+            let score = 0;
+            let factors = 0;
+
+            // Factor 1: Utilization (40% weight)
+            const avgUtilization = routes.reduce((sum, r) => sum + (r.assigned_users.length / r.vehicle_type), 0) / routes.length;
+            score += Math.min(avgUtilization * 10, 4);
+            factors += 4;
+
+            // Factor 2: Distance efficiency (30% weight)
+            let totalDistance = 0;
+            let connections = 0;
+            routes.forEach(route => {
+                route.assigned_users.forEach(user => {
+                    totalDistance += haversineDistance(route.latitude, route.longitude, user.lat, user.lng);
+                    connections++;
+                });
+            });
+            const avgDistance = connections ? totalDistance / connections : 0;
+            const distanceScore = Math.max(0, 3 - (avgDistance / 5) * 3); // 3 points max, penalty for distance > 5km
+            score += distanceScore;
+            factors += 3;
+
+            // Factor 3: Balance (30% weight)
+            const utilizations = routes.map(r => r.assigned_users.length / r.vehicle_type);
+            const stdDev = Math.sqrt(utilizations.reduce((sum, u) => sum + Math.pow(u - avgUtilization, 2), 0) / utilizations.length);
+            const balanceScore = Math.max(0, 3 - stdDev * 6); // 3 points max, penalty for high variance
+            score += balanceScore;
+            factors += 3;
+
+            return score;
+        }
+
+        function generateSystemAlerts(metrics) {
+            const container = document.getElementById('alertsContainer');
+            container.innerHTML = '';
+
+            const alerts = [];
+
+            if (metrics.capacityUtilization < 60) {
+                alerts.push({
+                    type: 'warning',
+                    icon: 'exclamation-triangle',
+                    message: `Low capacity utilization (${metrics.capacityUtilization}%) - Consider optimizing routes`
+                });
+            }
+
+            if (metrics.avgDistance > 8) {
+                alerts.push({
+                    type: 'error',
+                    icon: 'route',
+                    message: `High average distance (${metrics.avgDistance} km) - Routes may be inefficient`
+                });
+            }
+
+            if (metrics.lowEfficiency > allRoutes.length * 0.3) {
+                alerts.push({
+                    type: 'warning',
+                    icon: 'chart-line',
+                    message: `${metrics.lowEfficiency} routes have low efficiency - Review assignments`
+                });
+            }
+
+            if (metrics.efficiencyScore >= 8) {
+                alerts.push({
+                    type: 'success',
+                    icon: 'check-circle',
+                    message: `Excellent efficiency score (${metrics.efficiencyScore}/10)!`
+                });
+            }
+
+            if (alerts.length === 0) {
+                alerts.push({
+                    type: 'success',
+                    icon: 'thumbs-up',
+                    message: 'All systems operating efficiently'
+                });
+            }
+
+            alerts.forEach(alert => {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${alert.type}`;
+                alertDiv.innerHTML = `<i class="fas fa-${alert.icon}"></i> ${alert.message}`;
+                container.appendChild(alertDiv);
+            });
+        }
+
+        // Utility Functions
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function adjustBrightness(color, amount) {
+            const usePound = color[0] === "#";
+            const col = usePound ? color.slice(1) : color;
+            const num = parseInt(col, 16);
+            let r = (num >> 16) + amount;
+            let b = (num >> 8 & 0x00FF) + amount;
+            let g = (num & 0x0000FF) + amount;
+            r = r > 255 ? 255 : r < 0 ? 0 : r;
+            b = b > 255 ? 255 : b < 0 ? 0 : b;
+            g = g > 255 ? 255 : g < 0 ? 0 : g;
+            return (usePound ? "#" : "") + String("000000" + (g | (b << 8) | (r << 16)).toString(16)).slice(-6);
+        }
+
+        function clearMap() {
+            // Clear all markers except office
+            [...markers.drivers, ...markers.users, ...markers.routes].forEach(item => {
+                if (item.marker) {
+                    item.marker.setMap(null);
+                    if (item.infoWindow) item.infoWindow.close();
+                } else {
+                    // Handle sequence markers
+                    item.setMap(null);
+                }
+            });
+
+            // Clear route renderers and polylines
+            routeRenderers.forEach(item => {
+                if (item.renderer) item.renderer.setMap(null);
+                if (item.polyline) item.polyline.setMap(null);
+            });
+            optimalPaths.forEach(path => path.setMap(null));
+
+            // Clear heatmap
+            if (heatmap) heatmap.setMap(null);
+
+            // Reset arrays
+            markers.drivers = [];
+            markers.users = [];
+            markers.routes = [];
+            routeRenderers = [];
+            optimalPaths = [];
+            heatmap = null;
+        }
+
+        function closeAllInfoWindows() {
+            [...markers.drivers, ...markers.users].forEach(item => {
+                if (item.infoWindow) item.infoWindow.close();
+            });
+        }
+
+        function showAlert(type, message) {
+            const container = document.getElementById('alertsContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+            container.appendChild(alertDiv);
+        }
+
+        function showRouteInfo(route, index) {
+            const popup = document.getElementById('routeInfoPopup');
+            const utilization = (route.assigned_users.length / route.vehicle_type * 100).toFixed(1);
+            
+            const content = `
+                <div style="font-family: Inter, sans-serif;">
+                    <h4 style="margin: 0 0 15px 0; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 28px; height: 28px; background: linear-gradient(45deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -30)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">${index + 1}</div>
+                        Route ${index + 1}
+                    </h4>
+                    <div style="display: grid; gap: 8px; font-size: 13px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8;">Driver:</span>
+                            <span style="font-weight: 600; color: #f1f5f9;">${route.driver_id}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8;">Utilization:</span>
+                            <span style="font-weight: 600; color: #f1f5f9;">${utilization}%</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #94a3b8;">Efficiency:</span>
+                            <span style="font-weight: 600; color: #f1f5f9;">${utilization >= 80 ? '🟢 High' : utilization >= 50 ? '🟡 Medium' : '🔴 Low'}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <div style="background: #334155; height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="height: 100%; background: linear-gradient(90deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -20)}); width: ${utilization}%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('routeInfoContent').innerHTML = content;
+            popup.style.display = 'block';
+            
+            setTimeout(() => popup.style.display = 'none', 5000);
+        }
+
+        // Event Handlers
+        function handleSearch() {
+            const query = document.getElementById("searchInput").value.toLowerCase();
+            if (!query) {
+                loadRouteData(); // Reload all data if search is cleared
+                return;
+            }
+
+            // Reload original data to filter from
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(routes => {
+                    const filtered = routes.filter(route =>
+                        route.driver_id.toLowerCase().includes(query) ||
+                        route.vehicle_id.toLowerCase().includes(query) ||
+                        route.assigned_users.some(user => 
+                            user.user_id.toLowerCase().includes(query) ||
+                            (user.first_name && user.first_name.toLowerCase().includes(query)) ||
+                            (user.email && user.email.toLowerCase().includes(query))
+                        )
+                    );
+                    allRoutes = filtered;
+                    renderMap();
+                    updateStats(); // Update stats based on filtered data
+                })
+                .catch(error => {
+                    console.error('Error reloading data for search:', error);
+                    showAlert('error', 'Failed to refresh data for search.');
+                });
+        }
+
+        function filterCluster() {
+            const selectedValue = document.getElementById("clusterSelect").value;
+            if (selectedValue === "all") {
+                loadRouteData(); // Reload all data
+            } else {
+                // Reload original data to ensure we have the correct route
+                fetch(API_URL)
+                    .then(res => res.json())
+                    .then(routes => {
+                        if (routes && routes[parseInt(selectedValue)]) {
+                            allRoutes = [routes[parseInt(selectedValue)]];
+                            renderMap();
+                            updateStats(); // Update stats for the single route
+                        } else {
+                            showAlert('error', 'Selected route not found.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error reloading data for cluster filter:', error);
+                        showAlert('error', 'Failed to refresh data for filtering.');
+                    });
+            } 
+        }
+
+        function filterByUtilization() {
+            const minUtilizationPercent = parseInt(document.getElementById("utilizationRange").value);
+            const minUtilization = minUtilizationPercent / 100;
+            document.getElementById("utilizationValue").textContent = `${minUtilizationPercent}%`;
+            
+            // Reload original data to filter from
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(routes => {
+                    const filtered = routes.filter(route => {
+                        const utilization = route.assigned_users.length / route.vehicle_type;
+                        return utilization >= minUtilization;
+                    });
+                    allRoutes = filtered;
+                    renderMap();
+                    updateStats(); // Update stats based on filtered data
+                })
+                .catch(error => {
+                    console.error('Error reloading data for utilization filter:', error);
+                    showAlert('error', 'Failed to refresh data for filtering.');
+                });
+        }
+
+        function highlightRoute(index) {
+            // Remove existing highlights
+            document.querySelectorAll('.cluster-color').forEach(el => el.classList.remove('active'));
+            
+            // Highlight selected
+            const highlightedElement = document.querySelector(`.cluster-color:nth-child(${index + 1})`);
+            if (highlightedElement) {
+                highlightedElement.classList.add('active');
+            }
+            
+            // Filter to show only this route
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(routes => {
+                    if (routes && routes[index]) {
+                        allRoutes = [routes[index]];
+                        renderMap();
+                        updateStats(); // Update stats for the single route
+                        
+                        // Focus map on this route
+                        const route = allRoutes[0];
+                        if (route.assigned_users.length > 0) {
+                            const bounds = new google.maps.LatLngBounds();
+                            bounds.extend(new google.maps.LatLng(parseFloat(route.latitude), parseFloat(route.longitude)));
+                            route.assigned_users.forEach(user => {
+                                bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
+                            });
+                            map.fitBounds(bounds);
+                        }
+                    } else {
+                        showAlert('error', 'Selected route not found.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error reloading data for highlighting:', error);
+                    showAlert('error', 'Failed to refresh data for highlighting.');
+                });
+        }
+
+        // Toggle Functions
+        function toggleUsers() {
+            displayState.users = !displayState.users;
+            renderMap();
+            updateDisplayButtons();
+        }
+
+        function toggleDrivers() {
+            displayState.drivers = !displayState.drivers;
+            renderMap();
+            updateDisplayButtons();
+        }
+
+        function toggleRouteLines() {
+            displayState.routeLines = !displayState.routeLines;
+            renderMap();
+            updateDisplayButtons();
+        }
+
+        function toggleHeatmap() {
+            displayState.heatmap = !displayState.heatmap;
+            renderMap();
+            updateDisplayButtons();
+        }
+
+        function showOptimalPaths() {
+            displayState.optimalPaths = !displayState.optimalPaths;
+            renderMap();
+            updateDisplayButtons();
+        }
+
+        function updateDisplayButtons() {
+            const buttons = [
+                { id: 'toggleUsersBtn', state: displayState.users },
+                { id: 'toggleDriversBtn', state: displayState.drivers },
+                { id: 'toggleRouteLinesBtn', state: displayState.routeLines },
+                { id: 'toggleHeatmapBtn', state: displayState.heatmap },
+                { id: 'showOptimalBtn', state: displayState.optimalPaths }
+            ];
+
+            buttons.forEach(({ id, state }) => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    if (state) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        // Map Control Functions
+        function centerOnOffice() {
+            map.setCenter(OFFICE_LOCATION);
+            map.setZoom(12);
+        }
+
+        function fitAllRoutes() {
+            if (allRoutes.length === 0) return;
+
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(OFFICE_LOCATION);
+            
+            allRoutes.forEach(route => {
+                bounds.extend(new google.maps.LatLng(parseFloat(route.latitude), parseFloat(route.longitude)));
+                route.assigned_users.forEach(user => {
+                    bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
+                });
+            });
+            
+            map.fitBounds(bounds);
+        }
+
+        function refreshData() {
+            showAlert('success', 'Refreshing route data...');
+            loadRouteData();
+        }
+
+        // Export Functions
+        function exportAnalytics() {
+            const csvData = allRoutes.map((route, index) => ({
+                route_id: index + 1,
+                driver_id: route.driver_id,
+                vehicle_id: route.vehicle_id,
+                capacity: route.vehicle_type,
+                assigned_users: route.assigned_users.length,
+                utilization_percent: ((route.assigned_users.length / route.vehicle_type) * 100).toFixed(2),
+                efficiency_rating: route.assigned_users.length / route.vehicle_type >= 0.8 ? 'High' : 
+                                 route.assigned_users.length / route.vehicle_type >= 0.5 ? 'Medium' : 'Low',
+                driver_lat: route.latitude,
+                driver_lng: route.longitude
+            }));
+
+            if (csvData.length === 0) {
+                showAlert('warning', 'No data available to export.');
+                return;
+            }
+
+            const csv = [
+                Object.keys(csvData[0]).join(','),
+                ...csvData.map(row => Object.values(row).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `routeflow-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+            
+            showAlert('success', 'Analytics data exported successfully!');
+        }
+
+        function generateReport() {
+            const report = {
+                generated_at: new Date().toISOString(),
+                platform: "RouteFlow - Smart Driver Assignment Platform",
+                summary: {
+                    total_routes: allRoutes.length,
+                    total_users: allRoutes.reduce((sum, r) => sum + r.assigned_users.length, 0),
+                    total_capacity: allRoutes.reduce((sum, r) => sum + r.vehicle_type, 0),
+                    average_utilization: allRoutes.length > 0 ? (allRoutes.reduce((sum, r) => sum + (r.assigned_users.length / r.vehicle_type), 0) / allRoutes.length * 100).toFixed(2) : 0,
+                    efficiency_score: calculateEfficiencyScore(allRoutes).toFixed(2)
+                },
+                route_details: allRoutes.map((route, index) => ({
+                    route_id: index + 1,
+                    driver_id: route.driver_id,
+                    vehicle_info: {
+                        vehicle_id: route.vehicle_id,
+                        capacity: route.vehicle_type
+                    },
+                    assignment_info: {
+                        users_assigned: route.assigned_users.length,
+                        utilization_percent: ((route.assigned_users.length / route.vehicle_type) * 100).toFixed(2),
+                        efficiency_rating: route.assigned_users.length / route.vehicle_type >= 0.8 ? 'High' : 
+                                         route.assigned_users.length / route.vehicle_type >= 0.5 ? 'Medium' : 'Low'
+                    },
+                    location: {
+                        latitude: route.latitude,
+                        longitude: route.longitude
+                    },
+                    assigned_users: route.assigned_users
+                }))
+            };
+
+            if (allRoutes.length === 0) {
+                showAlert('warning', 'No data available to generate report.');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `routeflow-report-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+            
+            showAlert('success', 'Comprehensive report generated successfully!');
+        }
+
+        function exportMapImage() {
+            // Note: This would require html2canvas library for actual implementation
+            // For now, instructing the user to use browser's screenshot feature.
+            showAlert('warning', 'Map capture feature requires external libraries. Please use your browser\'s screenshot tool.');
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Any additional initialization code can go here if needed
+        });
+    </script>
+
+    <!-- Google Maps API with visualization library -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjESclgKTCpmdmHKc7bzCKIQtYe_vIbb4&libraries=places,visualization&callback=initMap&libraries=places" async defer></script>
+</body>
+</html>
