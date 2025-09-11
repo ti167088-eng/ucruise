@@ -28,83 +28,98 @@ from progress_tracker import get_progress_tracker
 # File context for logging
 FILE_CONTEXT = "ASSIGN_CAPACITY.PY (CAPACITY OPTIMIZATION)"
 
-# Try to import road network, fallback to mock if not available
-try:
-    from road_network import RoadNetwork
-    road_network = None
-    logger = get_logger()
-    try:
-        road_network = RoadNetwork('tricity_main_roads.graphml')
-        logger.info("✅ Successfully loaded RoadNetwork with GraphML data")
-    except Exception as e:
-        logger.warning(
-            f"Could not create RoadNetwork instance: {e}. Using mock implementation."
-        )
-        road_network = None
-except ImportError:
-    logger = get_logger()
-    logger.warning(
-        "road_network module not available, using mock implementation")
-    road_network = None
+# Disable road network for better bearing-based routing
+road_network = None
+logger = get_logger()
+logger.info("🎯 Using bearing-focused routing without road network dependency")
 
 
-# Mock road network class for fallback
-class MockRoadNetwork:
+# Bearing-focused routing class
+class BearingFocusedRouting:
 
     def get_road_distance(self, lat1, lon1, lat2, lon2):
-        return haversine_distance(lat1, lon1, lat2, lon2) * 1.3
+        return haversine_distance(lat1, lon1, lat2, lon2) * 1.2  # Slightly conservative estimate
 
     def is_user_on_route_path(self,
                               driver_pos,
                               existing_users,
                               candidate_pos,
                               office_pos,
-                              max_detour_ratio=1.15,
+                              max_detour_ratio=1.10,
                               route_type="capacity"):
-        # CONSERVATIVE geometric check with strict constraints
-        def projection_along(a_lat, a_lon, b_lat, b_lon, ref_bearing):
-            d = haversine_distance(a_lat, a_lon, b_lat, b_lon)
-            b = calculate_bearing(a_lat, a_lon, b_lat, b_lon)
-            diff = bearing_difference(b, ref_bearing)
-            return d * math.cos(math.radians(diff)), diff
+        """Ultra-strict bearing-based validation for directional consistency"""
 
-        main_bearing = calculate_bearing(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
-        proj, diff = projection_along(driver_pos[0], driver_pos[1], candidate_pos[0], candidate_pos[1], main_bearing)
+        # Calculate main route bearing (office to driver direction, reversed)
+        main_bearing = calculate_bearing(office_pos[0], office_pos[1], driver_pos[0], driver_pos[1])
 
-        # STRICT: Must be significantly ahead (not just barely positive)
-        if proj <= 0.3:  # Require at least 300m forward projection
-            return False
-            
-        # STRICT: Much tighter bearing tolerance
-        max_bearing_tolerance = min(0.5 * _config.get('MAX_BEARING_DIFFERENCE', 25), 20)  # Cap at 20 degrees
-        if diff > max_bearing_tolerance:
+        # Calculate candidate bearing from office
+        candidate_bearing = calculate_bearing(office_pos[0], office_pos[1], candidate_pos[0], candidate_pos[1])
+
+        # ULTRA STRICT: Maximum 12 degrees bearing difference
+        bearing_diff = bearing_difference(main_bearing, candidate_bearing)
+        if bearing_diff > 12:
             return False
 
-        # STRICT: Conservative detour check
-        direct = haversine_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
-        via_candidate = (haversine_distance(driver_pos[0], driver_pos[1], candidate_pos[0], candidate_pos[1]) +
-                         haversine_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1]))
-        if direct == 0:
-            return True
-        if (via_candidate / direct) > min(max_detour_ratio, 1.12):  # Conservative detour limit
+        # Distance progression check - candidate should be closer to office than driver
+        driver_to_office = haversine_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
+        candidate_to_office = haversine_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1])
+
+        # Must be making progress toward office
+        if candidate_to_office > driver_to_office + 0.5:  # 500m tolerance
             return False
 
-        # STRICT: If there are existing users, candidate must be very close to route corridor
-        if existing_users:
-            min_dist = min(haversine_distance(candidate_pos[0], candidate_pos[1], u[0], u[1]) for u in existing_users)
-            max_allowed_distance = _config.get('MAX_FILL_DISTANCE_KM', 6.0) * 0.3  # Reduced from 0.6
-            if min_dist > max_allowed_distance:
+        # ULTRA STRICT detour check
+        driver_to_candidate = haversine_distance(driver_pos[0], driver_pos[1], candidate_pos[0], candidate_pos[1])
+        total_distance = driver_to_candidate + candidate_to_office
+
+        if driver_to_office > 0:
+            detour_ratio = total_distance / driver_to_office
+            if detour_ratio > 1.08:  # Maximum 8% detour
                 return False
+
+        # If existing users, check bearing consistency within the route
+        if existing_users:
+            for user_pos in existing_users:
+                user_bearing = calculate_bearing(office_pos[0], office_pos[1], user_pos[0], user_pos[1])
+                user_bearing_diff = bearing_difference(candidate_bearing, user_bearing)
+                if user_bearing_diff > 8:  # Maximum 8 degrees between users in same route
+                    return False
 
         return True
 
-    def get_route_coherence_score(self, driver_pos, user_positions,
-                                  office_pos):
-        return 0.8  # Assume good coherence for capacity optimization
+    def get_route_coherence_score(self, driver_pos, user_positions, office_pos):
+        """Calculate coherence based purely on bearing consistency"""
+        if not user_positions:
+            return 1.0
+
+        # Calculate bearing from office to driver
+        main_bearing = calculate_bearing(office_pos[0], office_pos[1], driver_pos[0], driver_pos[1])
+
+        # Check bearing consistency for all users
+        total_deviation = 0.0
+        for user_pos in user_positions:
+            user_bearing = calculate_bearing(office_pos[0], office_pos[1], user_pos[0], user_pos[1])
+            deviation = bearing_difference(main_bearing, user_bearing)
+            total_deviation += deviation
+
+        if len(user_positions) == 0:
+            return 1.0
+
+        avg_deviation = total_deviation / len(user_positions)
+
+        # Score based on average deviation (lower is better)
+        if avg_deviation <= 10:
+            return 1.0
+        elif avg_deviation <= 20:
+            return 0.8
+        elif avg_deviation <= 30:
+            return 0.6
+        else:
+            return 0.3
 
 
-if road_network is None:
-    road_network = MockRoadNetwork()
+# Always use bearing-focused routing for better directional consistency
+road_network = BearingFocusedRouting()
 
 
 # Load and validate configuration
@@ -132,36 +147,36 @@ def load_and_validate_config():
     # Validate and set configuration with mode-specific overrides
     config = {}
 
-    # Distance configurations - more lenient for capacity optimization
+    # Distance configurations - stricter for bearing-focused routing
     config['MAX_FILL_DISTANCE_KM'] = max(
         0.1,
         float(
             mode_config.get("max_fill_distance_km",
-                            cfg.get("max_fill_distance_km", 15.0))))
+                            cfg.get("max_fill_distance_km", 8.0))))  # Reduced from 15.0
     config['MERGE_DISTANCE_KM'] = max(
         0.1,
         float(
             mode_config.get("merge_distance_km",
-                            cfg.get("merge_distance_km", 10.0))))
-    config['DBSCAN_EPS_KM'] = max(0.1, float(cfg.get("dbscan_eps_km", 3.0)))
+                            cfg.get("merge_distance_km", 6.0))))  # Reduced from 10.0
+    config['DBSCAN_EPS_KM'] = max(0.1, float(cfg.get("dbscan_eps_km", 2.0)))  # Reduced from 3.0
     config['MIN_SAMPLES_DBSCAN'] = max(1, int(cfg.get("min_samples_dbscan",
                                                       2)))
 
-    # Angle configurations - more lenient for capacity optimization
+    # Angle configurations - much stricter for bearing-focused routing
     config['MAX_BEARING_DIFFERENCE'] = max(
         0,
         min(
             180,
             float(
                 mode_config.get("max_bearing_difference",
-                                cfg.get("max_bearing_difference", 60)))))
+                                cfg.get("max_bearing_difference", 15)))))  # Reduced from 60
     config['MAX_TURNING_ANGLE'] = max(
         0,
         min(
             180,
             float(
                 mode_config.get("max_allowed_turning_score",
-                                cfg.get("max_allowed_turning_score", 90)))))
+                                cfg.get("max_allowed_turning_score", 30)))))  # Reduced from 90
 
     # Capacity optimization specific settings
     config['capacity_weight'] = mode_config.get('capacity_weight', 10.0)
@@ -553,6 +568,9 @@ def step3_assign_routes(user_df, driver_df, office_lat, office_lon):
     available_drivers = driver_df.sort_values(['capacity', 'priority'],
                                               ascending=[False, True])
 
+    logger.info(f"🔍 DEBUG: Processing {user_df['sub_cluster'].nunique()} sub-clusters")
+    logger.info(f"🔍 DEBUG: Available drivers: {len(available_drivers)}")
+    
     # Process each sub-cluster with bearing coherence check
     for sub_cluster_id in sorted(user_df['sub_cluster'].unique()):
         if sub_cluster_id == -1:
@@ -565,26 +583,40 @@ def step3_assign_routes(user_df, driver_df, office_lat, office_lon):
         if unassigned_in_cluster.empty:
             continue
 
+        logger.info(f"🔍 DEBUG: Processing sub-cluster {sub_cluster_id} with {len(unassigned_in_cluster)} users")
+        
+        # Log user details in this cluster
+        for _, user in unassigned_in_cluster.iterrows():
+            user_bearing = user['bearing_from_office']
+            logger.info(f"  🧭 User {user['user_id']}: bearing={user_bearing:.1f}°, lat={user['latitude']:.6f}, lng={user['longitude']:.6f}")
+
         # Check bearing coherence within cluster
         if len(unassigned_in_cluster) > 1:
             bearings = unassigned_in_cluster['bearing_from_office'].values
             bearing_diffs = []
             for i in range(len(bearings)):
                 for j in range(i + 1, len(bearings)):
-                    bearing_diffs.append(
-                        bearing_difference(bearings[i], bearings[j]))
+                    diff = bearing_difference(bearings[i], bearings[j])
+                    bearing_diffs.append(diff)
+                    logger.info(f"    🔄 Bearing diff between users {unassigned_in_cluster.iloc[i]['user_id']} and {unassigned_in_cluster.iloc[j]['user_id']}: {diff:.1f}°")
 
             max_bearing_diff = max(bearing_diffs) if bearing_diffs else 0
+            logger.info(f"  📏 Max bearing difference in cluster {sub_cluster_id}: {max_bearing_diff:.1f}° (threshold: {_config['MAX_BEARING_DIFFERENCE']}°)")
 
             # If bearing spread is too large, split the cluster
             if max_bearing_diff > _config['MAX_BEARING_DIFFERENCE']:
                 logger.info(
-                    f"  📐 Splitting cluster {sub_cluster_id} due to bearing spread ({max_bearing_diff:.1f}°)"
+                    f"  📐 SPLITTING cluster {sub_cluster_id} due to bearing spread ({max_bearing_diff:.1f}°)"
                 )
                 split_clusters = split_cluster_by_bearing(
                     unassigned_in_cluster, office_lat, office_lon)
 
-                for split_cluster in split_clusters:
+                logger.info(f"  🔗 Split into {len(split_clusters)} sub-clusters")
+                for i, split_cluster in enumerate(split_clusters):
+                    logger.info(f"    📦 Split cluster {i+1}: {len(split_cluster)} users")
+                    for _, user in split_cluster.iterrows():
+                        logger.info(f"      👤 User {user['user_id']}: bearing={user['bearing_from_office']:.1f}°")
+                    
                     route = assign_driver_to_cluster(split_cluster,
                                                      available_drivers,
                                                      used_driver_ids,
@@ -594,9 +626,13 @@ def step3_assign_routes(user_df, driver_df, office_lat, office_lon):
                         assigned_user_ids.update(
                             u['user_id'] for u in route['assigned_users'])
                         used_driver_ids.add(route['driver_id'])
+                        logger.info(f"    ✅ Route created for split cluster {i+1} with driver {route['driver_id']}")
+                    else:
+                        logger.warning(f"    ❌ Failed to create route for split cluster {i+1}")
                 continue
 
         # Normal assignment for coherent clusters
+        logger.info(f"  ✅ Cluster {sub_cluster_id} is directionally coherent, assigning to single driver")
         route = assign_driver_to_cluster(unassigned_in_cluster,
                                          available_drivers, used_driver_ids,
                                          office_lat, office_lon)
@@ -605,30 +641,88 @@ def step3_assign_routes(user_df, driver_df, office_lat, office_lon):
             assigned_user_ids.update(u['user_id']
                                      for u in route['assigned_users'])
             used_driver_ids.add(route['driver_id'])
+            logger.info(f"  ✅ Route created for cluster {sub_cluster_id} with driver {route['driver_id']}")
+        else:
+            logger.warning(f"  ❌ Failed to create route for cluster {sub_cluster_id}")
 
     logger.info(
         f"✅ COMPLETED STEP 3: INITIAL ROUTE ASSIGNMENT - {len(routes)} routes created"
     )
+    
+    # Log final route details for validation
+    logger.info("🔍 DEBUG: Final routes from Step 3:")
+    for i, route in enumerate(routes, 1):
+        logger.info(f"  Route {i} - Driver {route['driver_id']}:")
+        driver_bearing = calculate_bearing(office_lat, office_lon, route['latitude'], route['longitude'])
+        logger.info(f"    🧭 Driver bearing: {driver_bearing:.1f}°")
+        logger.info(f"    👥 Users ({len(route['assigned_users'])}):")
+        for user in route['assigned_users']:
+            user_bearing = calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
+            logger.info(f"      - User {user['user_id']}: bearing={user_bearing:.1f}°")
+    
     return routes, assigned_user_ids, used_driver_ids
 
 
+def validate_cluster_directional_consistency(cluster_users, office_lat, office_lon):
+    """Validate that cluster has strict directional consistency"""
+    if len(cluster_users) <= 1:
+        return True
+
+    # Calculate all bearings from office to users
+    bearings = []
+    for _, user in cluster_users.iterrows():
+        bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
+        bearings.append(bearing)
+
+    # Check bearing spread
+    min_bearing = min(bearings)
+    max_bearing = max(bearings)
+
+    # Handle wraparound case
+    bearing_spread = max_bearing - min_bearing
+    if bearing_spread > 180:
+        bearing_spread = 360 - bearing_spread
+
+    # STRICT: Maximum 20 degree spread within cluster
+    if bearing_spread > 20:
+        return False
+
+    # Check distance consistency (users should be in similar distance range)
+    distances = [haversine_distance(user['latitude'], user['longitude'], office_lat, office_lon)
+                for _, user in cluster_users.iterrows()]
+
+    min_distance = min(distances)
+    max_distance = max(distances)
+
+    # STRICT: Distance range should not be too large
+    if max_distance - min_distance > 8.0:  # 8km max range
+        return False
+
+    return True
+
+
 def split_cluster_by_bearing(cluster_users, office_lat, office_lon):
-    """Split cluster by bearing to ensure directional coherence"""
+    """Split cluster by bearing to ensure STRICT directional coherence"""
     if len(cluster_users) <= 1:
         return [cluster_users]
 
-    # Use K-means clustering with bearing features
+    # Calculate bearings for all users
+    bearings = []
+    for _, user in cluster_users.iterrows():
+        bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
+        bearings.append(bearing)
+
+    # Use K-means on bearing values (converted to 2D coordinates)
     coords_with_bearing = []
     for _, user in cluster_users.iterrows():
         bearing_rad = math.radians(user['bearing_from_office'])
-        # Convert to unit circle coordinates and scale
-        x = math.cos(bearing_rad) * 2.0  # Weight bearing heavily
-        y = math.sin(bearing_rad) * 2.0
+        # Weight bearing very heavily for strict directional clustering
+        x = math.cos(bearing_rad) * 5.0  # Increased weight
+        y = math.sin(bearing_rad) * 5.0
 
-        # Add geographic coordinates (normalized)
-        lat_norm = (user['latitude'] - office_lat) * _config['LAT_TO_KM'] * 0.1
-        lon_norm = (user['longitude'] -
-                    office_lon) * _config['LON_TO_KM'] * 0.1
+        # Reduced geographic weight to prioritize direction
+        lat_norm = (user['latitude'] - office_lat) * _config['LAT_TO_KM'] * 0.05
+        lon_norm = (user['longitude'] - office_lon) * _config['LON_TO_KM'] * 0.05
 
         coords_with_bearing.append([x, y, lat_norm, lon_norm])
 
@@ -641,57 +735,138 @@ def split_cluster_by_bearing(cluster_users, office_lat, office_lon):
     group1 = cluster_users[labels == 0]
     group2 = cluster_users[labels == 1]
 
-    return [group1, group2]
+    # Validate that both groups maintain directional consistency
+    valid_groups = []
+    for group in [group1, group2]:
+        if validate_cluster_directional_consistency(group, office_lat, office_lon):
+            valid_groups.append(group)
+        else:
+            # Further split if still not consistent
+            if len(group) > 2:
+                # Split into individual routes if necessary
+                for _, user in group.iterrows():
+                    single_user_df = group[group['user_id'] == user['user_id']]
+                    valid_groups.append(single_user_df)
+            else:
+                valid_groups.append(group)
+
+    return valid_groups if valid_groups else [group1, group2]
 
 
 def assign_driver_to_cluster(cluster_users, available_drivers, used_driver_ids,
                              office_lat, office_lon):
-    """Assign best driver to a cluster considering capacity and bearing"""
+    """Assign best driver to a cluster with STRICT directional validation"""
     if cluster_users.empty:
+        logger.warning("🔍 assign_driver_to_cluster: Empty cluster_users")
         return None
 
+    logger.info(f"🔍 assign_driver_to_cluster: Processing cluster with {len(cluster_users)} users")
+    
     best_driver = None
     best_score = float('inf')
+    candidates_checked = 0
+    candidates_rejected = {}
 
-    # Calculate cluster properties
+    # Calculate cluster properties with strict directional validation
     cluster_center = (cluster_users['latitude'].mean(),
                       cluster_users['longitude'].mean())
     cluster_bearing = cluster_users['bearing_from_office'].mean()
 
+    logger.info(f"  🧭 Cluster center: ({cluster_center[0]:.6f}, {cluster_center[1]:.6f})")
+    logger.info(f"  🧭 Cluster bearing: {cluster_bearing:.1f}°")
+
+    # STRICT: Validate cluster directional consistency before assignment
+    is_consistent = validate_cluster_directional_consistency(cluster_users, office_lat, office_lon)
+    logger.info(f"  🔍 Cluster directional consistency: {'✅ PASS' if is_consistent else '❌ FAIL'}")
+    
+    if not is_consistent:
+        logger.warning(f"❌ Cluster failed strict directional validation, skipping assignment")
+        return None
+
     for _, driver in available_drivers.iterrows():
+        candidates_checked += 1
+        driver_id = driver['driver_id']
+        
+        logger.info(f"  🚗 Checking driver {driver_id} (candidate {candidates_checked})")
+        
         if driver['driver_id'] in used_driver_ids:
+            candidates_rejected[driver_id] = "Already used"
+            logger.info(f"    ❌ Driver {driver_id}: Already used")
             continue
 
         # Check if driver can accommodate all users
         if driver['capacity'] < len(cluster_users):
+            candidates_rejected[driver_id] = f"Insufficient capacity ({driver['capacity']} < {len(cluster_users)})"
+            logger.info(f"    ❌ Driver {driver_id}: Insufficient capacity ({driver['capacity']} < {len(cluster_users)})")
+            continue
+
+        # Check bearing compatibility - ULTRA STRICT directional validation
+        driver_bearing = calculate_bearing(office_lat, office_lon,
+                                           driver['latitude'],
+                                           driver['longitude'])
+        bearing_diff = bearing_difference(driver_bearing, cluster_bearing)
+        
+        logger.info(f"    🧭 Driver {driver_id}: bearing={driver_bearing:.1f}°, diff from cluster={bearing_diff:.1f}°")
+
+        # ULTRA strict bearing requirement for initial assignment
+        if bearing_diff > 5:  # Maximum 5 degrees deviation for drivers
+            candidates_rejected[driver_id] = f"Bearing diff too large ({bearing_diff:.1f}° > 5°)"
+            logger.info(f"    ❌ Driver {driver_id}: Bearing diff too large ({bearing_diff:.1f}° > 5°)")
+            continue
+
+        # Additional check: driver should be positioned reasonably for the direction
+        # Driver should be in roughly the same direction as the cluster from office
+        driver_to_office_bearing = calculate_bearing(driver['latitude'], driver['longitude'], office_lat, office_lon)
+        office_to_cluster_bearing = calculate_bearing(office_lat, office_lon, cluster_center[0], cluster_center[1])
+        driver_position_compatibility = bearing_difference(driver_to_office_bearing, office_to_cluster_bearing)
+
+        logger.info(f"    🔄 Driver {driver_id}: position compatibility={driver_position_compatibility:.1f}°")
+
+        if driver_position_compatibility > 15:  # Driver must be positioned sensibly
+            candidates_rejected[driver_id] = f"Position incompatible ({driver_position_compatibility:.1f}° > 15°)"
+            logger.info(f"    ❌ Driver {driver_id}: Position incompatible ({driver_position_compatibility:.1f}° > 15°)")
             continue
 
         # Calculate driver to cluster center distance
         distance = haversine_distance(driver['latitude'], driver['longitude'],
                                       cluster_center[0], cluster_center[1])
 
-        # Calculate driver bearing alignment
-        driver_bearing = calculate_bearing(office_lat, office_lon,
-                                           driver['latitude'],
-                                           driver['longitude'])
-        bearing_diff = bearing_difference(driver_bearing, cluster_bearing)
+        logger.info(f"    📏 Driver {driver_id}: distance to cluster={distance:.2f}km")
+
+        # STRICT: Driver should be in reasonable proximity to cluster
+        max_distance = _config['MAX_FILL_DISTANCE_KM'] * 0.5
+        if distance > max_distance:  # Reduced tolerance
+            candidates_rejected[driver_id] = f"Too far from cluster ({distance:.2f}km > {max_distance:.2f}km)"
+            logger.info(f"    ❌ Driver {driver_id}: Too far from cluster ({distance:.2f}km > {max_distance:.2f}km)")
+            continue
 
         # Stronger capacity utilization bonus
         utilization = len(cluster_users) / driver['capacity']
         utilization_bonus = utilization * _config['capacity_weight'] * 1.5
 
-        # Direction penalty
-        direction_penalty = bearing_diff * (_config['direction_weight']) / 50.0
+        # INCREASED direction penalty for strict directional consistency
+        direction_penalty = bearing_diff * (_config['direction_weight'] * 2.0) / 50.0
 
         # Combined score (lower is better)
         score = distance + direction_penalty - utilization_bonus
 
+        logger.info(f"    📊 Driver {driver_id}: score={score:.3f} (distance={distance:.2f}, direction_penalty={direction_penalty:.3f}, utilization_bonus={utilization_bonus:.3f})")
+
         if score < best_score:
             best_score = score
             best_driver = driver
+            logger.info(f"    ⭐ Driver {driver_id}: NEW BEST CANDIDATE with score {score:.3f}")
+
+    logger.info(f"  📈 Summary: Checked {candidates_checked} drivers")
+    logger.info(f"  📈 Rejected drivers: {len(candidates_rejected)}")
+    for driver_id, reason in candidates_rejected.items():
+        logger.info(f"    ❌ {driver_id}: {reason}")
 
     if best_driver is None:
+        logger.warning(f"  ❌ No suitable driver found for cluster")
         return None
+
+    logger.info(f"  🎯 SELECTED: Driver {best_driver['driver_id']} with score {best_score:.3f}")
 
     # Create route
     route = {
@@ -707,6 +882,7 @@ def assign_driver_to_cluster(cluster_users, available_drivers, used_driver_ids,
     cluster_users_sorted = cluster_users.sort_values('office_distance',
                                                      ascending=False)
 
+    logger.info(f"  👥 Adding {len(cluster_users_sorted)} users to route:")
     for _, user in cluster_users_sorted.iterrows():
         user_data = {
             'user_id': str(user['user_id']),
@@ -721,11 +897,14 @@ def assign_driver_to_cluster(cluster_users, available_drivers, used_driver_ids,
             user_data['email'] = str(user['email'])
 
         route['assigned_users'].append(user_data)
+        
+        user_bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
+        logger.info(f"    👤 User {user['user_id']}: bearing={user_bearing:.1f}°, office_distance={user.get('office_distance', 0):.2f}km")
 
     utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
     avg_bearing = cluster_users['bearing_from_office'].mean()
     logger.info(
-        f"  -> Driver {route['driver_id']}: {len(route['assigned_users'])}/{route['vehicle_type']} users ({utilization:.1f}%) - Bearing: {avg_bearing:.1f}°"
+        f"  ✅ ROUTE CREATED: Driver {route['driver_id']}: {len(route['assigned_users'])}/{route['vehicle_type']} users ({utilization:.1f}%) - Avg Bearing: {avg_bearing:.1f}°"
     )
 
     return route
@@ -734,21 +913,28 @@ def assign_driver_to_cluster(cluster_users, available_drivers, used_driver_ids,
 # STEP 4: ROAD NETWORK ON-THE-WAY PICKUP
 def step4_road_network_pickup(routes, user_df, assigned_user_ids, office_lat,
                               office_lon):
-    """Step 4: Use road network to pick up users on the way with bearing validation"""
+    """Step 4: Use road network to pick up users on the way with STRICT directional validation"""
     logger = get_logger()
     logger.info(
         "================================================================================"
     )
-    logger.info("🚀 STARTING STEP 4: BEARING-AWARE ON-THE-WAY PICKUP")
+    logger.info("🚀 STARTING STEP 4: STRICT DIRECTIONAL ON-THE-WAY PICKUP")
     logger.info(
         "================================================================================"
     )
 
     total_pickups = 0
     unassigned_users = user_df[~user_df['user_id'].isin(assigned_user_ids)]
+    
+    logger.info(f"🔍 Step 4 DEBUG: {len(unassigned_users)} unassigned users available for pickup")
+    logger.info(f"🔍 Step 4 DEBUG: Processing {len(routes)} existing routes")
 
-    for route in routes:
+    for route_idx, route in enumerate(routes):
+        logger.info(f"  🚗 Processing Route {route_idx + 1} - Driver {route['driver_id']}")
+        logger.info(f"    📊 Current capacity: {len(route['assigned_users'])}/{route['vehicle_type']}")
+        
         if len(route['assigned_users']) >= route['vehicle_type']:
+            logger.info(f"    ❌ Route is full, skipping")
             continue  # Route is full
 
         driver_pos = (route['latitude'], route['longitude'])
@@ -756,66 +942,155 @@ def step4_road_network_pickup(routes, user_df, assigned_user_ids, office_lat,
         existing_users = [(u['lat'], u['lng'])
                           for u in route['assigned_users']]
 
-        # Calculate route bearing
-        route_bearing = calculate_route_bearing(route, office_lat, office_lon)
+        # Calculate STRICT route bearing - use existing users' average bearing
+        route_corridor_bearing = calculate_strict_route_bearing(route, office_lat, office_lon)
+        
+        logger.info(f"    🧭 Route corridor bearing: {route_corridor_bearing:.1f}°")
+
+        # Get current route corridor boundaries
+        existing_users_bearings = []
+        for existing_user in route['assigned_users']:
+            user_bearing = calculate_bearing(office_lat, office_lon, existing_user['lat'], existing_user['lng'])
+            existing_users_bearings.append(user_bearing)
+            logger.info(f"      👤 Existing user {existing_user['user_id']}: bearing={user_bearing:.1f}°")
+
+        # Calculate corridor boundaries (if we have existing users)
+        if existing_users_bearings:
+            corridor_min = min(existing_users_bearings)
+            corridor_max = max(existing_users_bearings)
+            corridor_spread = corridor_max - corridor_min
+
+            # Handle wraparound
+            if corridor_spread > 180:
+                corridor_spread = 360 - corridor_spread
+                # Adjust corridor boundaries for wraparound case
+                if corridor_spread < 10:  # Only if tight corridor
+                    corridor_min, corridor_max = corridor_max, corridor_min + 360
+                    
+            logger.info(f"    📏 Corridor boundaries: [{corridor_min:.1f}°, {corridor_max:.1f}°] (spread: {corridor_spread:.1f}°)")
+        else:
+            corridor_min = route_corridor_bearing - 5
+            corridor_max = route_corridor_bearing + 5
+            corridor_spread = 10
+            logger.info(f"    📏 New corridor boundaries: [{corridor_min:.1f}°, {corridor_max:.1f}°] (default)")
 
         users_to_add = []
+        users_evaluated = 0
+        users_rejected = {}
 
         for _, user in unassigned_users.iterrows():
+            users_evaluated += 1
+            user_id = user['user_id']
+            
             if user['user_id'] in assigned_user_ids:
+                users_rejected[user_id] = "Already assigned"
                 continue
 
-            if len(route['assigned_users']) + len(
-                    users_to_add) >= route['vehicle_type']:
+            if len(route['assigned_users']) + len(users_to_add) >= route['vehicle_type']:
+                users_rejected[user_id] = "Route would be full"
                 break
 
             candidate_pos = (user['latitude'], user['longitude'])
+            logger.info(f"      🔍 Evaluating User {user_id} for pickup")
 
-            # Compute driver main bearing (driver -> office)
-            driver_main_bearing = calculate_bearing(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
+            # STEP 1: ULTRA STRICT corridor validation
+            candidate_bearing = calculate_bearing(office_lat, office_lon, candidate_pos[0], candidate_pos[1])
+            logger.info(f"        🧭 User {user_id}: bearing={candidate_bearing:.1f}°")
 
-            # Compute candidate projection and bearing difference relative to driver_main_bearing
-            distance_to_driver = haversine_distance(driver_pos[0], driver_pos[1], candidate_pos[0], candidate_pos[1])
-            user_bearing_from_driver = calculate_bearing(driver_pos[0], driver_pos[1], candidate_pos[0], candidate_pos[1])
-            bearing_diff_from_driver = bearing_difference(driver_main_bearing, user_bearing_from_driver)
-            projection = distance_to_driver * math.cos(math.radians(bearing_diff_from_driver))
-
-            # STRICT FORWARD PROJECTION CHECK: Reject if not ahead toward office
-            if projection <= 0.2:  # Require at least 200m forward projection
-                continue
-                
-            # TIGHTER BEARING THRESHOLD for capacity mode to prevent left/right deviation
-            max_bearing_diff = _config['MAX_BEARING_DIFFERENCE'] * 0.6  # Reduced from 0.7
-            if bearing_diff_from_driver > max_bearing_diff:
+            # Check if candidate is within the established corridor
+            bearing_diff_from_corridor = bearing_difference(route_corridor_bearing, candidate_bearing)
+            logger.info(f"        📏 User {user_id}: corridor deviation={bearing_diff_from_corridor:.1f}° (max: 5°)")
+            
+            if bearing_diff_from_corridor > 5:  # ULTRA strict - maximum 5 degrees from corridor center
+                users_rejected[user_id] = f"Corridor deviation {bearing_diff_from_corridor:.1f}° > 5°"
+                logger.info(f"        ❌ User {user_id}: REJECTED - corridor deviation {bearing_diff_from_corridor:.1f}° > 5°")
                 continue
 
-            # ENFORCE STRICT DETOUR RATIO using road distances
-            driver_to_office_direct = haversine_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
+            # If we have existing users, candidate must fit within their corridor boundaries
+            if existing_users_bearings:
+                # Check if candidate bearing fits within existing corridor (with small expansion)
+                corridor_tolerance = 3  # Allow 3 degrees expansion
+                adjusted_min = corridor_min - corridor_tolerance
+                adjusted_max = corridor_max + corridor_tolerance
+
+                logger.info(f"        📏 User {user_id}: checking corridor boundaries [{adjusted_min:.1f}°, {adjusted_max:.1f}°]")
+
+                # Handle wraparound case
+                if adjusted_max - adjusted_min > 360:
+                    # Wide corridor due to wraparound - check differently
+                    if not (candidate_bearing >= adjusted_min or candidate_bearing <= adjusted_max - 360):
+                        users_rejected[user_id] = f"Outside corridor boundaries (wraparound) {candidate_bearing:.1f}°"
+                        logger.info(f"        ❌ User {user_id}: REJECTED - outside corridor boundaries (wraparound)")
+                        continue
+                else:
+                    # Normal case
+                    if not (adjusted_min <= candidate_bearing <= adjusted_max):
+                        users_rejected[user_id] = f"Outside corridor boundaries {candidate_bearing:.1f}° not in [{adjusted_min:.1f}°, {adjusted_max:.1f}°]"
+                        logger.info(f"        ❌ User {user_id}: REJECTED - outside corridor boundaries {candidate_bearing:.1f}° not in [{adjusted_min:.1f}°, {adjusted_max:.1f}°]")
+                        continue
+
+            # STEP 2: Progressive distance validation - MUST be making progress toward office
+            driver_to_office_distance = haversine_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
+            candidate_to_office_distance = haversine_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1])
+
+            logger.info(f"        📏 User {user_id}: distance validation - candidate_to_office={candidate_to_office_distance:.2f}km, driver_to_office={driver_to_office_distance:.2f}km")
+
+            # Candidate must be closer to office than driver (strict progression)
+            if candidate_to_office_distance >= driver_to_office_distance + 0.2:  # Reduced tolerance to 200m
+                users_rejected[user_id] = f"Not progressing toward office {candidate_to_office_distance:.2f}km vs {driver_to_office_distance:.2f}km"
+                logger.info(f"        ❌ User {user_id}: REJECTED - not progressing toward office {candidate_to_office_distance:.2f}km vs {driver_to_office_distance:.2f}km")
+                continue
+
+            # STEP 3: ULTRA STRICT detour validation
             driver_to_candidate = haversine_distance(driver_pos[0], driver_pos[1], candidate_pos[0], candidate_pos[1])
             candidate_to_office = haversine_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1])
-            
-            if driver_to_office_direct > 0:
-                detour_ratio = (driver_to_candidate + candidate_to_office) / driver_to_office_direct
-                if detour_ratio > 1.15:  # Strict 15% detour limit
+
+            if driver_to_office_distance > 0:
+                detour_ratio = (driver_to_candidate + candidate_to_office) / driver_to_office_distance
+                logger.info(f"        📏 User {user_id}: detour ratio={detour_ratio:.3f} (max: 1.08)")
+                
+                if detour_ratio > 1.08:  # ULTRA strict 8% detour limit (reduced from 15%)
+                    users_rejected[user_id] = f"Detour ratio {detour_ratio:.3f} > 1.08"
+                    logger.info(f"        ❌ User {user_id}: REJECTED - detour ratio {detour_ratio:.3f} > 1.08")
                     continue
 
-            # Require candidate reasonably close to existing route users
+            # STEP 4: Proximity to existing route validation
             if existing_users:
                 min_distance_to_route = min(haversine_distance(candidate_pos[0], candidate_pos[1], u[0], u[1]) for u in existing_users)
-                if min_distance_to_route > _config['MAX_FILL_DISTANCE_KM'] * 0.4:  # Reduced from 0.5
+                max_distance_allowed = _config['MAX_FILL_DISTANCE_KM'] * 0.3
+                logger.info(f"        📏 User {user_id}: min distance to route={min_distance_to_route:.2f}km (max: {max_distance_allowed:.2f}km)")
+                
+                if min_distance_to_route > max_distance_allowed:  # Reduced from 0.4
+                    users_rejected[user_id] = f"Too far from route {min_distance_to_route:.2f}km > {max_distance_allowed:.2f}km"
+                    logger.info(f"        ❌ User {user_id}: REJECTED - too far from route {min_distance_to_route:.2f}km")
                     continue
 
-            # Conservative road network check with strict detour ratio
-            if not road_network.is_user_on_route_path(driver_pos, existing_users, candidate_pos, office_pos, max_detour_ratio=1.12, route_type="capacity"):
+            # STEP 5: ULTRA STRICT road network validation
+            road_network_valid = road_network.is_user_on_route_path(driver_pos, existing_users, candidate_pos, office_pos, max_detour_ratio=1.06, route_type="capacity")
+            logger.info(f"        🛣️ User {user_id}: road network validation={'✅ PASS' if road_network_valid else '❌ FAIL'}")
+            
+            if not road_network_valid:
+                users_rejected[user_id] = "Failed road network validation"
+                logger.info(f"        ❌ User {user_id}: REJECTED - failed road network validation")
                 continue
 
-            # Calculate combined quality score for proper ordering
-            direction_score = bearing_diff_from_driver / max_bearing_diff  # 0-1, lower is better
-            efficiency_score = min(1.0, detour_ratio - 1.0) * 10  # Detour penalty
+            # STEP 6: Calculate quality score for ranking
+            direction_score = bearing_diff_from_corridor / 5.0  # Normalize to 0-1
+            efficiency_score = (detour_ratio - 1.0) * 20  # Detour penalty
             proximity_score = min_distance_to_route / _config['MAX_FILL_DISTANCE_KM'] if existing_users else 0
-            
-            combined_score = direction_score + efficiency_score + proximity_score
-            users_to_add.append((user, bearing_diff_from_driver, projection, combined_score))
+
+            combined_score = direction_score * 0.6 + efficiency_score * 0.3 + proximity_score * 0.1
+            users_to_add.append((user, bearing_diff_from_corridor, driver_to_candidate, combined_score))
+
+            logger.info(f"        ✅ User {user_id}: ACCEPTED for route {route['driver_id']} - corridor_dev={bearing_diff_from_corridor:.1f}°, detour={detour_ratio:.3f}, score={combined_score:.3f}")
+
+        logger.info(f"    📊 Route {route['driver_id']} evaluation summary:")
+        logger.info(f"      👥 Users evaluated: {users_evaluated}")
+        logger.info(f"      ✅ Users accepted: {len(users_to_add)}")
+        logger.info(f"      ❌ Users rejected: {len(users_rejected)}")
+        
+        for user_id, reason in users_rejected.items():
+            logger.info(f"        ❌ {user_id}: {reason}")
 
         # Sort by combined quality score (lower is better) for proper tie-breaking
         users_to_add.sort(key=lambda x: x[3])  # Sort by combined_score
@@ -856,11 +1131,11 @@ def step4_road_network_pickup(routes, user_df, assigned_user_ids, office_lat,
                 else:
                     bearing_diffs.append(0)
                     projections.append(0)
-            
+
             avg_bearing_diff = np.mean(bearing_diffs) if bearing_diffs else 0
             avg_projection = np.mean(projections) if projections else 0
             logger.info(
-                f"  -> Route {route['driver_id']} (bearing: {route_bearing:.1f}°): Picked up {len(users_to_add)} users (avg bearing diff: {avg_bearing_diff:.1f}°, avg projection: {avg_projection:.2f}km)"
+                f"  -> Route {route['driver_id']} (bearing: {route_corridor_bearing:.1f}°): Picked up {len(users_to_add)} users (avg bearing diff: {avg_bearing_diff:.1f}°, avg projection: {avg_projection:.2f}km)"
             )
 
     logger.info(
@@ -871,19 +1146,19 @@ def step4_road_network_pickup(routes, user_df, assigned_user_ids, office_lat,
 
 # STEP 5: CAPACITY-BASED MERGING
 def step5_capacity_merging(routes, office_lat, office_lon):
-    """Step 5: Merge routes to maximize capacity utilization with bearing coherence"""
+    """Step 5: Merge routes with STRICT directional consistency"""
     logger = get_logger()
     logger.info(
         "================================================================================"
     )
-    logger.info("🚀 STARTING STEP 5: BEARING-AWARE CAPACITY MERGING")
+    logger.info("🚀 STARTING STEP 5: STRICT DIRECTIONAL CAPACITY MERGING")
     logger.info(
         "================================================================================"
     )
 
     merges_completed = 0
-    max_distance = _config['MERGE_DISTANCE_KM']
-    max_bearing_diff = _config['MAX_BEARING_DIFFERENCE']
+    max_distance = _config['MERGE_DISTANCE_KM'] * 0.8  # More restrictive distance
+    max_bearing_diff = 6  # ULTRA strict bearing difference for merging - maximum 6 degrees
 
     improved = True
     while improved:
@@ -911,6 +1186,14 @@ def step5_capacity_merging(routes, office_lat, office_lon):
                 if total_users > max_capacity:
                     continue
 
+                # STRICT: Check bearing compatibility first (most important)
+                bearing1 = calculate_strict_route_bearing(route1, office_lat, office_lon)
+                bearing2 = calculate_strict_route_bearing(route2, office_lat, office_lon)
+                bearing_diff = bearing_difference(bearing1, bearing2)
+
+                if bearing_diff > max_bearing_diff:
+                    continue
+
                 # Check distance between route centers
                 center1 = calculate_route_center(route1)
                 center2 = calculate_route_center(route2)
@@ -920,36 +1203,31 @@ def step5_capacity_merging(routes, office_lat, office_lon):
                 if distance > max_distance:
                     continue
 
-                # Check bearing compatibility
-                bearing1 = calculate_route_bearing(route1, office_lat,
-                                                   office_lon)
-                bearing2 = calculate_route_bearing(route2, office_lat,
-                                                   office_lon)
-                bearing_diff = bearing_difference(bearing1, bearing2)
-
-                if bearing_diff > max_bearing_diff:
+                # STRICT: Validate that merged route would maintain directional integrity
+                test_merged_users = route1['assigned_users'] + route2['assigned_users']
+                if not validate_merged_route_direction(test_merged_users, office_lat, office_lon):
                     continue
 
                 # ENHANCED: Comprehensive merge coherence check
                 all_users_positions = [(u['lat'], u['lng']) for u in route1['assigned_users']] + [(u['lat'], u['lng']) for u in route2['assigned_users']]
-                
+
                 # Check route coherence score
                 coherence = road_network.get_route_coherence_score(
                     (route1['latitude'], route1['longitude']),
                     all_users_positions,
                     (office_lat, office_lon)
                 )
-                
+
                 # Calculate combined detour ratio
                 combined_detour_ratio = _calculate_combined_detour_ratio(
                     (route1['latitude'], route1['longitude']), all_users_positions, (office_lat, office_lon)
                 )
-                
+
                 # Calculate turning score for combined route
                 combined_turning_score = _calculate_combined_turning_score(
                     (route1['latitude'], route1['longitude']), all_users_positions, (office_lat, office_lon)
                 )
-                
+
                 # STRICT merge criteria - all must pass
                 if coherence < 0.65:  # Increased from 0.55
                     continue
@@ -1041,6 +1319,89 @@ def calculate_route_bearing(route, office_lat, office_lon):
     return np.mean(bearings)
 
 
+def calculate_strict_route_bearing(route, office_lat, office_lon):
+    """Calculate strict route bearing with validation"""
+    if not route['assigned_users']:
+        return calculate_bearing(office_lat, office_lon, route['latitude'], route['longitude'])
+
+    # Use the bearing from office to the centroid of existing users
+    if len(route['assigned_users']) == 1:
+        user = route['assigned_users'][0]
+        return calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
+
+    # Calculate centroid of existing users
+    total_lat = sum(u['lat'] for u in route['assigned_users'])
+    total_lng = sum(u['lng'] for u in route['assigned_users'])
+    centroid_lat = total_lat / len(route['assigned_users'])
+    centroid_lng = total_lng / len(route['assigned_users'])
+
+    return calculate_bearing(office_lat, office_lon, centroid_lat, centroid_lng)
+
+
+def validate_strict_directional_consistency(driver_pos, existing_users, candidate_pos, office_pos, route_bearing):
+    """Validate that adding a candidate maintains strict directional consistency"""
+
+    # Calculate candidate bearing from office
+    candidate_bearing = calculate_bearing(office_pos[0], office_pos[1], candidate_pos[0], candidate_pos[1])
+
+    # STRICT: Candidate must be in same general direction (max 15 degrees deviation)
+    bearing_diff = bearing_difference(route_bearing, candidate_bearing)
+    if bearing_diff > 15:
+        return False
+
+    # STRICT: Check that candidate doesn't create backtracking
+    if existing_users:
+        # Calculate distances to office for all existing users
+        existing_distances = [haversine_distance(u[0], u[1], office_pos[0], office_pos[1]) for u in existing_users]
+        candidate_distance = haversine_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1])
+
+        min_existing_distance = min(existing_distances)
+        max_existing_distance = max(existing_distances)
+
+        # Candidate must fit within the distance range (no outliers)
+        if candidate_distance < min_existing_distance - 1.0 or candidate_distance > max_existing_distance + 1.0:
+            return False
+
+    # STRICT: Progressive distance check - must be moving toward office
+    driver_to_office = haversine_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
+    candidate_to_office = haversine_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1])
+
+    # Candidate should be closer to office than driver (allowing small tolerance)
+    if candidate_to_office > driver_to_office + 0.3:  # 300m tolerance
+        return False
+
+    return True
+
+
+def validate_route_directional_integrity(route, office_lat, office_lon):
+    """Validate that entire route maintains directional integrity"""
+    if len(route['assigned_users']) <= 1:
+        return True
+
+    # Calculate route bearing
+    route_bearing = calculate_strict_route_bearing(route, office_lat, office_lon)
+
+    # Check each user against route bearing
+    max_allowed_deviation = 12  # Very strict - 12 degrees max
+
+    for user in route['assigned_users']:
+        user_bearing = calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
+        bearing_diff = bearing_difference(route_bearing, user_bearing)
+
+        if bearing_diff > max_allowed_deviation:
+            return False
+
+    # Check distance progression (users should be roughly in order of distance from office)
+    distances = [haversine_distance(u['lat'], u['lng'], office_lat, office_lon) for u in route['assigned_users']]
+
+    # Allow some flexibility but no major reversals
+    for i in range(len(distances) - 1):
+        if distances[i] < distances[i + 1] - 2.0:  # 2km tolerance for distance progression
+            return False
+
+    return True
+
+
 def calculate_route_center(route):
     """Calculate the center point of users in a route"""
     if not route['assigned_users']:
@@ -1051,24 +1412,61 @@ def calculate_route_center(route):
     return (np.mean(lats), np.mean(lngs))
 
 
+def validate_merged_route_direction(merged_users, office_lat, office_lon):
+    """Validate that merged route maintains strict directional consistency"""
+    if len(merged_users) <= 1:
+        return True
+
+    # Calculate bearings for all users
+    bearings = []
+    for user in merged_users:
+        bearing = calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
+        bearings.append(bearing)
+
+    # Check bearing spread - should be very tight
+    min_bearing = min(bearings)
+    max_bearing = max(bearings)
+
+    # Handle wraparound case (crossing 0/360 degrees)
+    bearing_spread = max_bearing - min_bearing
+    if bearing_spread > 180:
+        bearing_spread = 360 - bearing_spread
+
+    # STRICT: Maximum 20 degree spread for merged route
+    if bearing_spread > 20:
+        return False
+
+    # Check distance progression consistency
+    distances = [haversine_distance(u['lat'], u['lng'], office_lat, office_lon) for u in merged_users]
+    distances.sort()
+
+    # Check for reasonable distance distribution (no huge gaps)
+    for i in range(len(distances) - 1):
+        gap = distances[i + 1] - distances[i]
+        if gap > 5.0:  # 5km max gap between consecutive users
+            return False
+
+    return True
+
+
 def _calculate_combined_detour_ratio(driver_pos, user_positions, office_pos):
     """Calculate detour ratio for a combined route"""
     if not user_positions:
         return 1.0
-    
+
     # Calculate total route distance
     total_distance = 0.0
     current_pos = driver_pos
-    
+
     for user_pos in user_positions:
         total_distance += haversine_distance(current_pos[0], current_pos[1], user_pos[0], user_pos[1])
         current_pos = user_pos
-    
+
     total_distance += haversine_distance(current_pos[0], current_pos[1], office_pos[0], office_pos[1])
-    
+
     # Calculate direct distance
     direct_distance = haversine_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
-    
+
     return total_distance / direct_distance if direct_distance > 0 else 1.0
 
 
@@ -1076,23 +1474,23 @@ def _calculate_combined_turning_score(driver_pos, user_positions, office_pos):
     """Calculate average turning score for a combined route"""
     if len(user_positions) < 2:
         return 0.0
-    
+
     route_points = [driver_pos] + user_positions + [office_pos]
     total_turning = 0.0
     turning_segments = 0
-    
+
     for i in range(len(route_points) - 2):
         # Calculate bearings for consecutive segments
-        bearing1 = calculate_bearing(route_points[i][0], route_points[i][1], 
+        bearing1 = calculate_bearing(route_points[i][0], route_points[i][1],
                                    route_points[i+1][0], route_points[i+1][1])
-        bearing2 = calculate_bearing(route_points[i+1][0], route_points[i+1][1], 
+        bearing2 = calculate_bearing(route_points[i+1][0], route_points[i+1][1],
                                    route_points[i+2][0], route_points[i+2][1])
-        
+
         # Calculate turning angle
         turning_angle = bearing_difference(bearing1, bearing2)
         total_turning += turning_angle
         turning_segments += 1
-    
+
     return total_turning / turning_segments if turning_segments > 0 else 0.0
 
 
@@ -1179,55 +1577,55 @@ def post_assignment_local_optimization(routes, office_lat, office_lon):
     """Post-assignment local optimization to fix greedy assignment issues"""
     logger = get_logger()
     logger.info("🔄 Starting post-assignment local optimization")
-    
+
     improvements_made = 0
     max_iterations = 3
-    
+
     for iteration in range(max_iterations):
         iteration_improvements = 0
-        
+
         # Phase 1: Single user moves between nearby routes
         for i in range(len(routes)):
             for j in range(len(routes)):
                 if i == j or len(routes[i]['assigned_users']) <= 1:
                     continue
-                
+
                 # Check if routes are nearby
                 center_i = calculate_route_center(routes[i])
                 center_j = calculate_route_center(routes[j])
                 distance = haversine_distance(center_i[0], center_i[1], center_j[0], center_j[1])
-                
+
                 if distance > _config['MERGE_DISTANCE_KM']:
                     continue
-                
+
                 # Try moving users from route i to route j
                 if try_single_user_move(routes[i], routes[j], office_lat, office_lon):
                     iteration_improvements += 1
-        
+
         # Phase 2: User swaps between routes
         for i in range(len(routes)):
             for j in range(i + 1, len(routes)):
                 if not routes[i]['assigned_users'] or not routes[j]['assigned_users']:
                     continue
-                
+
                 # Check if routes are nearby
                 center_i = calculate_route_center(routes[i])
                 center_j = calculate_route_center(routes[j])
                 distance = haversine_distance(center_i[0], center_i[1], center_j[0], center_j[1])
-                
+
                 if distance > _config['MERGE_DISTANCE_KM']:
                     continue
-                
+
                 # Try swapping users between routes
                 if try_user_swap_between_routes(routes[i], routes[j], office_lat, office_lon):
                     iteration_improvements += 1
-        
+
         improvements_made += iteration_improvements
         logger.info(f"  -> Iteration {iteration + 1}: {iteration_improvements} improvements")
-        
+
         if iteration_improvements == 0:
             break
-    
+
     logger.info(f"  -> Total improvements made: {improvements_made}")
     return routes
 
@@ -1236,44 +1634,44 @@ def try_single_user_move(source_route, target_route, office_lat, office_lon):
     """Try moving a single user from source to target route if it improves combined cost"""
     if len(target_route['assigned_users']) >= target_route['vehicle_type']:
         return False
-    
+
     best_improvement = 0
     best_user_idx = None
-    
+
     # Calculate current costs
     current_cost_source = calculate_route_total_cost(source_route, office_lat, office_lon)
     current_cost_target = calculate_route_total_cost(target_route, office_lat, office_lon)
     current_total_cost = current_cost_source + current_cost_target
-    
+
     # Try moving each user
     for user_idx, user in enumerate(source_route['assigned_users']):
         # Check if user satisfies direction constraints for target route
         if not check_user_direction_compatibility(user, target_route, office_lat, office_lon):
             continue
-        
+
         # Create temporary routes
         temp_source = source_route.copy()
         temp_target = target_route.copy()
         temp_source['assigned_users'] = [u for i, u in enumerate(source_route['assigned_users']) if i != user_idx]
         temp_target['assigned_users'] = target_route['assigned_users'] + [user]
-        
+
         # Calculate new costs
         new_cost_source = calculate_route_total_cost(temp_source, office_lat, office_lon)
         new_cost_target = calculate_route_total_cost(temp_target, office_lat, office_lon)
         new_total_cost = new_cost_source + new_cost_target
-        
+
         improvement = current_total_cost - new_total_cost
         if improvement > best_improvement and improvement > 0.5:  # Minimum improvement threshold
             best_improvement = improvement
             best_user_idx = user_idx
-    
+
     # Apply best move if found
     if best_user_idx is not None:
         user_to_move = source_route['assigned_users'].pop(best_user_idx)
         target_route['assigned_users'].append(user_to_move)
         logger.info(f"    -> Moved user {user_to_move['user_id']} from route {source_route['driver_id']} to {target_route['driver_id']} (improvement: {best_improvement:.2f}km)")
         return True
-    
+
     return False
 
 
@@ -1281,15 +1679,15 @@ def try_user_swap_between_routes(route1, route2, office_lat, office_lon):
     """Try swapping users between two routes if it improves combined cost"""
     if not route1['assigned_users'] or not route2['assigned_users']:
         return False
-    
+
     best_improvement = 0
     best_swap = None
-    
+
     # Calculate current costs
     current_cost1 = calculate_route_total_cost(route1, office_lat, office_lon)
     current_cost2 = calculate_route_total_cost(route2, office_lat, office_lon)
     current_total_cost = current_cost1 + current_cost2
-    
+
     # Try all possible single-user swaps
     for i, user1 in enumerate(route1['assigned_users']):
         for j, user2 in enumerate(route2['assigned_users']):
@@ -1297,23 +1695,23 @@ def try_user_swap_between_routes(route1, route2, office_lat, office_lon):
             if not (check_user_direction_compatibility(user1, route2, office_lat, office_lon) and
                     check_user_direction_compatibility(user2, route1, office_lat, office_lon)):
                 continue
-            
+
             # Create temporary routes with swapped users
             temp_route1 = route1.copy()
             temp_route2 = route2.copy()
             temp_route1['assigned_users'] = [user2 if idx == i else u for idx, u in enumerate(route1['assigned_users'])]
             temp_route2['assigned_users'] = [user1 if idx == j else u for idx, u in enumerate(route2['assigned_users'])]
-            
+
             # Calculate new costs
             new_cost1 = calculate_route_total_cost(temp_route1, office_lat, office_lon)
             new_cost2 = calculate_route_total_cost(temp_route2, office_lat, office_lon)
             new_total_cost = new_cost1 + new_cost2
-            
+
             improvement = current_total_cost - new_total_cost
             if improvement > best_improvement and improvement > 0.3:  # Minimum improvement threshold
                 best_improvement = improvement
                 best_swap = (i, j, user1, user2)
-    
+
     # Apply best swap if found
     if best_swap is not None:
         i, j, user1, user2 = best_swap
@@ -1321,7 +1719,7 @@ def try_user_swap_between_routes(route1, route2, office_lat, office_lon):
         route2['assigned_users'][j] = user1
         logger.info(f"    -> Swapped users {user1['user_id']} ↔ {user2['user_id']} between routes {route1['driver_id']} and {route2['driver_id']} (improvement: {best_improvement:.2f}km)")
         return True
-    
+
     return False
 
 
@@ -1329,13 +1727,13 @@ def check_user_direction_compatibility(user, route, office_lat, office_lon):
     """Check if user is directionally compatible with route"""
     if not route['assigned_users']:
         return True
-    
+
     # Calculate route bearing
     route_bearing = calculate_route_bearing(route, office_lat, office_lon)
-    
+
     # Calculate user bearing from office
     user_bearing = calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
-    
+
     # Check bearing compatibility
     bearing_diff = bearing_difference(route_bearing, user_bearing)
     return bearing_diff <= _config['MAX_BEARING_DIFFERENCE']
@@ -1345,23 +1743,23 @@ def calculate_route_total_cost(route, office_lat, office_lon):
     """Calculate total cost (distance + turning penalty) for a route"""
     if not route['assigned_users']:
         return 0.0
-    
+
     # Calculate total distance
     total_distance = 0.0
     current_pos = (route['latitude'], route['longitude'])
-    
+
     for user in route['assigned_users']:
         user_pos = (user['lat'], user['lng'])
         total_distance += haversine_distance(current_pos[0], current_pos[1], user_pos[0], user_pos[1])
         current_pos = user_pos
-    
+
     total_distance += haversine_distance(current_pos[0], current_pos[1], office_lat, office_lon)
-    
+
     # Calculate turning penalty
-    turning_score = _calculate_combined_turning_score((route['latitude'], route['longitude']), 
-                                                     [(u['lat'], u['lng']) for u in route['assigned_users']], 
+    turning_score = _calculate_combined_turning_score((route['latitude'], route['longitude']),
+                                                     [(u['lat'], u['lng']) for u in route['assigned_users']],
                                                      (office_lat, office_lon))
-    
+
     # Combine distance and turning penalty (1 degree ≈ 0.1km penalty)
     return total_distance + (turning_score * 0.1)
 
@@ -1378,7 +1776,7 @@ def try_capacity_swap(route1, route2):
     if util1 >= 0.8 and util2 >= 0.8:
         return False
 
-    # Try swapping one user from the fuller route to the emptier route
+    # Try moving one user from the fuller route to the emptier route
     if util1 > util2 and len(
             route2['assigned_users']) < route2['vehicle_type']:
         # Move user from route1 to route2
@@ -1485,11 +1883,9 @@ def handle_remaining_unassigned_users(unassigned_users, driver_df, routes,
                 new_route['assigned_users'].append(user_data)
 
             routes.append(new_route)
-            assigned_ids = [u['user_id'] for u in users_for_route.iterrows()]
+            assigned_ids = [row[1]['user_id'] for row in users_for_route.iterrows()]
             remaining_unassigned = remaining_unassigned[
-                ~remaining_unassigned['user_id'].
-                isin([row[1]['user_id']
-                      for row in users_for_route.iterrows()])]
+                ~remaining_unassigned['user_id'].isin(assigned_ids)]
 
             logger.info(
                 f"    Created new route for driver {driver['driver_id']} with {len(users_for_route)} users"
