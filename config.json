@@ -71,7 +71,7 @@
       "utilization_penalty_per_seat": 1.0,
       "aggressive_merging": true,
       "capacity_weight": 1.0,
-      "direction_weight": 4.0
+      "direction_weight": 2.5
     },
     "balanced_optimization": {
       "max_bearing_difference": 30,
@@ -85,15 +85,15 @@
       "direction_weight": 2.5
     },
     "capacity_optimization": {
-      "max_bearing_difference": 15,
-      "max_allowed_turning_score": 25,
       "max_fill_distance_km": 4.0,
       "merge_distance_km": 2.5,
-      "zigzag_penalty_weight": 0.5,
-      "utilization_penalty_per_seat": 1.0,
-      "aggressive_merging": true,
-      "capacity_weight": 5.0,
-      "direction_weight": 1.0
+      "max_bearing_difference": 20,
+      "max_allowed_turning_score": 30,
+      "utilization_penalty_per_seat": 1.5,
+      "aggressive_merging": false,
+      "capacity_weight": 15.0,
+      "direction_weight": 8.0,
+      "zigzag_penalty_weight": 3.0
     }
   }
 }

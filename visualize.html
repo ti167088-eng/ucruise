@@ -740,7 +740,7 @@
                     </div>
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="toggleRouteLines()" id="toggleRouteLinesBtn">
-                            <i class="fas fa-route"></i> Real Routes
+                            <i class="fas fa-route"></i> Pickup Routes
                         </button>
                         <button class="btn btn-secondary" onclick="toggleHeatmap()" id="toggleHeatmapBtn">
                             <i class="fas fa-fire"></i> Heatmap
@@ -883,7 +883,7 @@
                     <div class="legend-icon" style="background: linear-gradient(45deg, #f59e0b, #d97706);">
                         🛣️
                     </div>
-                    <span>Sequential Routes (Driver → Users → Office)</span>
+                    <span>Pickup Routes (Office → Users)</span>
                 </div>
                 <div class="cluster-palette" id="clusterPalette"></div>
             </div>
@@ -1367,7 +1367,7 @@
         function createSequentialRoute(route, color, routeIndex) {
             if (route.assigned_users.length === 0) return;
 
-            // Create waypoints array starting from driver
+            // Create waypoints array for all user locations
             const waypoints = [];
 
             // Add all user locations as waypoints
@@ -1378,7 +1378,7 @@
                 });
             });
 
-            // Create directions request: Driver -> Users -> Office
+            // Create directions request: Office -> Users (optimized route)
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
                 preserveViewport: true,
@@ -1391,11 +1391,11 @@
             });
             directionsRenderer.setMap(map);
 
-            // Build the sequential route
+            // Build the route: Office -> All Users (office-centric route)
             const request = {
-                origin: { lat: parseFloat(route.latitude), lng: parseFloat(route.longitude) },
-                destination: OFFICE_LOCATION, // End at office
-                waypoints: waypoints,
+                origin: OFFICE_LOCATION, // Start from office
+                destination: waypoints[waypoints.length - 1].location, // End at last user
+                waypoints: waypoints.slice(0, -1), // All users except the last one as waypoints
                 optimizeWaypoints: true, // Let Google optimize the order
                 travelMode: google.maps.TravelMode.DRIVING,
                 avoidHighways: false,
@@ -1406,56 +1406,51 @@
                 if (status === "OK") {
                     directionsRenderer.setDirections(response);
 
-                    // Add route markers to show sequence
+                    // Add route markers to show sequence starting from office
                     const legs = response.routes[0].legs;
                     legs.forEach((leg, legIndex) => {
-                        if (legIndex < legs.length) {
-                            // Add sequence number markers at each stop
-                            const sequenceMarker = new google.maps.Marker({
-                                position: leg.start_location,
-                                map: map,
-                                icon: {
-                                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <circle cx="12" cy="12" r="10" fill="${color}" stroke="#ffffff" stroke-width="2"/>
-                                            <text x="12" y="16" font-family="Arial" font-size="12" text-anchor="middle" fill="white" font-weight="bold">${legIndex + 1}</text>
-                                        </svg>
-                                    `),
-                                    scaledSize: new google.maps.Size(24, 24),
-                                    anchor: new google.maps.Point(12, 12)
-                                },
-                                title: `Stop ${legIndex + 1} in Route ${routeIndex + 1}`,
-                                zIndex: 400
-                            });
+                        // Add sequence number markers at each user stop
+                        const sequenceMarker = new google.maps.Marker({
+                            position: leg.end_location, // Mark the destination of each leg
+                            map: map,
+                            icon: {
+                                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="10" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+                                        <text x="12" y="16" font-family="Arial" font-size="12" text-anchor="middle" fill="white" font-weight="bold">${legIndex + 1}</text>
+                                    </svg>
+                                `),
+                                scaledSize: new google.maps.Size(24, 24),
+                                anchor: new google.maps.Point(12, 12)
+                            },
+                            title: `Pickup Stop ${legIndex + 1} - Route ${routeIndex + 1}`,
+                            zIndex: 400
+                        });
 
-                            markers.routes.push(sequenceMarker);
-                        }
+                        markers.routes.push(sequenceMarker);
                     });
 
-                    console.log(`✅ Sequential route created for Driver ${route.driver_id} with ${route.assigned_users.length} stops`);
+                    console.log(`✅ Office-to-users route created for Route ${routeIndex + 1} with ${route.assigned_users.length} pickup stops`);
                 } else {
-                    console.warn(`Sequential route failed for Driver ${route.driver_id}:`, status);
+                    console.warn(`Office-to-users route failed for Route ${routeIndex + 1}:`, status);
                     // Fallback to straight lines if directions fail
-                    createFallbackSequentialRoute(route, color);
+                    createFallbackOfficeRoute(route, color);
                 }
             });
 
             routeRenderers.push({ renderer: directionsRenderer, polyline: null });
         }
 
-        function createFallbackSequentialRoute(route, color) {
-            // Create simple polyline route as fallback
+        function createFallbackOfficeRoute(route, color) {
+            // Create simple polyline route as fallback: Office -> Users
             const routePath = [
-                { lat: parseFloat(route.latitude), lng: parseFloat(route.longitude) } // Start at driver
+                OFFICE_LOCATION // Start at office
             ];
 
             // Add all user locations
             route.assigned_users.forEach(user => {
                 routePath.push({ lat: parseFloat(user.lat), lng: parseFloat(user.lng) });
             });
-
-            // End at office
-            routePath.push(OFFICE_LOCATION);
 
             const fallbackRoute = new google.maps.Polyline({
                 path: routePath,
@@ -1930,11 +1925,13 @@
                         renderMap();
                         updateStats(); // Update stats for the single route
                         
-                        // Focus map on this route
+                        // Focus map on this route (office to users only, exclude driver)
                         const route = allRoutes[0];
                         if (route.assigned_users.length > 0) {
                             const bounds = new google.maps.LatLngBounds();
-                            bounds.extend(new google.maps.LatLng(parseFloat(route.latitude), parseFloat(route.longitude)));
+                            // Include office location
+                            bounds.extend(OFFICE_LOCATION);
+                            // Include all user locations
                             route.assigned_users.forEach(user => {
                                 bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
                             });
