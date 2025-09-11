@@ -25,9 +25,6 @@ warnings.filterwarnings('ignore')
 from logger_config import get_logger
 from progress_tracker import get_progress_tracker
 
-# File context for logging
-FILE_CONTEXT = "ASSIGNMENT.PY (ROUTE EFFICIENCY)"
-
 
 # Load and validate configuration with route efficiency settings
 def load_and_validate_config():
@@ -49,7 +46,7 @@ def load_and_validate_config():
     mode_config = mode_configs.get("route_efficiency", {})
 
     logger = get_logger()
-    logger.assignment_mode("ROUTE EFFICIENCY", FILE_CONTEXT)
+    logger.info(f"🎯 Using optimization mode: ROUTE EFFICIENCY")
 
     # Validate and set configuration with mode-specific overrides
     config = {}
@@ -791,7 +788,7 @@ def assign_drivers_by_priority(user_df, driver_df, office_lat, office_lon):
     Step 3: Assign drivers based on priority and proximity using sequence-aware cost
     """
     logger = get_logger()
-    logger.step_start("STEP 3: DRIVER ASSIGNMENT BY PRIORITY", FILE_CONTEXT)
+    logger.info("🚗 Step 3: Assigning drivers by priority...")
 
     routes = []
     assigned_user_ids = set()
@@ -899,8 +896,9 @@ def assign_drivers_by_priority(user_df, driver_df, office_lat, office_lon):
     routes = apply_route_splitting(routes, available_drivers, used_driver_ids,
                                    office_lat, office_lon)
 
-    logger.step_complete("STEP 3: DRIVER ASSIGNMENT", FILE_CONTEXT,
-                         f"- {len(routes)} routes created")
+    logger.info(
+        f"  ✅ Created {len(routes)} initial routes with priority-based assignment"
+    )
     return routes, assigned_user_ids
 
 
@@ -1248,24 +1246,29 @@ def calculate_sequence_turning_score_improved(sequence, driver_pos,
                 bearing_differences.append(bearing_diff)
             prev_bearing = current_bearing
             continue
-        elif i == len(sequence) - 1:
+
+        # Bearing from previous to current
+        prev_pos = (sequence[i - 1]['latitude'], sequence[i - 1]['longitude'])
+        current_pos = (sequence[i]['latitude'], sequence[i]['longitude'])
+        current_bearing = calculate_bearing(prev_pos[0], prev_pos[1],
+                                            current_pos[0], current_pos[1])
+
+        if i == len(sequence) - 1:
             # Last user: bearing from current to office
-            current_pos = (sequence[i]['latitude'], sequence[i]['longitude'])
             next_bearing = calculate_bearing(current_pos[0], current_pos[1],
                                              office_pos[0], office_pos[1])
         else:
-            # Between users
-            current_pos = (sequence[i]['latitude'], sequence[i]['longitude'])
+            # Bearing from current to next
             next_pos = (sequence[i + 1]['latitude'],
                         sequence[i + 1]['longitude'])
             next_bearing = calculate_bearing(current_pos[0], current_pos[1],
                                              next_pos[0], next_pos[1])
 
-        if prev_bearing is not None:
-            bearing_diff = bearing_difference(prev_bearing, next_bearing)
+        bearing_diff = bearing_difference(prev_bearing, current_bearing)
+        if bearing_diff > 0:
             bearing_differences.append(bearing_diff)
 
-        prev_bearing = next_bearing
+        prev_bearing = current_bearing
 
     return sum(bearing_differences) / len(
         bearing_differences) if bearing_differences else 0
@@ -1449,7 +1452,7 @@ def local_optimization(routes, office_lat, office_lon):
     Step 4: Local optimization within routes and between nearby routes
     """
     logger = get_logger()
-    logger.step_start("STEP 4: LOCAL OPTIMIZATION", FILE_CONTEXT)
+    logger.info("🔧 Step 4: Local optimization...")
 
     improved = True
     iterations = 0
@@ -1491,8 +1494,7 @@ def local_optimization(routes, office_lat, office_lon):
         if try_user_swap_improved(routes, office_lat, office_lon):
             improved = True
 
-    logger.step_complete("STEP 4: LOCAL OPTIMIZATION", FILE_CONTEXT,
-                         f"- {iterations} iterations")
+    logger.info(f"  ✅ Local optimization completed in {iterations} iterations")
     return routes
 
 
@@ -1825,16 +1827,16 @@ def global_optimization(routes, user_df, assigned_user_ids, driver_df,
     Step 5: Global optimization with improved single-route fixing and route quality management
     """
     logger = get_logger()
-    logger.step_start("STEP 5: GLOBAL OPTIMIZATION", FILE_CONTEXT)
+    logger.info("🌍 Step 5: Enhanced Global optimization...")
 
     # PHASE 1: Fix single-user routes first (highest priority)
-    logger.file_operation("PHASE 1: FIXING SINGLE-USER ROUTES", FILE_CONTEXT)
+    logger.info("  🎯 Phase 1: Fixing single-user routes...")
     routes = fix_single_user_routes_improved(routes, user_df,
                                              assigned_user_ids, driver_df,
                                              office_lat, office_lon)
 
     # PHASE 2: Fill underutilized routes with strict quality checks
-    logger.file_operation("PHASE 2: QUALITY-CONTROLLED ROUTE FILLING", FILE_CONTEXT)
+    logger.info("  📈 Phase 2: Quality-controlled route filling...")
     unassigned_users_df = user_df[~user_df['user_id'].isin(assigned_user_ids
                                                            )].copy()
     routes = quality_controlled_route_filling(routes, unassigned_users_df,
@@ -1842,17 +1844,17 @@ def global_optimization(routes, user_df, assigned_user_ids, driver_df,
                                               office_lon)
 
     # PHASE 3: Merge underutilized routes with strict quality preservation
-    logger.file_operation("PHASE 3: QUALITY-PRESERVING ROUTE MERGING", FILE_CONTEXT)
+    logger.info("  🔗 Phase 3: Quality-preserving route merging...")
     routes = quality_preserving_route_merging(routes, driver_df, office_lat,
                                               office_lon)
 
     # PHASE 4: Split poor quality routes with improved logic
-    logger.file_operation("PHASE 4: ENHANCED ROUTE SPLITTING", FILE_CONTEXT)
+    logger.info("  ✂️ Phase 4: Enhanced route splitting...")
     routes = enhanced_route_splitting(routes, driver_df, office_lat,
                                       office_lon)
 
     # PHASE 5: Outlier detection and reassignment
-    logger.file_operation("PHASE 5: OUTLIER DETECTION AND REASSIGNMENT", FILE_CONTEXT)
+    logger.info("  🔍 Phase 5: Outlier detection and reassignment...")
     routes, failed_outlier_reassignments = outlier_detection_and_reassignment(
         routes, office_lat, office_lon)
 
@@ -1870,8 +1872,7 @@ def global_optimization(routes, user_df, assigned_user_ids, driver_df,
         )
         unassigned_list.extend(failed_outlier_reassignments)
 
-    logger.step_complete("STEP 5: GLOBAL OPTIMIZATION", FILE_CONTEXT,
-                         f"- {len(routes)} final routes")
+    logger.info("  ✅ Enhanced global optimization completed")
     return routes, unassigned_list
 
 
@@ -1881,7 +1882,7 @@ def final_pass_merge(routes, config, office_lat, office_lon):
     Final-pass merge algorithm: Loop over all pairs of routes and merge compatible ones
     """
     logger = get_logger()
-    logger.step_start("STEP 6: FINAL-PASS MERGE", FILE_CONTEXT)
+    logger.info("🔄 Step 6: Final-pass merge algorithm...")
 
     merged_routes = []
     used = set()
@@ -1989,8 +1990,8 @@ def final_pass_merge(routes, config, office_lat, office_lon):
             merged_routes.append(r1)
             used.add(i)
 
-    logger.step_complete("STEP 6: FINAL-PASS MERGE", FILE_CONTEXT,
-                         f"- {len(routes)} → {len(merged_routes)} routes")
+    logger.info(
+        f"  🔄 Final-pass merge: {len(routes)} → {len(merged_routes)} routes")
     return merged_routes
 
 
@@ -2022,7 +2023,8 @@ def fix_single_user_routes_improved(routes, user_df, assigned_user_ids,
             multi_user_routes.append(route)
 
     logger.info(
-        f"    📊 Found {len(single_user_routes)} single-user routes to optimize")
+        f"    📊 Found {len(single_user_routes)} single-user routes to optimize"
+    )
 
     # Strategy 1: Merge single users into compatible multi-user routes
     routes_to_keep = []
@@ -2446,6 +2448,11 @@ def calculate_merge_quality_score(route1, route2, office_lat, office_lon):
         (test_route['latitude'], test_route['longitude']),
         (office_lat, office_lon))
 
+    direction_consistency = calculate_direction_consistency_improved(
+        test_route['assigned_users'],
+        (test_route['latitude'], test_route['longitude']),
+        (office_lat, office_lon))
+
     # Combined quality score (lower is better)
     quality_score = turning_score + (tortuosity -
                                      1.0) * 20  # Normalize tortuosity penalty
@@ -2541,7 +2548,8 @@ def enhanced_route_splitting(routes, driver_df, office_lat, office_lon):
 
     if routes_split > 0:
         logger.info(
-            f"    ✂️ Successfully split {routes_split} routes with enhanced logic")
+            f"    ✂️ Successfully split {routes_split} routes with enhanced logic"
+        )
 
     return improved_routes
 
@@ -2670,9 +2678,9 @@ def find_best_driver_for_group(user_group, available_drivers, office_lat,
     if available_drivers.empty or len(user_group) == 0:
         return None
 
-    cluster_center = calculate_users_center_improved(user_group)
-    cluster_bearing = calculate_bearing(office_lat, office_lon,
-                                        cluster_center[0], cluster_center[1])
+    group_center = calculate_users_center_improved(user_group)
+    group_bearing = calculate_bearing(office_lat, office_lon, group_center[0],
+                                      group_center[1])
 
     best_driver = None
     best_score = float('inf')
@@ -2683,13 +2691,13 @@ def find_best_driver_for_group(user_group, available_drivers, office_lat,
 
         # Calculate comprehensive score
         distance = haversine_distance(driver['latitude'], driver['longitude'],
-                                      cluster_center[0], cluster_center[1])
+                                      group_center[0], group_center[1])
 
         # Driver-cluster bearing alignment
         driver_bearing = calculate_bearing(office_lat, office_lon,
                                            driver['latitude'],
                                            driver['longitude'])
-        bearing_diff = bearing_difference(driver_bearing, cluster_bearing)
+        bearing_diff = bearing_difference(driver_bearing, group_bearing)
 
         # Utilization bonus
         utilization = len(user_group) / driver['capacity']
@@ -3160,7 +3168,7 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     Main assignment function that automatically routes to the appropriate algorithm
     based on ride_settings priority value from the API response:
     - Priority 1 → assign_capacity.py (Capacity Optimization)
-    - Priority 2 → assign_balance.py (Balanced Optimization)
+    - Priority 2 → assign_balance.py (Balanced Optimization) 
     - Priority 3 → assign_route.py (Road-Aware Routing)
     - Default → assignment.py (Route Efficiency)
     """
@@ -3210,15 +3218,13 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
         else:
             logger.info("🎯 Using default ROUTE EFFICIENCY algorithm (assignment.py)")
             # Continue with route efficiency algorithm (original assignment.py logic)
-            return run_route_efficiency_assignment(source_id, parameter,
-                                                   string_param)
+            return run_route_efficiency_assignment(source_id, parameter, string_param)
 
     except Exception as e:
         logger.error(f"Error in algorithm routing: {e}", exc_info=True)
         # Fallback to route efficiency
         logger.info("🔄 Falling back to ROUTE EFFICIENCY algorithm")
-        return run_route_efficiency_assignment(source_id, parameter,
-                                               string_param)
+        return run_route_efficiency_assignment(source_id, parameter, string_param)
 
 
 def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
