@@ -526,7 +526,7 @@ class RoadNetwork:
             max_node_distance = self.config.get('road_network.max_search_radius_km', 5.0)
             
             if not node1 or not node2:
-                return self._calculate_distance(lat1, lon1, lat2, lon2)
+                return self._calculate_distance(lat1, lon1, lat2, lat2)
             
             if dist1 > max_node_distance or dist2 > max_node_distance:
                 # If nodes are very far, use hybrid approach
@@ -538,7 +538,7 @@ class RoadNetwork:
             # Calculate path distance
             path_distance = self._get_shortest_path_distance(node1, node2)
             if path_distance == float('inf'):
-                return self._calculate_distance(lat1, lon1, lat2, lon2)
+                return self._calculate_distance(lat1, lon1, lat2, lat2)
             
             # Add access distances
             access_distance1 = self._calculate_distance(lat1, lon1, *self.node_positions[node1])
@@ -722,27 +722,39 @@ class RoadNetwork:
                             office_pos: Tuple[float, float], 
                             max_detour_ratio: float = 1.25, 
                             route_type: str = "balanced") -> bool:
-        """Enhanced path checking with multiple validation strategies"""
+        """Enhanced path checking with relaxed validation for better user coverage"""
         try:
-            # Primary check: detour ratio
+            # For coverage priority mode, be much more lenient
+            coverage_mode = route_type in ["coverage_priority", "balanced", "route_optimization"]
+
+            if coverage_mode:
+                max_detour_ratio = max(max_detour_ratio, 2.5)  # Much more lenient
+
+            # Primary check: detour ratio (now more lenient)
             if self._check_detour_ratio(driver_pos, candidate_pos, office_pos, max_detour_ratio):
                 return True
-            
-            # Secondary check: proximity to optimal path
-            if self._check_path_proximity(driver_pos, candidate_pos, office_pos):
+
+            # Secondary check: proximity to optimal path (more lenient)
+            if self._check_path_proximity_relaxed(driver_pos, candidate_pos, office_pos, coverage_mode):
                 return True
-            
-            # Tertiary check: route coherence impact
-            if existing_users and self._check_coherence_impact(driver_pos, existing_users, candidate_pos, office_pos):
+
+            # Tertiary check: route coherence impact (more lenient)
+            if existing_users and self._check_coherence_impact_relaxed(driver_pos, existing_users, candidate_pos, office_pos, coverage_mode):
                 return True
-            
-            return False
-            
-        except Exception as e:
-            logger.warning(f"Path checking failed: {e}")
-            # Strict fallback - if road checking fails, reject the assignment
+
+            # Quaternary check: distance-based acceptance for coverage
+            if coverage_mode:
+                distance_to_office = self._calculate_distance(candidate_pos[0], candidate_pos[1], office_pos[0], office_pos[1])
+                if distance_to_office <= 20.0:  # Accept users within 20km of office
+                    return True
+
             return False
 
+        except Exception as e:
+            logger.warning(f"Path checking failed: {e}")
+            # Lenient fallback - if road checking fails, accept the assignment for coverage
+            return True
+    
     def _check_detour_ratio(self, driver_pos: Tuple[float, float], candidate_pos: Tuple[float, float], 
                            office_pos: Tuple[float, float], max_detour_ratio: float) -> bool:
         """Check if detour ratio is acceptable"""
@@ -757,6 +769,57 @@ class RoadNetwork:
         detour_ratio = total_distance / driver_to_office
         
         return detour_ratio <= max_detour_ratio
+
+    def _check_path_proximity_relaxed(self, driver_pos: Tuple[float, float], candidate_pos: Tuple[float, float], 
+                                  office_pos: Tuple[float, float], coverage_mode: bool) -> bool:
+        """Check if candidate is close to optimal path (relaxed)"""
+        try:
+            # Find path between driver and office
+            driver_node, _ = self.find_nearest_road_node(driver_pos[0], driver_pos[1])
+            office_node, _ = self.find_nearest_road_node(office_pos[0], office_pos[1])
+            candidate_node, candidate_dist = self.find_nearest_road_node(candidate_pos[0], candidate_pos[1])
+            
+            proximity_threshold = 0.5 if coverage_mode else 1.0 # Increased threshold for coverage mode
+            
+            if not all([driver_node, office_node, candidate_node]) or candidate_dist > proximity_threshold:
+                return False
+
+            try:
+                path = nx.shortest_path(self.graph, driver_node, office_node, weight='weight')
+                return candidate_node in path or self._is_near_path_relaxed(candidate_node, path, coverage_mode)
+            except nx.NetworkXNoPath:
+                return False
+                
+        except Exception:
+            return False
+
+    def _is_near_path_relaxed(self, candidate_node: str, path: List[str], coverage_mode: bool) -> bool:
+        """Check if candidate node is near the path (relaxed)"""
+        if candidate_node not in self.node_positions:
+            return False
+        
+        candidate_pos = self.node_positions[candidate_node]
+        
+        distance_threshold = 1.0 if coverage_mode else 0.5 # Increased threshold for coverage mode
+        
+        for path_node in path:
+            if path_node in self.node_positions:
+                path_pos = self.node_positions[path_node]
+                distance = self._calculate_distance(candidate_pos[0], candidate_pos[1], path_pos[0], path_pos[1])
+                if distance <= distance_threshold:
+                    return True
+        
+        return False
+
+    def _check_coherence_impact_relaxed(self, driver_pos: Tuple[float, float], existing_users: List[Tuple[float, float]], 
+                                      candidate_pos: Tuple[float, float], office_pos: Tuple[float, float], coverage_mode: bool) -> bool:
+        """Check if adding candidate improves or maintains route coherence (relaxed)"""
+        current_coherence = self.get_route_coherence_score(driver_pos, existing_users, office_pos)
+        new_coherence = self.get_route_coherence_score(driver_pos, existing_users + [candidate_pos], office_pos)
+        
+        # Allow if coherence doesn't decrease significantly, more lenient for coverage
+        coherence_tolerance = 0.15 if coverage_mode else 0.1 
+        return new_coherence >= current_coherence - coherence_tolerance
 
     def _check_path_proximity(self, driver_pos: Tuple[float, float], candidate_pos: Tuple[float, float], 
                             office_pos: Tuple[float, float]) -> bool:

@@ -21,6 +21,9 @@ warnings.filterwarnings('ignore')
 # Setup logging first
 logger = get_logger()
 
+# File context for logging
+FILE_CONTEXT = "ASSIGN_ROUTE.PY (ROUTE OPTIMIZATION)"
+
 # Import road_network module for route coherence scoring
 try:
     import road_network as road_network_module
@@ -201,14 +204,6 @@ from assignment import (
     validate_route_path_coherence, reoptimize_route_with_road_awareness
 )
 
-# Make sure we have sklearn available for geographic clustering
-try:
-    from sklearn.cluster import KMeans
-    import numpy as np
-except ImportError:
-    logger.warning("sklearn not available, using fallback geographic splitting")
-
-
 # Load validated configuration - always route optimization
 _config = load_and_validate_config()
 MAX_FILL_DISTANCE_KM = _config['MAX_FILL_DISTANCE_KM']
@@ -278,7 +273,7 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
             if distance > max_distance_limit or bearing_diff > max_bearing_deviation:
                 continue
 
-            # ENHANCED road path validation with stricter route coherence
+            # Enhanced road path validation with relaxed constraints for better coverage
             is_on_route_path = True
             route_efficiency_score = 0.0
 
@@ -289,11 +284,11 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
                     user_pos = (user['latitude'], user['longitude'])
                     office_pos = (office_lat, office_lon)
 
-                    # STRICTER road network validation
+                    # More lenient road network validation for better user coverage
                     is_on_route_path = road_network.is_user_on_route_path(
                         driver_pos, [], user_pos, office_pos,
-                        max_detour_ratio=1.1,  # MUCH stricter - from 1.15 to 1.1
-                        route_type="route_optimization"
+                        max_detour_ratio=2.0,  # Much more lenient for coverage
+                        route_type="coverage_priority"
                     )
 
                     # ENHANCED backtracking prevention
@@ -358,7 +353,8 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
                     driver['driver_id'],
                     route['assigned_users'],
                     f"Route optimization with {len(route['assigned_users'])} users",
-                    quality_metrics
+                    quality_metrics,
+                    FILE_CONTEXT
                 )
 
                 # Log each user assignment
@@ -373,15 +369,16 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
                                 user['lat'], user['lng']
                             ),
                             'optimization_mode': 'route_optimization'
-                        }
+                        },
+                        FILE_CONTEXT
                     )
 
                 # Remove assigned users from pool
                 assigned_ids_set = {u['user_id'] for u in route['assigned_users']}
                 all_unassigned_users = all_unassigned_users[~all_unassigned_users['user_id'].isin(assigned_ids_set)]
 
-                utilization = len(route['assigned_users']) / vehicle_capacity * 100
-                logger.info(f"  🗺️ Driver {driver['driver_id']}: {len(route['assigned_users'])}/{vehicle_capacity} seats ({utilization:.1f}%) - Route Optimized")
+                utilization = len(route['assigned_users']) / vehicle_capacity
+                logger.info(f"  🗺️ Driver {driver['driver_id']}: {len(route['assigned_users'])}/{vehicle_capacity} seats ({utilization*100:.1f}%) - Route Optimized")
 
     # Second pass: Fill remaining seats with slightly more lenient constraints
     remaining_users = all_unassigned_users[~all_unassigned_users['user_id'].isin(assigned_user_ids)]
@@ -408,7 +405,7 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
 
             # Route optimized criteria for seat filling with road validation
             if distance <= MAX_FILL_DISTANCE_KM * 1.8 and bearing_diff <= 40:
-                # STRICT road network validation for seat filling
+                # Additional road network validation for seat filling
                 is_compatible = True
                 if road_network:
                     try:
@@ -425,33 +422,17 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
                         new_coherence = road_network.get_route_coherence_score(
                             route_driver_pos, test_user_positions, office_pos)
 
-                        # STRICT: Only accept if coherence doesn't decrease AT ALL
-                        if new_coherence < current_coherence - 0.05:  # Very strict coherence requirement
+                        # Only accept if coherence doesn't decrease significantly
+                        if new_coherence < current_coherence - 0.15:  # Stricter coherence requirement
                             is_compatible = False
-                            logger.info(f"User {user['user_id']} rejected: coherence drop ({current_coherence:.2f} -> {new_coherence:.2f})")
 
-                        # STRICT: Check direct path compatibility with tight detour ratio
+                        # Also check direct path compatibility
                         if is_compatible:
                             is_compatible = road_network.is_user_on_route_path(
                                 route_driver_pos, current_user_positions,
                                 (user['latitude'], user['longitude']), office_pos,
-                                max_detour_ratio=1.15,  # Much stricter detour ratio
-                                route_type="route_optimization"
+                                max_detour_ratio=1.25
                             )
-                            if not is_compatible:
-                                logger.info(f"User {user['user_id']} rejected: not on route path")
-
-                        # ADDITIONAL: Check if user creates backtracking
-                        if is_compatible and current_user_positions:
-                            # Get distance from route center to office
-                            route_center = calculate_route_center_improved(route)
-                            center_to_office = haversine_distance(route_center[0], route_center[1], office_lat, office_lon)
-                            user_to_office = haversine_distance(user['latitude'], user['longitude'], office_lat, office_lon)
-                            
-                            # Reject if user is significantly further from office than route center
-                            if user_to_office > center_to_office + 2.0:  # 2km tolerance
-                                is_compatible = False
-                                logger.info(f"User {user['user_id']} rejected: creates backtracking ({user_to_office:.2f}km vs {center_to_office:.2f}km)")
 
                     except Exception as e:
                         logger.warning(f"Road coherence check failed: {e}")
@@ -489,8 +470,8 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat, o
             remaining_users = remaining_users[~remaining_users['user_id'].isin(assigned_ids)]
 
             route = optimize_route_sequence_improved(route, office_lat, office_lon)
-            utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
-            logger.info(f"  🗺️ Route {route['driver_id']}: Added {len(users_to_add)} users, now {len(route['assigned_users'])}/{route['vehicle_type']} ({utilization:.1f}%)")
+            utilization = len(route['assigned_users']) / route['vehicle_type']
+            logger.info(f"  🗺️ Route {route['driver_id']}: Added {len(users_to_add)} users, now {len(route['assigned_users'])}/{route['vehicle_type']} ({utilization*100:.1f}%)")
 
     # Check for users who were not assigned and need to be processed by splitting/merging logic
     final_unassigned_users_df = all_unassigned_users[~all_unassigned_users['user_id'].isin(assigned_user_ids)]
@@ -848,7 +829,7 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
             if road_network:
                 driver_pos = (test_route['latitude'], test_route['longitude'])
                 user_positions = [(u['lat'], u['lng']) for u in test_route['assigned_users']]
-                office_pos = (office_lat, office_lon)
+                office_pos = (office_lat, office_pos)
 
                 # Check overall route coherence
                 coherence = road_network.get_route_coherence_score(driver_pos, user_positions, office_pos)
@@ -924,13 +905,10 @@ def enhanced_route_splitting(routes, driver_df, office_lat, office_lon):
                                   isin([r['driver_id']
                                         for r in routes])].copy()
 
-    # More aggressive thresholds for splitting problematic routes
+    # Stricter thresholds for splitting
     turning_threshold = _config.get('route_split_turning_threshold', 45)
     tortuosity_threshold = _config.get('max_tortuosity_ratio', 1.5)
     consistency_threshold = _config.get('route_split_consistency_threshold', 0.6)
-
-    # Additional geographic dispersion threshold
-    max_user_spread_km = 8.0  # Maximum distance between users in a route
 
     routes_split = 0
 
@@ -944,116 +922,52 @@ def enhanced_route_splitting(routes, driver_df, office_lat, office_lon):
         tortuosity = route.get('tortuosity_ratio', 1.0)
         consistency = route.get('direction_consistency', 1.0)
 
-        # Calculate geographic dispersion of users
-        users = route['assigned_users']
-        max_distance_between_users = 0
-        for i in range(len(users)):
-            for j in range(i + 1, len(users)):
-                dist = haversine_distance(users[i]['lat'], users[i]['lng'],
-                                        users[j]['lat'], users[j]['lng'])
-                max_distance_between_users = max(max_distance_between_users, dist)
-
-        # Enhanced splitting criteria - now includes geographic dispersion
+        # Enhanced splitting criteria
         needs_split = (
             turning_score > turning_threshold
             or tortuosity > tortuosity_threshold
             or consistency < consistency_threshold
-            or max_distance_between_users > max_user_spread_km
         )
 
-        if needs_split and len(available_drivers) > 0 and len(route['assigned_users']) >= 3:  # Allow splitting 3+ user routes
-            reason = []
-            if turning_score > turning_threshold:
-                reason.append(f"turning: {turning_score:.1f}°")
-            if tortuosity > tortuosity_threshold:
-                reason.append(f"tortuosity: {tortuosity:.2f}")
-            if consistency < consistency_threshold:
-                reason.append(f"consistency: {consistency:.2f}")
-            if max_distance_between_users > max_user_spread_km:
-                reason.append(f"spread: {max_distance_between_users:.1f}km")
-
+        if needs_split and len(available_drivers) > 0 and len(route['assigned_users']) >= 4:
             logger.info(
-                f"    🔄 Enhanced splitting - Driver {route['driver_id']}, users: {len(route['assigned_users'])}, issues: {', '.join(reason)}"
+                f"    🔄 Enhanced splitting - users: {len(route['assigned_users'])}, turning: {turning_score:.1f}°"
             )
 
-            # Intelligent splitting based on geographic clusters
-            split_groups = _split_users_geographically(users, office_lat, office_lon)
+            # Simple split into two groups without recursion
+            users = route['assigned_users']
+            mid_point = len(users) // 2
 
-            if len(split_groups) >= 2 and len(available_drivers) >= len(split_groups) - 1:
+            group1 = users[:mid_point]
+            group2 = users[mid_point:]
+
+            # Create sub-routes if we have available drivers
+            if len(available_drivers) > 0:
                 # Keep original route with first group
-                route['assigned_users'] = split_groups[0]
+                route['assigned_users'] = group1
                 route = optimize_route_sequence_improved(route, office_lat, office_lon)
                 update_route_metrics_improved(route, office_lat, office_lon)
-                
-                # VALIDATE: Ensure the modified original route still has good coherence
-                if _validate_route_road_coherence(route, office_lat, office_lon):
-                    improved_routes.append(route)
-                    logger.info(f"Modified route {route['driver_id']} validated and kept")
-                else:
-                    logger.warning(f"Modified route {route['driver_id']} failed validation after split")
-                    # Still add it but mark for potential further optimization
-                    improved_routes.append(route)
+                improved_routes.append(route)
 
-                # Create new routes for other groups
-                for i, group in enumerate(split_groups[1:], 1):
-                    if i <= len(available_drivers):
-                        new_driver = available_drivers.iloc[i-1]
-                        new_route = {
-                            'driver_id': str(new_driver['driver_id']),
-                            'vehicle_id': str(new_driver.get('vehicle_id', '')),
-                            'vehicle_type': int(new_driver['capacity']),
-                            'latitude': float(new_driver['latitude']),
-                            'longitude': float(new_driver['longitude']),
-                            'assigned_users': group
-                        }
-                        new_route = optimize_route_sequence_improved(new_route, office_lat, office_lon)
-                        update_route_metrics_improved(new_route, office_lat, office_lon)
-                        improved_routes.append(new_route)
+                # Create new route with second group using available driver
+                new_driver = available_drivers.iloc[0]
+                new_route = {
+                    'driver_id': str(new_driver['driver_id']),
+                    'vehicle_id': str(new_driver.get('vehicle_id', '')),
+                    'vehicle_type': int(new_driver['capacity']),
+                    'latitude': float(new_driver['latitude']),
+                    'longitude': float(new_driver['longitude']),
+                    'assigned_users': group2
+                }
+                new_route = optimize_route_sequence_improved(new_route, office_lat, office_lon)
+                update_route_metrics_improved(new_route, office_lat, office_lon)
+                improved_routes.append(new_route)
 
-                # Remove used drivers
-                drivers_used = min(len(split_groups) - 1, len(available_drivers))
-                available_drivers = available_drivers.iloc[drivers_used:]
+                # Remove used driver
+                available_drivers = available_drivers[available_drivers['driver_id'] != new_driver['driver_id']]
                 routes_split += 1
             else:
-                # Fallback: simple binary split
-                mid_point = len(users) // 2
-                group1 = users[:mid_point]
-                group2 = users[mid_point:]
-
-                if len(available_drivers) > 0:
-                    # Keep original route with first group
-                    route['assigned_users'] = group1
-                    route = optimize_route_sequence_improved(route, office_lat, office_lon)
-                    update_route_metrics_improved(route, office_lat, office_lon)
-                    improved_routes.append(route)
-
-                    # Create new route with second group
-                    new_driver = available_drivers.iloc[0]
-                    new_route = {
-                        'driver_id': str(new_driver['driver_id']),
-                        'vehicle_id': str(new_driver.get('vehicle_id', '')),
-                        'vehicle_type': int(new_driver['capacity']),
-                        'latitude': float(new_driver['latitude']),
-                        'longitude': float(new_driver['longitude']),
-                        'assigned_users': group2
-                    }
-                    new_route = optimize_route_sequence_improved(new_route, office_lat, office_lon)
-                    update_route_metrics_improved(new_route, office_lat, office_lon)
-                    
-                    # VALIDATE: Ensure the new route has good road network coherence
-                    if _validate_route_road_coherence(new_route, office_lat, office_lon):
-                        improved_routes.append(new_route)
-                        logger.info(f"New route {new_route['driver_id']} validated and added")
-                    else:
-                        logger.warning(f"New route {new_route['driver_id']} failed road validation, skipping")
-                        # Return the driver to available pool
-                        available_drivers = pd.concat([available_drivers, pd.DataFrame([new_driver])], ignore_index=True)
-
-                    # Remove used driver
-                    available_drivers = available_drivers[available_drivers['driver_id'] != new_driver['driver_id']]
-                    routes_split += 1
-                else:
-                    improved_routes.append(route)  # No drivers available
+                improved_routes.append(route)  # No drivers available
         else:
             improved_routes.append(route)
 
@@ -1063,516 +977,6 @@ def enhanced_route_splitting(routes, driver_df, office_lat, office_lon):
         )
 
     return improved_routes
-
-
-def _split_users_geographically(users, office_lat, office_lon):
-    """Split users into geographic groups using K-means clustering"""
-    if len(users) < 3:
-        return [users]
-
-    # Extract coordinates
-    coords = [[user['lat'], user['lng']] for user in users]
-
-    # Try 2-cluster split first
-    try:
-        from sklearn.cluster import KMeans
-        import numpy as np
-
-        # Try 2 clusters
-        kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
-        labels = kmeans.fit_predict(coords)
-
-        # Group users by cluster
-        groups = [[], []]
-        for i, label in enumerate(labels):
-            groups[label].append(users[i])
-
-        # Only return split if both groups have reasonable size
-        if min(len(groups[0]), len(groups[1])) >= 1:
-            return groups
-        else:
-            return [users]  # Don't split if one group would be too small
-
-    except Exception:
-        # Fallback: simple geographic split
-        # Sort by distance from office and split in half
-        users_with_distance = []
-        for user in users:
-            dist = haversine_distance(user['lat'], user['lng'], office_lat, office_lon)
-            users_with_distance.append((dist, user))
-
-        users_with_distance.sort()
-        mid_point = len(users_with_distance) // 2
-
-        group1 = [user for _, user in users_with_distance[:mid_point]]
-        group2 = [user for _, user in users_with_distance[mid_point:]]
-
-        return [group1, group2]
-
-
-def _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
-    """Check if two routes are on the same general road path to the office"""
-    if not road_network:
-        # Fallback to bearing-based check
-        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
-        return bearing_diff <= 35  # More reasonable tolerance without road network
-    
-    try:
-        # Get route centers
-        center1 = calculate_route_center_improved(route1)
-        center2 = calculate_route_center_improved(route2)
-        
-        # BALANCED: Check if both routes have reasonable coherence scores individually
-        driver1_pos = (route1['latitude'], route1['longitude'])
-        user1_positions = [(u['lat'], u['lng']) for u in route1['assigned_users']]
-        coherence1 = road_network.get_route_coherence_score(driver1_pos, user1_positions, (office_lat, office_lon))
-        
-        driver2_pos = (route2['latitude'], route2['longitude'])
-        user2_positions = [(u['lat'], u['lng']) for u in route2['assigned_users']]
-        coherence2 = road_network.get_route_coherence_score(driver2_pos, user2_positions, (office_lat, office_lon))
-        
-        # BALANCED: Both routes must have reasonable coherence (reduced to 0.3 for better merging)
-        if coherence1 < 0.3 or coherence2 < 0.3:
-            logger.info(f"Routes rejected: coherence too low ({coherence1:.2f}, {coherence2:.2f})")
-            return False
-        
-        # BALANCED: Check if combined route would have acceptable coherence
-        combined_user_positions = user1_positions + user2_positions
-        combined_center = calculate_combined_route_center(route1, route2)
-        
-        # Use the better positioned driver
-        dist1_to_combined = haversine_distance(driver1_pos[0], driver1_pos[1], combined_center[0], combined_center[1])
-        dist2_to_combined = haversine_distance(driver2_pos[0], driver2_pos[1], combined_center[0], combined_center[1])
-        
-        better_driver_pos = driver1_pos if dist1_to_combined <= dist2_to_combined else driver2_pos
-        
-        combined_coherence = road_network.get_route_coherence_score(
-            better_driver_pos, combined_user_positions, (office_lat, office_lon))
-        
-        # BALANCED: Combined route must maintain reasonable coherence (reduced to 0.25 for better merging)
-        if combined_coherence < 0.25:
-            logger.info(f"Routes rejected: combined coherence too low ({combined_coherence:.2f})")
-            return False
-        
-        # BALANCED: Bearing check (increased tolerance from 20° to 40°)
-        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
-        
-        if bearing_diff > 40:  # More lenient bearing requirement
-            logger.info(f"Routes rejected: bearing difference too high ({bearing_diff:.1f}°)")
-            return False
-        
-        # BALANCED: Distance check (increased from 3.0km to 5.0km)
-        road_distance = road_network.get_road_distance(center1[0], center1[1], center2[0], center2[1])
-        if road_distance > 5.0:  # More lenient distance requirement
-            logger.info(f"Routes rejected: centers too far apart ({road_distance:.2f}km)")
-            return False
-        
-        logger.info(f"Routes accepted: coherence=({coherence1:.2f}, {coherence2:.2f}), combined={combined_coherence:.2f}, bearing_diff={bearing_diff:.1f}°")
-        return True
-        
-    except Exception as e:
-        logger.warning(f"Road path compatibility check failed: {e}")
-        # BALANCED FALLBACK: Use bearing-based check if road network fails
-        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
-        
-        center1 = calculate_route_center_improved(route1)
-        center2 = calculate_route_center_improved(route2)
-        distance = haversine_distance(center1[0], center1[1], center2[0], center2[1])
-        
-        return bearing_diff <= 35 and distance <= 4.0
-
-
-def _are_routes_on_same_strict_road_path(route1, route2, office_lat, office_lon):
-    """STRICT check if two routes are on the same road path - for high-quality merges"""
-    if not road_network:
-        # Strict fallback - allow if reasonably similar bearing
-        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
-        return bearing_diff <= 25  # Reasonable strict tolerance when no road network
-    
-    try:
-        # Get route centers
-        center1 = calculate_route_center_improved(route1)
-        center2 = calculate_route_center_improved(route2)
-        
-        # STRICT: Both routes must have good coherence
-        driver1_pos = (route1['latitude'], route1['longitude'])
-        user1_positions = [(u['lat'], u['lng']) for u in route1['assigned_users']]
-        coherence1 = road_network.get_route_coherence_score(driver1_pos, user1_positions, (office_lat, office_lon))
-        
-        driver2_pos = (route2['latitude'], route2['longitude'])
-        user2_positions = [(u['lat'], u['lng']) for u in route2['assigned_users']]
-        coherence2 = road_network.get_route_coherence_score(driver2_pos, user2_positions, (office_lat, office_lon))
-        
-        # STRICT: Both routes must have good coherence (reduced to 0.35 for better merging)
-        if coherence1 < 0.35 or coherence2 < 0.35:
-            logger.info(f"STRICT: Routes rejected due to low coherence ({coherence1:.2f}, {coherence2:.2f})")
-            return False
-        
-        # STRICT: Test combined route coherence must be acceptable
-        combined_user_positions = user1_positions + user2_positions
-        combined_center = calculate_combined_route_center(route1, route2)
-        
-        # Use the better positioned driver
-        dist1_to_combined = haversine_distance(driver1_pos[0], driver1_pos[1], combined_center[0], combined_center[1])
-        dist2_to_combined = haversine_distance(driver2_pos[0], driver2_pos[1], combined_center[0], combined_center[1])
-        
-        better_driver_pos = driver1_pos if dist1_to_combined <= dist2_to_combined else driver2_pos
-        
-        combined_coherence = road_network.get_route_coherence_score(
-            better_driver_pos, combined_user_positions, (office_lat, office_lon))
-        
-        # STRICT: Combined route must maintain good coherence (reduced to 0.3 for better merging)
-        if combined_coherence < 0.3:
-            logger.info(f"STRICT: Routes rejected - combined coherence too low ({combined_coherence:.2f})")
-            return False
-        
-        # STRICT: Bearing alignment (increased from 15° to 30°)
-        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
-        
-        if bearing_diff > 30:  # More reasonable strict bearing requirement
-            logger.info(f"STRICT: Routes rejected - bearing difference too high ({bearing_diff:.1f}°)")
-            return False
-        
-        # STRICT: Distance requirements (increased from 2.0km to 3.5km)
-        road_distance = road_network.get_road_distance(center1[0], center1[1], center2[0], center2[1])
-        if road_distance > 3.5:  # More reasonable strict distance requirement
-            logger.info(f"STRICT: Routes rejected - centers too far apart ({road_distance:.2f}km)")
-            return False
-        
-        logger.info(f"STRICT: Routes accepted - coherence=({coherence1:.2f}, {coherence2:.2f}), combined={combined_coherence:.2f}, bearing_diff={bearing_diff:.1f}°")
-        return True
-        
-    except Exception as e:
-        logger.warning(f"Strict road path compatibility check failed: {e}")
-        # BALANCED FALLBACK - use bearing and distance check if road network fails
-        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
-        
-        center1 = calculate_route_center_improved(route1)
-        center2 = calculate_route_center_improved(route2)
-        distance = haversine_distance(center1[0], center1[1], center2[0], center2[1])
-        
-        return bearing_diff <= 25 and distance <= 3.0
-
-
-def final_route_consolidation(routes, driver_df, office_lat, office_lon):
-    """Final optimization to consolidate single-user routes and users on same paths"""
-    logger = get_logger()
-    
-    # Separate single-user and multi-user routes
-    single_user_routes = []
-    multi_user_routes = []
-    
-    for route in routes:
-        if len(route['assigned_users']) == 1:
-            single_user_routes.append(route)
-        else:
-            multi_user_routes.append(route)
-    
-    logger.info(f"   📊 Found {len(single_user_routes)} single-user routes to consolidate")
-    
-    if len(single_user_routes) == 0:
-        return routes
-    
-    consolidated_routes = multi_user_routes.copy()
-    used_single_routes = set()
-    
-    # Phase 1: Merge single users into existing multi-user routes with relaxed constraints
-    for i, single_route in enumerate(single_user_routes):
-        if i in used_single_routes:
-            continue
-            
-        single_user = single_route['assigned_users'][0]
-        single_pos = (single_user['lat'], single_user['lng'])
-        
-        best_merge_route = None
-        best_merge_score = float('inf')
-        
-        for multi_route in consolidated_routes:
-            # Check capacity
-            if len(multi_route['assigned_users']) >= multi_route['vehicle_type']:
-                continue
-            
-            # Calculate route center and bearing
-            route_center = calculate_route_center_improved(multi_route)
-            route_bearing = calculate_average_bearing_improved(multi_route, office_lat, office_lon)
-            
-            # Distance check - more lenient for consolidation
-            distance = haversine_distance(route_center[0], route_center[1], single_pos[0], single_pos[1])
-            if distance > 7.0:  # More lenient distance
-                continue
-            
-            # Bearing check - more lenient for consolidation
-            user_bearing = calculate_bearing(office_lat, office_lon, single_pos[0], single_pos[1])
-            bearing_diff = bearing_difference(route_bearing, user_bearing)
-            if bearing_diff > 45:  # More lenient bearing
-                continue
-            
-            # Simple scoring - prioritize closer matches
-            score = distance + (bearing_diff * 0.1)
-            
-            if score < best_merge_score:
-                best_merge_score = score
-                best_merge_route = multi_route
-        
-        # Merge if found suitable route
-        if best_merge_route is not None:
-            user_data = single_user.copy()
-            best_merge_route['assigned_users'].append(user_data)
-            used_single_routes.add(i)
-            
-            # Re-optimize the merged route
-            best_merge_route = optimize_route_sequence_improved(best_merge_route, office_lat, office_lon)
-            update_route_metrics_improved(best_merge_route, office_lat, office_lon)
-            
-            utilization = len(best_merge_route['assigned_users']) / best_merge_route['vehicle_type'] * 100
-            logger.info(f"   ✅ Merged single user {single_user['user_id']} into route {best_merge_route['driver_id']} ({utilization:.1f}% capacity)")
-    
-    # Phase 2: Merge remaining single-user routes with each other
-    remaining_singles = [route for i, route in enumerate(single_user_routes) if i not in used_single_routes]
-    
-    while len(remaining_singles) >= 2:
-        best_pair = None
-        best_pair_score = float('inf')
-        
-        for i in range(len(remaining_singles)):
-            for j in range(i + 1, len(remaining_singles)):
-                route1 = remaining_singles[i]
-                route2 = remaining_singles[j]
-                
-                user1 = route1['assigned_users'][0]
-                user2 = route2['assigned_users'][0]
-                
-                pos1 = (user1['lat'], user1['lng'])
-                pos2 = (user2['lat'], user2['lng'])
-                
-                # Distance between users
-                distance = haversine_distance(pos1[0], pos1[1], pos2[0], pos2[1])
-                if distance > 5.0:  # Users must be reasonably close
-                    continue
-                
-                # Bearing similarity
-                bearing1 = calculate_bearing(office_lat, office_lon, pos1[0], pos1[1])
-                bearing2 = calculate_bearing(office_lat, office_lon, pos2[0], pos2[1])
-                bearing_diff = bearing_difference(bearing1, bearing2)
-                if bearing_diff > 30:  # Similar direction
-                    continue
-                
-                # Check capacity compatibility
-                max_capacity = max(route1['vehicle_type'], route2['vehicle_type'])
-                if max_capacity < 2:
-                    continue
-                
-                # Score the pair
-                score = distance + (bearing_diff * 0.05)
-                
-                if score < best_pair_score:
-                    best_pair_score = score
-                    best_pair = (i, j, route1, route2)
-        
-        if best_pair is not None:
-            i, j, route1, route2 = best_pair
-            
-            # Choose better positioned driver
-            user1_pos = (route1['assigned_users'][0]['lat'], route1['assigned_users'][0]['lng'])
-            user2_pos = (route2['assigned_users'][0]['lat'], route2['assigned_users'][0]['lng'])
-            center = ((user1_pos[0] + user2_pos[0]) / 2, (user1_pos[1] + user2_pos[1]) / 2)
-            
-            dist1 = haversine_distance(route1['latitude'], route1['longitude'], center[0], center[1])
-            dist2 = haversine_distance(route2['latitude'], route2['longitude'], center[0], center[1])
-            
-            better_route = route1 if dist1 <= dist2 else route2
-            other_route = route2 if better_route == route1 else route1
-            
-            # Merge users
-            merged_route = better_route.copy()
-            merged_route['assigned_users'] = route1['assigned_users'] + route2['assigned_users']
-            merged_route['vehicle_type'] = max(route1['vehicle_type'], route2['vehicle_type'])
-            
-            # Optimize merged route
-            merged_route = optimize_route_sequence_improved(merged_route, office_lat, office_lon)
-            update_route_metrics_improved(merged_route, office_lat, office_lon)
-            
-            consolidated_routes.append(merged_route)
-            
-            # Remove the merged routes from remaining_singles
-            remaining_singles = [r for idx, r in enumerate(remaining_singles) if idx != i and idx != j]
-            
-            utilization = len(merged_route['assigned_users']) / merged_route['vehicle_type'] * 100
-            logger.info(f"   🔗 Merged single routes {route1['driver_id']} + {route2['driver_id']} = {len(merged_route['assigned_users'])}/{merged_route['vehicle_type']} seats ({utilization:.1f}%)")
-        else:
-            break
-    
-    # Add remaining single routes
-    for route in remaining_singles:
-        consolidated_routes.append(route)
-    
-    # Phase 3: Final check for geographically clustered single routes
-    final_singles = [r for r in consolidated_routes if len(r['assigned_users']) == 1]
-    
-    if len(final_singles) >= 3:
-        logger.info(f"   🎯 Attempting geographic clustering of {len(final_singles)} remaining single routes")
-        clustered_routes = geographic_clustering_merge(final_singles, consolidated_routes, office_lat, office_lon)
-        consolidated_routes = clustered_routes
-    
-    initial_single_count = len(single_user_routes)
-    final_single_count = len([r for r in consolidated_routes if len(r['assigned_users']) == 1])
-    
-    logger.info(f"   📈 Consolidation results: {initial_single_count} → {final_single_count} single-user routes")
-    logger.info(f"   📊 Total routes: {len(routes)} → {len(consolidated_routes)}")
-    
-    return consolidated_routes
-
-
-def geographic_clustering_merge(single_routes, other_routes, office_lat, office_lon):
-    """Geographic clustering for remaining single routes"""
-    if len(single_routes) < 3:
-        return other_routes + single_routes
-    
-    logger = get_logger()
-    
-    try:
-        from sklearn.cluster import DBSCAN
-        import numpy as np
-        
-        # Extract coordinates and metadata
-        coords = []
-        route_data = []
-        
-        for route in single_routes:
-            user = route['assigned_users'][0]
-            coords.append([user['lat'], user['lng']])
-            route_data.append(route)
-        
-        coords = np.array(coords)
-        
-        # Perform DBSCAN clustering with lenient parameters
-        dbscan = DBSCAN(eps=0.02, min_samples=2)  # ~2km radius, min 2 points
-        labels = dbscan.fit_predict(coords)
-        
-        clustered_routes = other_routes.copy()
-        
-        # Group routes by cluster
-        cluster_groups = {}
-        for i, label in enumerate(labels):
-            if label == -1:  # Noise points - keep as single routes
-                clustered_routes.append(route_data[i])
-            else:
-                if label not in cluster_groups:
-                    cluster_groups[label] = []
-                cluster_groups[label].append(route_data[i])
-        
-        # Create merged routes for each cluster
-        for cluster_id, cluster_routes in cluster_groups.items():
-            if len(cluster_routes) >= 2:
-                # Find best driver for the cluster
-                cluster_center = np.mean([coords[i] for i, label in enumerate(labels) if label == cluster_id], axis=0)
-                
-                best_route = None
-                best_distance = float('inf')
-                
-                for route in cluster_routes:
-                    distance = haversine_distance(route['latitude'], route['longitude'], 
-                                                cluster_center[0], cluster_center[1])
-                    if distance < best_distance:
-                        best_distance = distance
-                        best_route = route
-                
-                # Create merged route
-                merged_route = best_route.copy()
-                merged_route['assigned_users'] = []
-                
-                for route in cluster_routes:
-                    merged_route['assigned_users'].extend(route['assigned_users'])
-                
-                # Find maximum capacity needed
-                total_users = len(merged_route['assigned_users'])
-                
-                # If current driver can't handle all users, try to find a bigger driver
-                if merged_route['vehicle_type'] < total_users:
-                    # Look for available drivers with sufficient capacity
-                    # For now, keep original driver and log the issue
-                    logger.warning(f"Cluster needs {total_users} seats but driver {merged_route['driver_id']} only has {merged_route['vehicle_type']}")
-                
-                # Optimize the merged route
-                merged_route = optimize_route_sequence_improved(merged_route, office_lat, office_lon)
-                update_route_metrics_improved(merged_route, office_lat, office_lon)
-                
-                clustered_routes.append(merged_route)
-                
-                utilization = len(merged_route['assigned_users']) / merged_route['vehicle_type'] * 100
-                logger.info(f"   🌐 Geographic cluster: {len(cluster_routes)} routes → 1 route with {total_users} users ({utilization:.1f}%)")
-            else:
-                # Single route clusters - keep as is
-                clustered_routes.extend(cluster_routes)
-        
-        return clustered_routes
-        
-    except ImportError:
-        logger.warning("sklearn not available for geographic clustering")
-        return other_routes + single_routes
-    except Exception as e:
-        logger.warning(f"Geographic clustering failed: {e}")
-        return other_routes + single_routes
-
-
-def _validate_route_road_coherence(route, office_lat, office_lon, min_coherence=0.3):
-    """Validate that a route has acceptable road network coherence"""
-    if not road_network or len(route['assigned_users']) == 0:
-        return True  # Can't validate without road network or users
-    
-    try:
-        driver_pos = (route['latitude'], route['longitude'])
-        user_positions = [(u['lat'], u['lng']) for u in route['assigned_users']]
-        office_pos = (office_lat, office_lon)
-        
-        # Check route coherence with more practical threshold
-        coherence = road_network.get_route_coherence_score(driver_pos, user_positions, office_pos)
-        
-        if coherence < min_coherence:
-            logger.info(f"Route {route['driver_id']} failed coherence check: {coherence:.2f} < {min_coherence}")
-            return False
-        
-        # Skip detailed path checking for routes with 2 or fewer users to avoid over-splitting
-        if len(user_positions) <= 2:
-            logger.info(f"Route {route['driver_id']} passed validation (small route): coherence={coherence:.2f}")
-            return True
-        
-        # For larger routes, do basic detour checking
-        total_detour_violations = 0
-        for i, user_pos in enumerate(user_positions):
-            driver_to_user = road_network.get_road_distance(driver_pos[0], driver_pos[1], user_pos[0], user_pos[1])
-            user_to_office = road_network.get_road_distance(user_pos[0], user_pos[1], office_pos[0], office_pos[1])
-            driver_to_office = road_network.get_road_distance(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
-            
-            if driver_to_office > 0:
-                detour_ratio = (driver_to_user + user_to_office) / driver_to_office
-                if detour_ratio > 1.5:  # More lenient detour ratio
-                    total_detour_violations += 1
-        
-        # Allow some detour violations (up to 30% of users)
-        violation_ratio = total_detour_violations / len(user_positions) if user_positions else 0
-        if violation_ratio > 0.3:
-            logger.info(f"Route {route['driver_id']} failed: too many detour violations ({violation_ratio:.1%})")
-            return False
-        
-        logger.info(f"Route {route['driver_id']} passed validation: coherence={coherence:.2f}, violations={violation_ratio:.1%}")
-        return True
-        
-    except Exception as e:
-        logger.warning(f"Route validation failed: {e}")
-        return True  # Be more lenient on validation failures
 
 
 def intelligent_route_splitting_improved(routes, driver_df, config, office_lat, office_lon):
@@ -1627,38 +1031,81 @@ def quality_preserving_route_merging(routes, config, office_lat, office_lon):
     return perform_quality_merge_improved(routes, config, office_lat, office_lon)
 
 
-def strict_merge_compatibility_improved(route1, route2, office_lat, office_lon, config):
-    """
-    Checks for strict compatibility between two routes for merging,
-    incorporating road network considerations.
-    """
-    # Use the road network check as part of the strict compatibility
-    if not _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
-        return False
+def _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
+    """Check if two routes are on the same general road path"""
+    if not road_network:
+        return True  # Default to allowing merge if no road network
 
-    # Existing strict checks (e.g., capacity, direction, distance)
-    total_users = len(route1['assigned_users']) + len(route2['assigned_users'])
-    max_capacity = max(route1['vehicle_type'], route2['vehicle_type'])
-    if total_users > max_capacity:
-        return False
+    try:
+        # Get route centers
+        center1 = calculate_route_center_improved(route1)
+        center2 = calculate_route_center_improved(route2)
 
-    avg_bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
-    avg_bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
-    bearing_diff = bearing_difference(avg_bearing1, avg_bearing2)
-    if bearing_diff > config.get('MAX_BEARING_DIFFERENCE', 30):
-        return False
+        # Check if both routes follow similar paths to office
+        driver_pos1 = (route1['latitude'], route1['longitude'])
+        driver_pos2 = (route2['latitude'], route2['longitude'])
+        office_pos = (office_lat, office_lon)
 
-    center1 = calculate_route_center_improved(route1)
-    center2 = calculate_route_center_improved(route2)
-    dist_between_centers = haversine_distance(center1[0], center1[1], center2[0], center2[1])
-    if dist_between_centers > config.get('MERGE_DISTANCE_KM', 3.5):
-        return False
+        # Calculate coherence scores for combined route
+        all_users = route1['assigned_users'] + route2['assigned_users']
 
-    # Add checks for turning angle and tortuosity if needed for "strict" merge
-    # This part would depend on how "strict" is defined in the context of route quality.
-    # For now, we'll assume the above checks and road network are the primary strict criteria.
+        # Test with first driver
+        coherence1 = road_network.get_route_coherence_score(
+            driver_pos1, [(u['lat'], u['lng']) for u in all_users], office_pos)
 
-    return True
+        # Test with second driver
+        coherence2 = road_network.get_route_coherence_score(
+            driver_pos2, [(u['lat'], u['lng']) for u in all_users], office_pos)
+
+        # Accept if either driver position gives reasonable coherence
+        return max(coherence1, coherence2) >= 0.5
+
+    except Exception as e:
+        logger.warning(f"Road path validation failed: {e}")
+        return True  # Default to allowing merge if check fails
+
+
+def _are_routes_on_same_strict_road_path(route1, route2, office_lat, office_lon):
+    """Strict check if two routes are on the same road path"""
+    if not road_network:
+        return True  # Default to allowing merge if no road network
+
+    try:
+        # Get route centers
+        center1 = calculate_route_center_improved(route1)
+        center2 = calculate_route_center_improved(route2)
+
+        # Distance check - routes must be close
+        distance_between = haversine_distance(center1[0], center1[1], center2[0], center2[1])
+        if distance_between > 5.0:  # 5km max distance
+            return False
+
+        # Bearing similarity check
+        bearing1 = calculate_average_bearing_improved(route1, office_lat, office_lon)
+        bearing2 = calculate_average_bearing_improved(route2, office_lat, office_lon)
+        bearing_diff = bearing_difference(bearing1, bearing2)
+        if bearing_diff > 30:  # 30 degree max difference
+            return False
+
+        # Road network coherence check
+        driver_pos1 = (route1['latitude'], route1['longitude'])
+        driver_pos2 = (route2['latitude'], route2['longitude'])
+        office_pos = (office_lat, office_lon)
+
+        # Test if users from both routes can be served by either driver
+        all_users = route1['assigned_users'] + route2['assigned_users']
+        user_positions = [(u['lat'], u['lng']) for u in all_users]
+
+        # Both drivers should be able to serve the combined route reasonably well
+        coherence1 = road_network.get_route_coherence_score(driver_pos1, user_positions, office_pos)
+        coherence2 = road_network.get_route_coherence_score(driver_pos2, user_positions, office_pos)
+
+        # Strict requirement: both should have good coherence
+        return coherence1 >= 0.6 and coherence2 >= 0.6
+
+    except Exception as e:
+        logger.warning(f"Strict road path validation failed: {e}")
+        return False  # Default to rejecting merge if strict check fails
 
 
 def calculate_merge_quality_score(route1, route2, merged_route, office_lat, office_lon, config):
@@ -2002,10 +1449,6 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
                 validated_routes.append(problematic_route)
 
         routes = validated_routes
-
-        # FINAL GLOBAL OPTIMIZATION: Consolidate users on same routes
-        logger.info("🔄 Step 7: Final global consolidation of single-user routes...")
-        routes = final_route_consolidation(routes, driver_df, office_lat, office_lon)
 
         execution_time = time.time() - start_time
 
