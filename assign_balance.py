@@ -326,8 +326,7 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                                           user['latitude'], user['longitude'])
 
             office_to_user_bearing = calculate_bearing(office_lat, office_lon,
-                                                       user['latitude'],
-                                                       user['longitude'])
+                                                       user['latitude'], user['longitude'])
 
             bearing_diff = bearing_difference(main_route_bearing,
                                               office_to_user_bearing)
@@ -336,7 +335,7 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
             if distance > max_distance_limit or bearing_diff > max_bearing_deviation:
                 continue
 
-            # ENHANCED road path validation with stricter route coherence (from assign_route)
+            # ENHANCED road path validation with STRICT coherence for balanced optimization
             is_on_route_path = True
             route_efficiency_score = 0.0
 
@@ -347,16 +346,16 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                     user_pos = (user['latitude'], user['longitude'])
                     office_pos = (office_lat, office_lon)
 
-                    # STRICTER road network validation (from assign_route)
+                    # STRICT road network validation for balanced optimization
                     is_on_route_path = road_network.is_user_on_route_path(
                         driver_pos,
                         [],
                         user_pos,
                         office_pos,
-                        max_detour_ratio=1.1,  # MUCH stricter - from assign_route
+                        max_detour_ratio=1.08,  # VERY strict - 8% max detour for balanced mode
                         route_type="balanced_optimization")
 
-                    # ENHANCED backtracking prevention (from assign_route)
+                    # ENHANCED validation: check actual road distances
                     if is_on_route_path:
                         driver_to_office_dist = road_network.get_road_distance(
                             driver['latitude'], driver['longitude'],
@@ -368,17 +367,38 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                             user['latitude'], user['longitude'], office_lat,
                             office_lon)
 
-                        # STRICTER backtracking check (from assign_route)
-                        detour_penalty = (
-                            driver_to_user_dist +
-                            user_to_office_dist) / driver_to_office_dist
-                        if detour_penalty > 1.15:  # Reduced from 1.2 to 1.15 (15% max detour)
+                        # STRICT detour checking - must be efficient route
+                        if driver_to_office_dist > 0:
+                            detour_penalty = (driver_to_user_dist + user_to_office_dist) / driver_to_office_dist
+                            if detour_penalty > 1.08:  # Very strict 8% max detour for balanced mode
+                                is_on_route_path = False
+                                logger.debug(f"User {user['user_id']} rejected: detour ratio {detour_penalty:.2f} > 1.08")
+
+                            # Additional check: user shouldn't be too far from direct path
+                            direct_distance = haversine_distance(driver['latitude'], driver['longitude'],
+                                                               office_lat, office_lon)
+                            user_deviation = abs(driver_to_user_dist + user_to_office_dist - direct_distance)
+                            if user_deviation > 2.0:  # Max 2km deviation from direct path
+                                is_on_route_path = False
+                                logger.debug(f"User {user['user_id']} rejected: path deviation {user_deviation:.2f}km > 2km")
+
+                            # Calculate route efficiency score for ranking
+                            route_efficiency_score = 1.0 / max(1.0, detour_penalty)
+                        else:
                             is_on_route_path = False
 
-                        # Calculate route efficiency score for ranking
-                        route_efficiency_score = 1.0 / max(
-                            1.0, detour_penalty
-                        )  # Higher score for more efficient routes
+                    # ADDITIONAL: Check if users would be too far apart when grouped
+                    if is_on_route_path and len(users_for_vehicle) > 0:
+                        for existing_user in users_for_vehicle:
+                            existing_pos = (existing_user['latitude'], existing_user['longitude'])
+                            inter_user_distance = haversine_distance(
+                                user_pos[0], user_pos[1], existing_pos[0], existing_pos[1])
+
+                            # Reject if users are more than 3km apart (strict for balanced mode)
+                            if inter_user_distance > 3.0:
+                                is_on_route_path = False
+                                logger.debug(f"User {user['user_id']} rejected: too far from existing user ({inter_user_distance:.2f}km)")
+                                break
 
                 except Exception as e:
                     logger.warning(
@@ -485,15 +505,29 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                                           user['latitude'], user['longitude'])
 
             user_bearing = calculate_bearing(office_lat, office_lon,
-                                             user['latitude'],
-                                             user['longitude'])
+                                             user['latitude'], user['longitude'])
             bearing_diff = bearing_difference(route_bearing, user_bearing)
 
-            # Route optimized criteria for seat filling with road validation (from assign_route)
-            if distance <= MAX_FILL_DISTANCE_KM * 1.8 and bearing_diff <= 40:
-                # STRICT road network validation for seat filling (from assign_route)
+            # STRICT criteria for seat filling with enhanced road validation
+            if distance <= MAX_FILL_DISTANCE_KM * 1.2 and bearing_diff <= 30:  # Stricter thresholds
+                # VERY STRICT road network validation for seat filling
                 is_compatible = True
-                if road_network:
+
+                # First check: inter-user distances must be reasonable
+                if route['assigned_users']:
+                    max_inter_user_distance = 0
+                    for existing_user in route['assigned_users']:
+                        inter_distance = haversine_distance(
+                            user['latitude'], user['longitude'],
+                            existing_user['lat'], existing_user['lng'])
+                        max_inter_user_distance = max(max_inter_user_distance, inter_distance)
+
+                    # Reject if any user would be more than 2.5km from this new user
+                    if max_inter_user_distance > 2.5:
+                        is_compatible = False
+                        logger.info(f"User {user['user_id']} rejected: too far from existing users ({max_inter_user_distance:.2f}km)")
+
+                if is_compatible and road_network:
                     try:
                         # Check if adding this user maintains route coherence
                         current_user_positions = [
@@ -504,53 +538,44 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                             (user['latitude'], user['longitude'])
                         ]
 
-                        route_driver_pos = (route['latitude'],
-                                            route['longitude'])
+                        route_driver_pos = (route['latitude'], route['longitude'])
                         office_pos = (office_lat, office_lon)
 
                         # Calculate coherence with and without the new user
                         current_coherence = road_network.get_route_coherence_score(
-                            route_driver_pos, current_user_positions,
-                            office_pos)
+                            route_driver_pos, current_user_positions, office_pos)
                         new_coherence = road_network.get_route_coherence_score(
                             route_driver_pos, test_user_positions, office_pos)
 
-                        # STRICT: Only accept if coherence doesn't decrease AT ALL
-                        if new_coherence < current_coherence - 0.05:  # Very strict coherence requirement
+                        # VERY STRICT: No coherence decrease allowed in balanced mode
+                        if new_coherence < current_coherence - 0.02:
                             is_compatible = False
                             logger.info(
                                 f"User {user['user_id']} rejected: coherence drop ({current_coherence:.2f} -> {new_coherence:.2f})"
                             )
 
-                        # STRICT: Check direct path compatibility with tight detour ratio
+                        # STRICT: Check direct path compatibility with very tight detour ratio
                         if is_compatible:
                             is_compatible = road_network.is_user_on_route_path(
                                 route_driver_pos,
                                 current_user_positions,
                                 (user['latitude'], user['longitude']),
                                 office_pos,
-                                max_detour_ratio=
-                                1.15,  # Much stricter detour ratio
+                                max_detour_ratio=1.08,  # Very strict for balanced mode
                                 route_type="balanced_optimization")
                             if not is_compatible:
-                                logger.info(
-                                    f"User {user['user_id']} rejected: not on route path"
-                                )
+                                logger.info(f"User {user['user_id']} rejected: not on route path")
 
-                        # ADDITIONAL: Check if user creates backtracking (from assign_route)
+                        # ADDITIONAL: Strict backtracking prevention
                         if is_compatible and current_user_positions:
-                            # Get distance from route center to office
-                            route_center = calculate_route_center_improved(
-                                route)
+                            route_center = calculate_route_center_improved(route)
                             center_to_office = haversine_distance(
-                                route_center[0], route_center[1], office_lat,
-                                office_lon)
+                                route_center[0], route_center[1], office_lat, office_lon)
                             user_to_office = haversine_distance(
-                                user['latitude'], user['longitude'],
-                                office_lat, office_lon)
+                                user['latitude'], user['longitude'], office_lat, office_lon)
 
-                            # Reject if user is significantly further from office than route center
-                            if user_to_office > center_to_office + 2.0:  # 2km tolerance
+                            # Very strict backtracking check for balanced mode
+                            if user_to_office > center_to_office + 1.5:  # Only 1.5km tolerance
                                 is_compatible = False
                                 logger.info(
                                     f"User {user['user_id']} rejected: creates backtracking ({user_to_office:.2f}km vs {center_to_office:.2f}km)"
@@ -919,9 +944,8 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
     used = set()
 
     # STRICT thresholds for directional consistency - no compromise
-    MERGE_BEARING_THRESHOLD = 15  # EXTREMELY strict directional requirement
-    MERGE_DISTANCE_KM = config.get("MERGE_DISTANCE_KM",
-                                   3.5) * 1.0  # Strict distance tolerance
+    MERGE_BEARING_THRESHOLD = 12  # EXTREMELY strict directional requirement
+    MERGE_DISTANCE_KM = config.get("MERGE_DISTANCE_KM", 3.5) * 0.8  # Even stricter distance tolerance (2.8km)
     MERGE_TURNING_THRESHOLD = 50  # Between 35° (efficiency) and 60° (capacity)
     MERGE_TORTUOSITY_THRESHOLD = 1.65  # Between 1.3 and 2.0
 

@@ -1,11 +1,77 @@
 [
   {
-    "driver_id": "322018",
-    "vehicle_id": "172",
+    "driver_id": "322025",
+    "vehicle_id": "179",
     "vehicle_type": 5,
-    "latitude": 30.7252649,
-    "longitude": 76.6509078,
+    "latitude": 30.7375409,
+    "longitude": 76.6978934,
     "assigned_users": [
+      {
+        "user_id": "321967",
+        "lat": 30.7356432,
+        "lng": 76.7158129,
+        "office_distance": 4.59,
+        "first_name": "Gaurav",
+        "email": "manoj.sharma@unifyrcm.com"
+      },
+      {
+        "user_id": "321966",
+        "lat": 30.7369481,
+        "lng": 76.7159763,
+        "office_distance": 4.72,
+        "first_name": "Nikhil",
+        "email": "rajeev.kumar@unifyrcm.com"
+      }
+    ],
+    "centroid": [
+      30.73629565,
+      76.7158946
+    ],
+    "utilization": 0.4,
+    "turning_score": 122.66851258613588,
+    "tortuosity_ratio": 1.0331102072658527,
+    "direction_consistency": 0.3333333333333333
+  },
+  {
+    "driver_id": "322029",
+    "vehicle_id": "183",
+    "vehicle_type": 5,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "321968",
+        "lat": 30.714478,
+        "lng": 76.7148927,
+        "office_distance": 2.57,
+        "first_name": "Manoj",
+        "email": "vikas.vedwal@unifyrcm.com"
+      }
+    ],
+    "centroid": [
+      30.714478,
+      76.7148927
+    ],
+    "utilization": 0.2,
+    "turning_score": 0,
+    "tortuosity_ratio": 1.0,
+    "direction_consistency": 1.0
+  },
+  {
+    "driver_id": "322031",
+    "vehicle_id": "185",
+    "vehicle_type": 5,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "321969",
+        "lat": 30.7040186,
+        "lng": 76.7296396,
+        "office_distance": 0.83,
+        "first_name": "Isha",
+        "email": "arun.kumar@unifyrcm.com"
+      },
       {
         "user_id": "322003",
         "lat": 30.699709,
@@ -24,79 +90,13 @@
       }
     ],
     "centroid": [
-      30.6998976,
-      76.71522225
+      30.701271266666666,
+      76.72002803333334
     ],
-    "utilization": 0.4,
-    "turning_score": 166.1481901074193,
-    "tortuosity_ratio": 1.2357028259153213,
-    "direction_consistency": 0.6666666666666666
-  },
-  {
-    "driver_id": "322020",
-    "vehicle_id": "174",
-    "vehicle_type": 5,
-    "latitude": 30.7284075,
-    "longitude": 76.6982815,
-    "assigned_users": [
-      {
-        "user_id": "321992",
-        "lat": 30.7224506,
-        "lng": 76.6840763,
-        "office_distance": 5.42,
-        "first_name": "Yagnik",
-        "email": "Yagnik@yopmail.com"
-      },
-      {
-        "user_id": "321980",
-        "lat": 30.7201545,
-        "lng": 76.6575149,
-        "office_distance": 7.61,
-        "first_name": "Sakshi",
-        "email": "Sakshi@yopmail.com"
-      }
-    ],
-    "centroid": [
-      30.721302549999997,
-      76.67079559999999
-    ],
-    "utilization": 0.4,
-    "turning_score": 87.34463680549449,
-    "tortuosity_ratio": 1.2651912190869639,
-    "direction_consistency": 0.3333333333333333
-  },
-  {
-    "driver_id": "322025",
-    "vehicle_id": "179",
-    "vehicle_type": 5,
-    "latitude": 30.7375409,
-    "longitude": 76.6978934,
-    "assigned_users": [
-      {
-        "user_id": "321969",
-        "lat": 30.7040186,
-        "lng": 76.7296396,
-        "office_distance": 0.83,
-        "first_name": "Isha",
-        "email": "arun.kumar@unifyrcm.com"
-      },
-      {
-        "user_id": "321968",
-        "lat": 30.714478,
-        "lng": 76.7148927,
-        "office_distance": 2.57,
-        "first_name": "Manoj",
-        "email": "vikas.vedwal@unifyrcm.com"
-      }
-    ],
-    "centroid": [
-      30.7092483,
-      76.72226615
-    ],
-    "utilization": 0.4,
-    "turning_score": 169.3756016359434,
-    "tortuosity_ratio": 1.6458622189649743,
-    "direction_consistency": 0.6666666666666666
+    "utilization": 0.6,
+    "turning_score": 117.28018255465834,
+    "tortuosity_ratio": 3.1166378336185447,
+    "direction_consistency": 0.5
   },
   {
     "driver_id": "322034",
@@ -104,39 +104,6 @@
     "vehicle_type": 5,
     "latitude": 30.720226,
     "longitude": 76.8374945,
-    "assigned_users": [
-      {
-        "user_id": "321977",
-        "lat": 30.7069528,
-        "lng": 76.7529498,
-        "office_distance": 2.26,
-        "first_name": "Hridesh",
-        "email": "Hridesh@yopmail.com"
-      },
-      {
-        "user_id": "321979",
-        "lat": 30.7173637,
-        "lng": 76.7632286,
-        "office_distance": 3.73,
-        "first_name": "Inderpreet",
-        "email": "Inderpreet.Kaur@yopmail.com"
-      }
-    ],
-    "centroid": [
-      30.71215825,
-      76.7580892
-    ],
-    "utilization": 0.4,
-    "turning_score": 154.29877119389437,
-    "tortuosity_ratio": 1.2661295787357723,
-    "direction_consistency": 0.6666666666666666
-  },
-  {
-    "driver_id": "322016",
-    "vehicle_id": "170",
-    "vehicle_type": 5,
-    "latitude": 30.707877,
-    "longitude": 76.783382,
     "assigned_users": [
       {
         "user_id": "321975",
@@ -160,215 +127,9 @@
       76.833791
     ],
     "utilization": 0.4,
-    "turning_score": 90.92535586591787,
-    "tortuosity_ratio": 1.0474254540407104,
-    "direction_consistency": 0.3333333333333333
-  },
-  {
-    "driver_id": "322019",
-    "vehicle_id": "173",
-    "vehicle_type": 7,
-    "latitude": 30.735888499999998,
-    "longitude": 76.70581833333334,
-    "assigned_users": [
-      {
-        "user_id": "321967",
-        "lat": 30.7356432,
-        "lng": 76.7158129,
-        "office_distance": 4.59,
-        "first_name": "Gaurav",
-        "email": "manoj.sharma@unifyrcm.com"
-      },
-      {
-        "user_id": "321966",
-        "lat": 30.7369481,
-        "lng": 76.7159763,
-        "office_distance": 4.72,
-        "first_name": "Nikhil",
-        "email": "rajeev.kumar@unifyrcm.com"
-      }
-    ],
-    "centroid": [
-      30.73629565,
-      76.7158946
-    ],
-    "utilization": 0.2857142857142857,
-    "turning_score": 119.97534246166896,
-    "tortuosity_ratio": 1.036164952825362,
-    "direction_consistency": 0.3333333333333333
-  },
-  {
-    "driver_id": "322024",
-    "vehicle_id": "178",
-    "vehicle_type": 5,
-    "latitude": 30.6881808,
-    "longitude": 76.7062336,
-    "assigned_users": [
-      {
-        "user_id": "322002",
-        "lat": 30.6840764,
-        "lng": 76.7128778,
-        "office_distance": 2.35,
-        "first_name": "Aditya",
-        "email": "Aditya.Panwar@yopmail.com"
-      },
-      {
-        "user_id": "322007",
-        "lat": 30.6858231,
-        "lng": 76.7044235,
-        "office_distance": 2.94,
-        "first_name": "Karandeep",
-        "email": "Karandeep.Singh@yopmail.com"
-      }
-    ],
-    "centroid": [
-      30.68494975,
-      76.70865065000001
-    ],
-    "utilization": 0.4,
-    "turning_score": 149.77114203378406,
-    "tortuosity_ratio": 1.4908653863625383,
-    "direction_consistency": 0.3333333333333333
-  },
-  {
-    "driver_id": "322029",
-    "vehicle_id": "183",
-    "vehicle_type": 5,
-    "latitude": 30.7046486,
-    "longitude": 76.7178726,
-    "assigned_users": [
-      {
-        "user_id": "321984",
-        "lat": 30.7389797,
-        "lng": 76.6464202,
-        "office_distance": 9.45,
-        "first_name": "Ashray",
-        "email": "raman.deep@unifyrcm.com"
-      },
-      {
-        "user_id": "321986",
-        "lat": 30.7431337,
-        "lng": 76.6390944,
-        "office_distance": 10.29,
-        "first_name": "Pankaj",
-        "email": "Pankaj@yopmail.com"
-      },
-      {
-        "user_id": "321983",
-        "lat": 30.736152,
-        "lng": 76.6390512,
-        "office_distance": 9.93,
-        "first_name": "Arfat",
-        "email": "sanbir@unifyrcm.com"
-      }
-    ],
-    "centroid": [
-      30.739421800000002,
-      76.64152193333332
-    ],
-    "utilization": 0.6,
-    "turning_score": 63.85688056211046,
-    "tortuosity_ratio": 1.0674216390889057,
-    "direction_consistency": 0.25
-  },
-  {
-    "driver_id": "322021",
-    "vehicle_id": "175",
-    "vehicle_type": 5,
-    "latitude": 30.656989,
-    "longitude": 76.6708693,
-    "assigned_users": [
-      {
-        "user_id": "321989",
-        "lat": 30.7539742,
-        "lng": 76.6434754,
-        "office_distance": 10.6,
-        "first_name": "Jagjeet",
-        "email": "Jagjeet@yopmail.com"
-      },
-      {
-        "user_id": "321994",
-        "lat": 30.7505159,
-        "lng": 76.6401003,
-        "office_distance": 10.65,
-        "first_name": "Pushkar",
-        "email": "Pushkar.Tyagi@yopmail.com"
-      }
-    ],
-    "centroid": [
-      30.75224505,
-      76.64178785
-    ],
-    "utilization": 0.4,
-    "turning_score": 111.16374027020822,
-    "tortuosity_ratio": 1.0311453440297387,
-    "direction_consistency": 0.0
-  },
-  {
-    "driver_id": "322033",
-    "vehicle_id": "187",
-    "vehicle_type": 5,
-    "latitude": 30.7046486,
-    "longitude": 76.7178726,
-    "assigned_users": [
-      {
-        "user_id": "321991",
-        "lat": 30.7425893,
-        "lng": 76.6657449,
-        "office_distance": 8.15,
-        "first_name": "Swayam",
-        "email": "balwinder.kaur@unifyrcm.com"
-      },
-      {
-        "user_id": "321990",
-        "lat": 30.7441945,
-        "lng": 76.6614853,
-        "office_distance": 8.58,
-        "first_name": "Anmol",
-        "email": "Anmol@yopmail.com"
-      }
-    ],
-    "centroid": [
-      30.7433919,
-      76.6636151
-    ],
-    "utilization": 0.4,
-    "turning_score": 91.23731573845453,
-    "tortuosity_ratio": 1.0295644894281804,
-    "direction_consistency": 0.3333333333333333
-  },
-  {
-    "driver_id": "322013",
-    "vehicle_id": "167",
-    "vehicle_type": 7,
-    "latitude": 30.6498769,
-    "longitude": 76.8066956,
-    "assigned_users": [
-      {
-        "user_id": "321987",
-        "lat": 30.7350742,
-        "lng": 76.6856658,
-        "office_distance": 6.16,
-        "first_name": "Rajat",
-        "email": "Rajat@yopmail.com"
-      },
-      {
-        "user_id": "321988",
-        "lat": 30.7293111,
-        "lng": 76.6946872,
-        "office_distance": 5.1,
-        "first_name": "Vikas Kumar",
-        "email": "Vikas.Kumar@yopmail.com"
-      }
-    ],
-    "centroid": [
-      30.732192650000002,
-      76.6901765
-    ],
-    "utilization": 0.2857142857142857,
-    "turning_score": 92.8301352215752,
-    "tortuosity_ratio": 1.0538200670277134,
-    "direction_consistency": 0.3333333333333333
+    "turning_score": 175.57645221969466,
+    "tortuosity_ratio": 1.136608476288267,
+    "direction_consistency": 0.6666666666666666
   },
   {
     "driver_id": "322010",
@@ -396,12 +157,61 @@
     "direction_consistency": 1.0
   },
   {
-    "driver_id": "322014",
-    "vehicle_id": "168",
-    "vehicle_type": 7,
-    "latitude": 30.6425496,
-    "longitude": 76.8173359,
+    "driver_id": "322016",
+    "vehicle_id": "170",
+    "vehicle_type": 5,
+    "latitude": 30.707877,
+    "longitude": 76.783382,
     "assigned_users": [
+      {
+        "user_id": "321977",
+        "lat": 30.7069528,
+        "lng": 76.7529498,
+        "office_distance": 2.26,
+        "first_name": "Hridesh",
+        "email": "Hridesh@yopmail.com"
+      }
+    ],
+    "centroid": [
+      30.7069528,
+      76.7529498
+    ],
+    "utilization": 0.2,
+    "turning_score": 0,
+    "tortuosity_ratio": 1.0,
+    "direction_consistency": 1.0
+  },
+  {
+    "driver_id": "322024",
+    "vehicle_id": "178",
+    "vehicle_type": 5,
+    "latitude": 30.6881808,
+    "longitude": 76.7062336,
+    "assigned_users": [
+      {
+        "user_id": "321978",
+        "lat": 30.684973,
+        "lng": 76.7245833,
+        "office_distance": 1.52,
+        "first_name": "Aman",
+        "email": "Aman.Guleria@yopmail.com"
+      },
+      {
+        "user_id": "322002",
+        "lat": 30.6840764,
+        "lng": 76.7128778,
+        "office_distance": 2.35,
+        "first_name": "Aditya",
+        "email": "Aditya.Panwar@yopmail.com"
+      },
+      {
+        "user_id": "322007",
+        "lat": 30.6858231,
+        "lng": 76.7044235,
+        "office_distance": 2.94,
+        "first_name": "Karandeep",
+        "email": "Karandeep.Singh@yopmail.com"
+      },
       {
         "user_id": "322004",
         "lat": 30.6862796,
@@ -412,8 +222,33 @@
       }
     ],
     "centroid": [
-      30.6862796,
-      76.7027055
+      30.685288025,
+      76.711147525
+    ],
+    "utilization": 0.8,
+    "turning_score": 81.4719353731182,
+    "tortuosity_ratio": 2.349639753422468,
+    "direction_consistency": 0.4
+  },
+  {
+    "driver_id": "322019",
+    "vehicle_id": "173",
+    "vehicle_type": 7,
+    "latitude": 30.7499495,
+    "longitude": 76.7372594,
+    "assigned_users": [
+      {
+        "user_id": "321979",
+        "lat": 30.7173637,
+        "lng": 76.7632286,
+        "office_distance": 3.73,
+        "first_name": "Inderpreet",
+        "email": "Inderpreet.Kaur@yopmail.com"
+      }
+    ],
+    "centroid": [
+      30.7173637,
+      76.7632286
     ],
     "utilization": 0.14285714285714285,
     "turning_score": 0,
@@ -421,37 +256,151 @@
     "direction_consistency": 1.0
   },
   {
-    "driver_id": "322017",
-    "vehicle_id": "171",
-    "vehicle_type": 5,
-    "latitude": 30.6613097,
-    "longitude": 76.8607247,
+    "driver_id": "322018",
+    "vehicle_id": "172",
+    "vehicle_type": 7,
+    "latitude": 30.721302549999997,
+    "longitude": 76.67079559999999,
     "assigned_users": [
       {
-        "user_id": "321978",
-        "lat": 30.684973,
-        "lng": 76.7245833,
-        "office_distance": 1.52,
-        "first_name": "Aman",
-        "email": "Aman.Guleria@yopmail.com"
+        "user_id": "321992",
+        "lat": 30.7224506,
+        "lng": 76.6840763,
+        "office_distance": 5.42,
+        "first_name": "Yagnik",
+        "email": "Yagnik@yopmail.com"
+      },
+      {
+        "user_id": "321980",
+        "lat": 30.7201545,
+        "lng": 76.6575149,
+        "office_distance": 7.61,
+        "first_name": "Sakshi",
+        "email": "Sakshi@yopmail.com"
       }
     ],
     "centroid": [
-      30.684973,
-      76.7245833
+      30.721302549999997,
+      76.67079559999999
     ],
-    "utilization": 0.2,
-    "turning_score": 0,
-    "tortuosity_ratio": 1.0,
-    "direction_consistency": 1.0
+    "utilization": 0.2857142857142857,
+    "turning_score": 167.20691816037677,
+    "tortuosity_ratio": 1.76447952849403,
+    "direction_consistency": 0.6666666666666666
   },
   {
-    "driver_id": "322022",
-    "vehicle_id": "176",
-    "vehicle_type": 7,
-    "latitude": 30.8992905,
-    "longitude": 76.2703593,
+    "driver_id": "322020",
+    "vehicle_id": "174",
+    "vehicle_type": 5,
+    "latitude": 30.7284075,
+    "longitude": 76.6982815,
     "assigned_users": [
+      {
+        "user_id": "321984",
+        "lat": 30.7389797,
+        "lng": 76.6464202,
+        "office_distance": 9.45,
+        "first_name": "Ashray",
+        "email": "raman.deep@unifyrcm.com"
+      },
+      {
+        "user_id": "321983",
+        "lat": 30.736152,
+        "lng": 76.6390512,
+        "office_distance": 9.93,
+        "first_name": "Arfat",
+        "email": "sanbir@unifyrcm.com"
+      },
+      {
+        "user_id": "321986",
+        "lat": 30.7431337,
+        "lng": 76.6390944,
+        "office_distance": 10.29,
+        "first_name": "Pankaj",
+        "email": "Pankaj@yopmail.com"
+      },
+      {
+        "user_id": "321994",
+        "lat": 30.7505159,
+        "lng": 76.6401003,
+        "office_distance": 10.65,
+        "first_name": "Pushkar",
+        "email": "Pushkar.Tyagi@yopmail.com"
+      },
+      {
+        "user_id": "321989",
+        "lat": 30.7539742,
+        "lng": 76.6434754,
+        "office_distance": 10.6,
+        "first_name": "Jagjeet",
+        "email": "Jagjeet@yopmail.com"
+      }
+    ],
+    "centroid": [
+      30.744551100000002,
+      76.64162830000001
+    ],
+    "utilization": 1.0,
+    "turning_score": 55.63936921929229,
+    "tortuosity_ratio": 1.170585981638775,
+    "direction_consistency": 0.16666666666666666
+  },
+  {
+    "driver_id": "322033",
+    "vehicle_id": "187",
+    "vehicle_type": 5,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "321988",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 5.1,
+        "first_name": "Vikas Kumar",
+        "email": "Vikas.Kumar@yopmail.com"
+      },
+      {
+        "user_id": "321987",
+        "lat": 30.7350742,
+        "lng": 76.6856658,
+        "office_distance": 6.16,
+        "first_name": "Rajat",
+        "email": "Rajat@yopmail.com"
+      }
+    ],
+    "centroid": [
+      30.732192650000002,
+      76.6901765
+    ],
+    "utilization": 0.4,
+    "turning_score": 93.76256574943363,
+    "tortuosity_ratio": 1.1121133344202245,
+    "direction_consistency": 0.3333333333333333
+  },
+  {
+    "driver_id": "322027",
+    "vehicle_id": "181",
+    "vehicle_type": 7,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "321991",
+        "lat": 30.7425893,
+        "lng": 76.6657449,
+        "office_distance": 8.15,
+        "first_name": "Swayam",
+        "email": "balwinder.kaur@unifyrcm.com"
+      },
+      {
+        "user_id": "321990",
+        "lat": 30.7441945,
+        "lng": 76.6614853,
+        "office_distance": 8.58,
+        "first_name": "Anmol",
+        "email": "Anmol@yopmail.com"
+      },
       {
         "user_id": "321995",
         "lat": 30.7385528,
@@ -462,13 +411,13 @@
       }
     ],
     "centroid": [
-      30.7385528,
-      76.6614853
+      30.741778866666664,
+      76.66290516666668
     ],
-    "utilization": 0.14285714285714285,
-    "turning_score": 0,
-    "tortuosity_ratio": 1.0,
-    "direction_consistency": 1.0
+    "utilization": 0.42857142857142855,
+    "turning_score": 61.979171531003885,
+    "tortuosity_ratio": 1.054696126565406,
+    "direction_consistency": 0.25
   },
   {
     "driver_id": "322012",
