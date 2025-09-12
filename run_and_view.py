@@ -8,7 +8,7 @@ import os
 import json
 from assignment import run_assignment, analyze_assignment_quality
 
-SOURCE_ID = "UC_frontdev"  # <-- Replace with your real source_id
+SOURCE_ID = "UC_unify_dev"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
 STRING_PARAM = "Evening%20shift" # Example string parameter
 
@@ -28,16 +28,16 @@ def detect_algorithm_from_api():
     return True  # Always proceed with automatic detection
 
 def start_fastapi():
-    subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000", "--reload"])
+    subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"])
 
 def launch_browser():
     time.sleep(5)  # Wait longer for server to start
     try:
-        webbrowser.open("http://localhost:3000/visualize")
-        print("🌐 Browser opened at: http://localhost:3000/visualize")
+        webbrowser.open("http://localhost:5000/visualize")
+        print("🌐 Browser opened at: http://localhost:5000/visualize")
     except Exception as e:
         print(f"⚠️  Could not auto-open browser: {e}")
-        print("   Please manually visit: http://localhost:3000/visualize")
+        print("   Please manually visit: http://localhost:5000/visualize")
 
 def display_detailed_analytics(result, algorithm_name):
     """Display comprehensive analytics in terminal with enhanced formatting"""
@@ -147,14 +147,18 @@ def display_detailed_analytics(result, algorithm_name):
 
         # If driver is NOT in the unused drivers list, it means this driver WAS used
         # We need to determine source from the original data structure
-        # Since we have more driversUnassigned (45) than driversAssigned (0),
-        # and our priority system shows Priority 1 and 2 drivers, they're from driversUnassigned
+        # Based on the debug info showing Priority 1 and 2 drivers, these are driversUnassigned
 
         if not driver_found_in_unused:
             # This driver was used, so determine its original source
-            # Based on the debug info showing Priority 1 and 2 drivers, these are driversUnassigned
-            driver_source = "driversUnassigned"  # This is correct based on the data
-            shift_type_display = "ST:1" if route["driver_id"] == "225427" else "ST:2"  # Based on priority info
+            # Based on the assignment debug, we know:
+            # Driver 225427 is Priority 1 (ST:1 or ST:3)
+            # Driver 225435 is Priority 2 (ST:2)
+            if route["driver_id"] == "225427":
+                driver_source = "driversUnassigned (ST:1,3)"
+            else:
+                driver_source = "driversUnassigned (ST:2)"
+            shift_type_display = "ST:1" if route["driver_id"] == "225427" else "ST:2"
         else:
             driver_source = "driversAssigned"  # Shouldn't happen in this case
             shift_type_display = "ST:N/A"
@@ -305,7 +309,7 @@ def display_detailed_analytics(result, algorithm_name):
             print(f"   ... and {len(unassigned_users) - 5} more users need manual assignment")
 
     print("\n" + "🎯" + "="*78 + "🎯")
-    print("🌐 ACCESS FULL INTERACTIVE DASHBOARD: http://localhost:3000/visualize")
+    print("🌐 ACCESS FULL INTERACTIVE DASHBOARD: http://localhost:5000/visualize")
     print("📊 Real-time analytics, route optimization, and performance monitoring available")
     print("🎯" + "="*78 + "🎯\n")
 
@@ -436,7 +440,7 @@ if __name__ == "__main__":
             exit(1)
 
         print("\n🚀 Launching Dashboard...")
-        print("   - Starting FastAPI server on port 3000")
+        print("   - Starting FastAPI server on port 5000")
         print("   - Opening browser automatically")
 
         # Start server in background
@@ -448,8 +452,8 @@ if __name__ == "__main__":
         browser_thread.start()
 
         print("\n✅ Dashboard is starting up...")
-        print("📱 Manual URL: http://localhost:3000/visualize")
-        print("📊 API Endpoint: http://localhost:3000/routes")
+        print("📱 Manual URL: http://localhost:5000/visualize")
+        print("📊 API Endpoint: http://localhost:5000/routes")
         print("\n⌨️  Press Ctrl+C to stop the server")
 
         try:

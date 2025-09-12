@@ -40,7 +40,7 @@ class RouteAssignmentLogger:
 
         # Create file handler with UTF-8 encoding
         log_file = os.path.join(log_dir, f"assignment_{self.session_timestamp}.log")
-        file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+        file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8', delay=True)
         file_handler.setLevel(logging.DEBUG)
 
         # Create detailed formatter
