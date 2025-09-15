@@ -2089,7 +2089,7 @@ def quality_preserving_route_merging(routes, config, office_lat, office_lon):
     considering efficiency, capacity, and now, road network compatibility.
     """
     logger.info(
-        "🔄 Performing quality-preserving route merging with road network awareness..."
+        "Performing quality-preserving route merging with road network awareness..."
     )
 
     # Use the enhanced merging function which includes road network checks
@@ -2205,7 +2205,8 @@ def perform_quality_merge_improved(routes, config, office_lat, office_lon):
     This function merges routes based on proximity, capacity, and road path compatibility.
     """
     logger.info(
-        "🔄 Performing enhanced route merging with road network awareness...")
+        "Performing enhanced route merging with road network awareness..."
+    )
 
     merged_routes = []
     used_route_indices = set()
@@ -2440,10 +2441,22 @@ def run_road_aware_assignment(source_id: str,
             user_df, driver_df, office_lat, office_lon, _config)
         progress.update_stage_progress(f"Created {len(routes)} initial routes")
 
-        # Build unassigned drivers list
+        # Filter out routes with no assigned users and capture their drivers for unassigned list
+        filtered_routes = []
+        unused_injected_driver_ids = set()
+        
+        for route in routes:
+            if route['assigned_users'] and len(route['assigned_users']) > 0:
+                filtered_routes.append(route)
+            else:
+                unused_injected_driver_ids.add(route['driver_id'])
+                logger.info(f"🚫 Driver {route['driver_id']} has no users - moving to unassigned")
+        
+        routes = filtered_routes
+        
+        # Build unassigned drivers list (including unused injected drivers)
         assigned_driver_ids = {route['driver_id'] for route in routes}
-        unassigned_drivers_df = driver_df_final[~driver_df_final['driver_id'].
-                                          isin(assigned_driver_ids)]
+        unassigned_drivers_df = driver_df_final[~driver_df_final['driver_id'].isin(assigned_driver_ids)]
         unassigned_drivers = []
 
         for _, driver in unassigned_drivers_df.iterrows():
@@ -2455,6 +2468,9 @@ def run_road_aware_assignment(source_id: str,
                 'longitude': float(driver.get('longitude', 0.0))
             }
             unassigned_drivers.append(driver_data)
+        
+        if unused_injected_driver_ids:
+            logger.info(f"📊 Moved {len(unused_injected_driver_ids)} unused injected drivers to unassigned list")
 
         execution_time = time.time() - start_time
 
@@ -2587,131 +2603,113 @@ def run_core_assignment_with_optimization(user_df, driver_df, office_lat, office
 
 def step_2_non_destructive_optimization(routes, unassigned_users, driver_df, user_df, office_lat, office_lon, config):
     """
-    STEP 2: Non-destructive optimization with driver injection loop
+    STEP 2: Bulk driver injection and optimization strategy
+    Inject ALL available drivers at once, then optimize
     """
     print(f"🎯 Starting Step 2: {len(unassigned_users)} users to assign, {len(routes)} existing routes")
+
+    if len(unassigned_users) == 0:
+        print("🎉 No unassigned users, skipping step 2")
+        return routes, unassigned_users, driver_df
+
+    # Phase 2A: Try to assign unassigned users to existing routes first
+    print(f"🎯 Phase 2A: Trying to fill existing routes...")
+    initial_unassigned = len(unassigned_users)
+    routes, unassigned_users = assign_unassigned_to_existing_routes(
+        routes, unassigned_users, office_lat, office_lon)
+
+    users_assigned_to_existing = initial_unassigned - len(unassigned_users)
+    if users_assigned_to_existing > 0:
+        print(f"✅ Assigned {users_assigned_to_existing} users to existing routes")
+        logger.info(f"✅ Assigned {users_assigned_to_existing} users to existing routes")
+
+    # If no more unassigned users, we're done
+    if len(unassigned_users) == 0:
+        print(f"🎉 All users assigned to existing routes!")
+        logger.info("✅ All users assigned to existing routes!")
+        return routes, unassigned_users, driver_df
+
+    # Phase 2B: BULK DRIVER INJECTION - Inject ALL remaining available drivers
+    print(f"🚗 Phase 2B: BULK driver injection for {len(unassigned_users)} remaining users")
     
-    # Optimization parameters
-    MAX_ADDED_DRIVERS_TOTAL = min(math.ceil(len(unassigned_users) / 4), 15)  # Reduced limit
+    # Find all available drivers not currently assigned
+    assigned_driver_ids = {route['driver_id'] for route in routes}
+    available_drivers = driver_df[~driver_df['driver_id'].isin(assigned_driver_ids)]
+    
+    if len(available_drivers) == 0:
+        print("⚠️ No additional drivers available for injection")
+        logger.warning("⚠️ No additional drivers available for injection")
+        return routes, unassigned_users, driver_df
+
+    print(f"🚗 Found {len(available_drivers)} available drivers for bulk injection")
+    logger.info(f"🚗 Found {len(available_drivers)} available drivers for bulk injection")
+    
+    # Create smart clusters of unassigned users 
+    clusters = create_user_clusters(unassigned_users, office_lat, office_lon)
+    print(f"📍 Created {len(clusters)} clusters from unassigned users")
+    logger.info(f"📍 Created {len(clusters)} clusters from unassigned users")
+    
+    # Log cluster details
+    for i, cluster in enumerate(clusters):
+        print(f"   📍 Cluster {i+1}: {len(cluster)} users")
+        logger.info(f"   📍 Cluster {i+1}: {len(cluster)} users")
+
+    # Calculate optimal drivers needed (be generous for better coverage)
     DEFAULT_INJECTED_CAPACITY = 4
-    MAX_ATTEMPTS = 5  # Reduced attempts
+    
+    # Strategy: Inject enough drivers to handle all unassigned users
+    drivers_for_users = math.ceil(len(unassigned_users) / DEFAULT_INJECTED_CAPACITY)
+    drivers_for_clusters = len(clusters) + 3  # At least one driver per cluster plus buffer
+    
+    # Use the larger estimate but cap at reasonable limits
+    drivers_needed = min(
+        len(available_drivers),  # Don't exceed available drivers
+        max(drivers_for_users, drivers_for_clusters),  # Take the larger estimate
+        min(50, len(unassigned_users) // 2)  # Cap at 50 or half the users, whichever is smaller
+    )
 
+    print(f"🚗 Driver injection calculation:")
+    print(f"   📊 Users needing drivers: {len(unassigned_users)}")
+    print(f"   📊 Drivers for user count: {drivers_for_users}")
+    print(f"   📊 Drivers for clusters: {drivers_for_clusters}")
+    print(f"   📊 Final injection count: {drivers_needed}")
+    print(f"🚗 Injecting {drivers_needed} drivers from {len(available_drivers)} available")
+    
+    logger.info(f"🚗 Driver injection: {drivers_needed} drivers for {len(unassigned_users)} users in {len(clusters)} clusters")
+    
+    # Select best positioned drivers for the clusters
+    drivers_to_inject = select_best_drivers_for_clusters(
+        clusters, available_drivers, drivers_needed, office_lat, office_lon)
+
+    # Create enhanced driver dataframe with all injected drivers
     current_driver_df = driver_df.copy()
-    added_drivers_count = 0
-    attempt = 0
-    last_unassigned_count = len(unassigned_users)
-    no_progress_count = 0
+    injected_count = 0
 
-    while len(unassigned_users) > 0 and attempt < MAX_ATTEMPTS and added_drivers_count < MAX_ADDED_DRIVERS_TOTAL:
-        print(f"🔄 Optimization attempt {attempt + 1}/{MAX_ATTEMPTS} - {len(unassigned_users)} users remaining")
-        print(f"   📊 Current routes: {len(routes)}, Available drivers: {len(current_driver_df)}")
-        progress.update_stage_progress(f"Attempt {attempt + 1}: {len(unassigned_users)} users unassigned")
+    for driver_data in drivers_to_inject:
+        # Add to driver pool with enhanced positioning
+        injected_count += 1
+        print(f"   🚗 Injecting driver {driver_data['driver_id']} at cluster {driver_data.get('cluster_id', 'N/A')}")
 
-        # Phase 2A: Try to assign unassigned users to existing routes with capacity
-        print(f"   🎯 Phase 2A: Trying to fill existing routes...")
-        initial_unassigned = len(unassigned_users)
-        routes, unassigned_users = assign_unassigned_to_existing_routes(
-            routes, unassigned_users, office_lat, office_lon)
+    print(f"✅ Bulk injection complete: {injected_count} drivers added")
+    logger.info(f"🚗 Bulk injection: {injected_count} drivers added")
 
-        users_assigned_to_existing = initial_unassigned - len(unassigned_users)
-        if users_assigned_to_existing > 0:
-            print(f"   ✅ Assigned {users_assigned_to_existing} users to existing routes")
-            logger.info(f"✅ Assigned {users_assigned_to_existing} users to existing routes")
+    # Phase 2C: Run full assignment with all drivers
+    print(f"🔄 Re-running assignment with ALL drivers ({len(current_driver_df)} total)")
+    temp_routes, temp_unassigned = run_standard_assignment_algorithm(
+        user_df, current_driver_df, office_lat, office_lon, config)
 
-        # If no more unassigned users, we're done
-        if len(unassigned_users) == 0:
-            print(f"   🎉 All users assigned to existing routes!")
-            logger.info("✅ All users assigned to existing routes!")
-            break
+    # Accept the new solution
+    improvement = len(unassigned_users) - len(temp_unassigned)
+    routes = temp_routes
+    unassigned_users = temp_unassigned
+    
+    print(f"📈 Bulk injection result: {improvement} users assigned ({len(temp_unassigned)} remaining)")
+    logger.info(f"📈 Bulk injection result: {len(temp_unassigned)} unassigned users")
 
-        # Check for progress - if no improvement, try driver injection or exit
-        if len(unassigned_users) >= last_unassigned_count:
-            no_progress_count += 1
-            print(f"   ⚠️ No progress in attempt {attempt + 1} (count: {no_progress_count})")
-            
-            # If no progress for 2 consecutive attempts, try more aggressive approach
-            if no_progress_count >= 2:
-                print(f"   🚨 No progress for {no_progress_count} attempts, trying driver injection...")
-                
-                # Phase 2B: Driver injection for remaining unassigned users
-                if added_drivers_count < MAX_ADDED_DRIVERS_TOTAL:
-                    print(f"   🚗 Phase 2B: Injecting drivers for {len(unassigned_users)} remaining users")
-
-                    # Create smart clusters of unassigned users
-                    clusters = create_user_clusters(unassigned_users, office_lat, office_lon)
-                    print(f"   📍 Created {len(clusters)} clusters from unassigned users")
-
-                    # Calculate how many drivers to inject this round
-                    drivers_needed = min(
-                        math.ceil(len(unassigned_users) / DEFAULT_INJECTED_CAPACITY),
-                        MAX_ADDED_DRIVERS_TOTAL - added_drivers_count,
-                        3  # Reduced max drivers per attempt
-                    )
-
-                    if drivers_needed > 0:
-                        print(f"   🚗 Injecting {drivers_needed} new drivers...")
-                        
-                        # Select top clusters for driver injection
-                        clusters_to_inject = sorted(clusters, key=len, reverse=True)[:drivers_needed]
-
-                        # Create new drivers at cluster centroids
-                        new_drivers = create_drivers_from_clusters(
-                            clusters_to_inject, DEFAULT_INJECTED_CAPACITY, attempt, office_lat, office_lon)
-
-                        # Add to driver pool
-                        for new_driver in new_drivers:
-                            new_driver_row = {
-                                'driver_id': new_driver['driver_id'],
-                                'latitude': new_driver['latitude'],
-                                'longitude': new_driver['longitude'],
-                                'capacity': new_driver['capacity'],
-                                'vehicle_id': new_driver['vehicle_id'],
-                                'priority': 1000 + added_drivers_count
-                            }
-                            current_driver_df = pd.concat([current_driver_df, pd.DataFrame([new_driver_row])], ignore_index=True)
-                            added_drivers_count += 1
-
-                        print(f"   ✅ Injected {len(new_drivers)} drivers (total: {added_drivers_count})")
-                        logger.info(f"🚗 Injected {len(new_drivers)} drivers (total: {added_drivers_count})")
-
-                        # Try assignment with new drivers
-                        print(f"   🔄 Re-running assignment with {len(current_driver_df)} total drivers...")
-                        temp_routes, temp_unassigned = run_standard_assignment_algorithm(
-                            user_df, current_driver_df, office_lat, office_lon, config)
-
-                        # Accept if improvement
-                        if len(temp_unassigned) < len(unassigned_users):
-                            improvement = len(unassigned_users) - len(temp_unassigned)
-                            routes = temp_routes
-                            unassigned_users = temp_unassigned
-                            print(f"   📈 Driver injection improved: -{improvement} users ({len(temp_unassigned)} remaining)")
-                            logger.info(f"📈 Driver injection improved: {len(temp_unassigned)} unassigned users")
-                            no_progress_count = 0  # Reset progress counter
-                        else:
-                            print(f"   📊 Driver injection didn't improve, will try different approach")
-                            logger.info("📊 Driver injection didn't improve, continuing...")
-                    else:
-                        print(f"   ⚠️ Cannot inject more drivers (limit: {MAX_ADDED_DRIVERS_TOTAL})")
-                        logger.warning(f"⚠️ Cannot inject more drivers (limit: {MAX_ADDED_DRIVERS_TOTAL})")
-                        break
-                else:
-                    print(f"   ⚠️ Hit driver injection limit ({MAX_ADDED_DRIVERS_TOTAL})")
-                    logger.warning(f"⚠️ Hit driver injection limit ({MAX_ADDED_DRIVERS_TOTAL})")
-                    break
-                    
-                # If still no progress after driver injection, exit loop
-                if no_progress_count >= 3:
-                    print(f"   🛑 Stopping optimization: No progress after {no_progress_count} attempts")
-                    break
-        else:
-            no_progress_count = 0  # Reset counter on progress
-            
-        last_unassigned_count = len(unassigned_users)
-        attempt += 1
-
-    print(f"🎯 Step 2 complete: injected {added_drivers_count} drivers, {len(unassigned_users)} users remain unassigned")
-    logger.info(f"🎯 Step 2 complete: injected {added_drivers_count} drivers, {len(unassigned_users)} users remain unassigned")
-    progress.update_stage_progress(f"{added_drivers_count} drivers injected, {len(unassigned_users)} users remain")
+    print(f"🎯 Step 2 complete: bulk injected {injected_count} drivers, {len(unassigned_users)} users remain")
+    logger.info(f"🎯 Step 2 complete: bulk injected {injected_count} drivers")
+    progress.update_stage_progress(f"{injected_count} drivers bulk injected, {len(unassigned_users)} users remain")
+    
     return routes, unassigned_users, current_driver_df
 
 
@@ -2799,7 +2797,7 @@ def step_3_smart_user_swapping(routes, office_lat, office_lon, config):
     max_swap_iterations = 5
 
     for iteration in range(max_swap_iterations):
-        logger.info(f"🔄 Swap iteration {iteration + 1}")
+        logger.info(f"  🔄 Swap iteration {iteration + 1}")
         iteration_improvements = 0
 
         # Try cross-route optimizations
@@ -3094,7 +3092,7 @@ def run_non_destructive_optimization(routes, unassigned_users, office_lat, offic
 
 
 def create_user_clusters(unassigned_users, office_lat, office_lon):
-    """Create geographic clusters of unassigned users"""
+    """Create geographic clusters of unassigned users with aggressive clustering for better driver injection"""
     if len(unassigned_users) == 0:
         return []
 
@@ -3102,7 +3100,7 @@ def create_user_clusters(unassigned_users, office_lat, office_lon):
         return [unassigned_users]
 
     try:
-        from sklearn.cluster import DBSCAN
+        from sklearn.cluster import DBSCAN, KMeans
         import numpy as np
 
         # Extract coordinates
@@ -3112,21 +3110,57 @@ def create_user_clusters(unassigned_users, office_lat, office_lon):
 
         coords = np.array(coords)
 
-        # Use DBSCAN for clustering
-        dbscan = DBSCAN(eps=0.02, min_samples=1)  # ~2km radius
-        labels = dbscan.fit_predict(coords)
+        # Strategy 1: Use KMeans to force a reasonable number of clusters
+        # Target 4-6 users per cluster for optimal driver utilization
+        target_users_per_cluster = 5
+        estimated_clusters = max(3, min(len(unassigned_users) // target_users_per_cluster, 20))
+        
+        print(f"📍 Creating {estimated_clusters} clusters from {len(unassigned_users)} users")
+        logger.info(f"📍 Creating {estimated_clusters} clusters from {len(unassigned_users)} users")
+        
+        # Use KMeans for initial clustering
+        kmeans = KMeans(n_clusters=estimated_clusters, random_state=42, n_init=10)
+        kmeans_labels = kmeans.fit_predict(coords)
 
-        # Group users by cluster
-        clusters = {}
-        for i, label in enumerate(labels):
-            if label not in clusters:
-                clusters[label] = []
-            clusters[label].append(unassigned_users[i])
+        # Group users by KMeans cluster
+        kmeans_clusters = {}
+        for i, label in enumerate(kmeans_labels):
+            if label not in kmeans_clusters:
+                kmeans_clusters[label] = []
+            kmeans_clusters[label].append(unassigned_users[i])
 
-        return list(clusters.values())
+        # Strategy 2: Further split large clusters using DBSCAN
+        final_clusters = []
+        for cluster_users in kmeans_clusters.values():
+            if len(cluster_users) <= 8:  # Small enough cluster
+                final_clusters.append(cluster_users)
+            else:
+                # Split large cluster using DBSCAN
+                cluster_coords = np.array([[u['lat'], u['lng']] for u in cluster_users])
+                dbscan = DBSCAN(eps=0.015, min_samples=2)  # ~1.5km radius, tighter clustering
+                dbscan_labels = dbscan.fit_predict(cluster_coords)
+                
+                # Group by DBSCAN results
+                dbscan_subclusters = {}
+                for i, label in enumerate(dbscan_labels):
+                    if label == -1:  # Noise points become individual clusters
+                        final_clusters.append([cluster_users[i]])
+                    else:
+                        if label not in dbscan_subclusters:
+                            dbscan_subclusters[label] = []
+                        dbscan_subclusters[label].append(cluster_users[i])
+                
+                # Add subclusters
+                for subcluster in dbscan_subclusters.values():
+                    final_clusters.append(subcluster)
+
+        print(f"✅ Created {len(final_clusters)} final clusters (avg {len(unassigned_users)/len(final_clusters):.1f} users per cluster)")
+        logger.info(f"✅ Created {len(final_clusters)} final clusters")
+        
+        return final_clusters
 
     except ImportError:
-        # Fallback: create clusters by proximity
+        # Fallback: create smaller clusters by proximity with aggressive splitting
         clusters = []
         remaining = unassigned_users.copy()
 
@@ -3134,12 +3168,15 @@ def create_user_clusters(unassigned_users, office_lat, office_lon):
             cluster = [remaining.pop(0)]
             cluster_center = (cluster[0]['lat'], cluster[0]['lng'])
 
-            # Add nearby users to cluster
+            # Add nearby users to cluster (smaller radius for more clusters)
             to_remove = []
             for i, user in enumerate(remaining):
+                if len(cluster) >= 6:  # Limit cluster size to force more clusters
+                    break
+                    
                 distance = haversine_distance(cluster_center[0], cluster_center[1],
                                             user['lat'], user['lng'])
-                if distance <= 3.0:  # 3km radius
+                if distance <= 2.0:  # Smaller 2km radius for more granular clusters
                     cluster.append(user)
                     to_remove.append(i)
 
@@ -3149,6 +3186,8 @@ def create_user_clusters(unassigned_users, office_lat, office_lon):
 
             clusters.append(cluster)
 
+        print(f"✅ Fallback created {len(clusters)} clusters")
+        logger.info(f"✅ Fallback created {len(clusters)} clusters")
         return clusters
 
 
@@ -3218,6 +3257,90 @@ def generate_merge_proposals(routes, office_lat, office_lon):
                     proposals.append(proposal)
 
     return proposals
+
+
+def select_best_drivers_for_clusters(clusters, available_drivers, drivers_needed, office_lat, office_lon):
+    """
+    Select the best positioned drivers for the user clusters
+    """
+    selected_drivers = []
+    
+    # Sort available drivers by priority and capacity  
+    available_drivers_sorted = available_drivers.sort_values(['priority', 'capacity'], ascending=[True, False])
+    
+    # Strategy 1: Assign drivers to largest clusters first
+    clusters_by_size = sorted(clusters, key=len, reverse=True)
+    
+    drivers_assigned = 0
+    driver_index = 0
+    
+    for cluster_idx, cluster in enumerate(clusters_by_size):
+        if drivers_assigned >= drivers_needed or driver_index >= len(available_drivers_sorted):
+            break
+            
+        # Calculate cluster centroid
+        if cluster:
+            centroid_lat = sum(user['lat'] for user in cluster) / len(cluster)
+            centroid_lng = sum(user['lng'] for user in cluster) / len(cluster)
+            
+            # Find the best available driver for this cluster
+            best_driver = None
+            best_score = float('inf')
+            best_driver_idx = -1
+            
+            for idx in range(driver_index, min(driver_index + 3, len(available_drivers_sorted))):  # Check next 3 drivers
+                driver = available_drivers_sorted.iloc[idx]
+                
+                # Calculate score based on distance to cluster centroid
+                distance = haversine_distance(
+                    driver['latitude'], driver['longitude'],
+                    centroid_lat, centroid_lng
+                )
+                
+                # Score based on distance and capacity utilization potential
+                capacity_score = len(cluster) / driver['capacity'] if driver['capacity'] > 0 else 0
+                total_score = distance - (capacity_score * 2.0)  # Prefer good utilization
+                
+                if total_score < best_score:
+                    best_score = total_score
+                    best_driver = driver
+                    best_driver_idx = idx
+            
+            if best_driver is not None:
+                driver_data = {
+                    'driver_id': str(best_driver['driver_id']),
+                    'latitude': float(best_driver['latitude']),
+                    'longitude': float(best_driver['longitude']),
+                    'capacity': int(best_driver['capacity']),
+                    'vehicle_id': str(best_driver.get('vehicle_id', '')),
+                    'priority': int(best_driver.get('priority', 1000)),
+                    'cluster_id': cluster_idx,
+                    'cluster_size': len(cluster)
+                }
+                selected_drivers.append(driver_data)
+                drivers_assigned += 1
+                driver_index = best_driver_idx + 1
+    
+    # Strategy 2: Fill remaining slots with best available drivers
+    while drivers_assigned < drivers_needed and driver_index < len(available_drivers_sorted):
+        driver = available_drivers_sorted.iloc[driver_index]
+        driver_data = {
+            'driver_id': str(driver['driver_id']),
+            'latitude': float(driver['latitude']),
+            'longitude': float(driver['longitude']),
+            'capacity': int(driver['capacity']),
+            'vehicle_id': str(driver.get('vehicle_id', '')),
+            'priority': int(driver.get('priority', 1000)),
+            'cluster_id': -1,  # No specific cluster
+            'cluster_size': 0
+        }
+        selected_drivers.append(driver_data)
+        drivers_assigned += 1
+        driver_index += 1
+    
+    return selected_drivers
+
+
 
 
 def generate_reassignment_proposals(routes, unassigned_users, office_lat, office_lon):

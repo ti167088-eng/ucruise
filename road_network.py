@@ -526,19 +526,18 @@ class RoadNetwork:
             max_node_distance = self.config.get('road_network.max_search_radius_km', 5.0)
             
             if not node1 or not node2:
-                return self._calculate_distance(lat1, lon1, lat2, lat2)
-            
+                return self._calculate_distance(lat1, lon1, lat2, lon2)
             if dist1 > max_node_distance or dist2 > max_node_distance:
                 # If nodes are very far, use hybrid approach
                 return self._hybrid_distance_calculation(lat1, lon1, lat2, lon2, node1, node2, dist1, dist2)
             
             if node1 == node2:
-                return self._calculate_distance(lat1, lon1, lat2, lat2)
+                return self._calculate_distance(lat1, lon1, lat2, lon2)
             
             # Calculate path distance
             path_distance = self._get_shortest_path_distance(node1, node2)
             if path_distance == float('inf'):
-                return self._calculate_distance(lat1, lon1, lat2, lat2)
+                return self._calculate_distance(lat1, lon1, lat2, lon2)
             
             # Add access distances
             access_distance1 = self._calculate_distance(lat1, lon1, *self.node_positions[node1])
@@ -596,9 +595,12 @@ class RoadNetwork:
 
         # Check if ratio is reasonable
         if ratio > max_ratio:
-            logger.warning(f"Unreasonable road distance ratio: {ratio:.2f}, using conservative estimate")
-            # More conservative fallback - use 1.5x straight distance instead of uncapped ratio
-            return straight_distance * 1.5
+            logger.warning(
+                f"Unreasonable road distance ratio: {ratio:.2f} (road={road_distance:.2f} km, straight={straight_distance:.2f} km). "
+                f"Capping to {max_ratio}x straight distance for safety."
+            )
+            capped = min(road_distance, max_ratio * straight_distance)
+            return capped
 
         # Check minimum efficiency
         if ratio < min_efficiency:
