@@ -1,0 +1,1400 @@
+{
+  "test_metadata": {
+    "test_name": "API Request/Response Capture Test",
+    "timestamp": "2025-09-11T18:04:40.240375",
+    "source_id": "UC_frontdev",
+    "parameter": 1,
+    "string_param": "Evening%20shift",
+    "test_duration_seconds": 15.216465
+  },
+  "api_data_capture": {
+    "request": {
+      "url": "http://unifygroup.in/uc/api/routeautomation/dailyAutomationCluster/UC_frontdev/1/Evening%20shift",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer 17090|DUbD6akNJzu03yxjwY4lqZUHe7yj9vfOB6FyFOLS6da43342",
+        "Content-Type": "application/json"
+      },
+      "timestamp": "2025-09-11T18:04:25.023552",
+      "source_id": "UC_frontdev",
+      "parameter": 1,
+      "string_param": "Evening%20shift"
+    },
+    "response": {
+      "status_code": 200,
+      "response_time_seconds": 2.901081,
+      "content_type": "application/json",
+      "content_length": 15310,
+      "data": {
+        "status": true,
+        "db": "UC_frontdev",
+        "message": "Groups saved successfully.",
+        "data": {
+          "company": {
+            "id": 1,
+            "address": "Mohali walk, Sector 62, Sahibzada Ajit Singh Nagar, Chandigarh, India",
+            "latitude": "30.6969081",
+            "longitude": "76.7323704"
+          },
+          "users": [
+            {
+              "id": 321966,
+              "first_name": "Nikhil",
+              "last_name": "",
+              "email": "rajeev.kumar@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "4.72",
+              "sub_user_id": 321966,
+              "latitude": "30.7369481",
+              "longitude": "76.7159763",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321967,
+              "first_name": "Gaurav",
+              "last_name": "",
+              "email": "manoj.sharma@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "4.59",
+              "sub_user_id": 321967,
+              "latitude": "30.7356432",
+              "longitude": "76.7158129",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321968,
+              "first_name": "Manoj",
+              "last_name": "",
+              "email": "vikas.vedwal@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "2.57",
+              "sub_user_id": 321968,
+              "latitude": "30.7144780",
+              "longitude": "76.7148927",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321969,
+              "first_name": "Isha",
+              "last_name": "Mattu",
+              "email": "arun.kumar@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "0.83",
+              "sub_user_id": 321969,
+              "latitude": "30.7040186",
+              "longitude": "76.7296396",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321971,
+              "first_name": "Kunal",
+              "last_name": null,
+              "email": "Kunal@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "10.38",
+              "sub_user_id": 321971,
+              "latitude": "30.7202260",
+              "longitude": "76.8374945",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321972,
+              "first_name": "Shruti",
+              "last_name": null,
+              "email": "Shruti@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "0.48",
+              "sub_user_id": 321972,
+              "latitude": "30.6928440",
+              "longitude": "76.7341850",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321975,
+              "first_name": "Manish",
+              "last_name": "Rana",
+              "email": "Manish.Rana@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "9.68",
+              "sub_user_id": 321975,
+              "latitude": "30.7196023",
+              "longitude": "76.8300875",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321977,
+              "first_name": "Hridesh",
+              "last_name": null,
+              "email": "Hridesh@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "2.26",
+              "sub_user_id": 321977,
+              "latitude": "30.7069528",
+              "longitude": "76.7529498",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321978,
+              "first_name": "Aman",
+              "last_name": "Guleria",
+              "email": "Aman.Guleria@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "1.52",
+              "sub_user_id": 321978,
+              "latitude": "30.6849730",
+              "longitude": "76.7245833",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321979,
+              "first_name": "Inderpreet",
+              "last_name": "Kaur",
+              "email": "Inderpreet.Kaur@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "3.73",
+              "sub_user_id": 321979,
+              "latitude": "30.7173637",
+              "longitude": "76.7632286",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321980,
+              "first_name": "Sakshi",
+              "last_name": null,
+              "email": "Sakshi@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "7.61",
+              "sub_user_id": 321980,
+              "latitude": "30.7201545",
+              "longitude": "76.6575149",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321983,
+              "first_name": "Arfat",
+              "last_name": "Mir",
+              "email": "sanbir@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "9.93",
+              "sub_user_id": 321983,
+              "latitude": "30.7361520",
+              "longitude": "76.6390512",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321984,
+              "first_name": "Ashray",
+              "last_name": "Amrate",
+              "email": "raman.deep@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "9.45",
+              "sub_user_id": 321984,
+              "latitude": "30.7389797",
+              "longitude": "76.6464202",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321986,
+              "first_name": "Pankaj",
+              "last_name": null,
+              "email": "Pankaj@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "10.29",
+              "sub_user_id": 321986,
+              "latitude": "30.7431337",
+              "longitude": "76.6390944",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321987,
+              "first_name": "Rajat",
+              "last_name": null,
+              "email": "Rajat@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "6.16",
+              "sub_user_id": 321987,
+              "latitude": "30.7350742",
+              "longitude": "76.6856658",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321988,
+              "first_name": "Vikas Kumar",
+              "last_name": "Thakur",
+              "email": "Vikas.Kumar@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "5.1",
+              "sub_user_id": 321988,
+              "latitude": "30.7293111",
+              "longitude": "76.6946872",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321989,
+              "first_name": "Jagjeet",
+              "last_name": null,
+              "email": "Jagjeet@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "10.6",
+              "sub_user_id": 321989,
+              "latitude": "30.7539742",
+              "longitude": "76.6434754",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321990,
+              "first_name": "Anmol",
+              "last_name": null,
+              "email": "Anmol@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "8.58",
+              "sub_user_id": 321990,
+              "latitude": "30.7441945",
+              "longitude": "76.6614853",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321991,
+              "first_name": "Swayam",
+              "last_name": "",
+              "email": "balwinder.kaur@unifyrcm.com",
+              "shift_type": "1",
+              "office_distance": "8.15",
+              "sub_user_id": 321991,
+              "latitude": "30.7425893",
+              "longitude": "76.6657449",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321992,
+              "first_name": "Yagnik",
+              "last_name": null,
+              "email": "Yagnik@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "5.42",
+              "sub_user_id": 321992,
+              "latitude": "30.7224506",
+              "longitude": "76.6840763",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321994,
+              "first_name": "Pushkar",
+              "last_name": "Tyagi",
+              "email": "Pushkar.Tyagi@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "10.65",
+              "sub_user_id": 321994,
+              "latitude": "30.7505159",
+              "longitude": "76.6401003",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321995,
+              "first_name": "Abhinandan",
+              "last_name": null,
+              "email": "Abhinandan@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "8.21",
+              "sub_user_id": 321995,
+              "latitude": "30.7385528",
+              "longitude": "76.6614853",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 321999,
+              "first_name": "Nandita",
+              "last_name": "Brar",
+              "email": "Nandita.Brar@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "2.18",
+              "sub_user_id": 321999,
+              "latitude": "30.7000862",
+              "longitude": "76.7099215",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 322002,
+              "first_name": "Aditya",
+              "last_name": "Panwar",
+              "email": "Aditya.Panwar@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "2.35",
+              "sub_user_id": 322002,
+              "latitude": "30.6840764",
+              "longitude": "76.7128778",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 322003,
+              "first_name": "Krish",
+              "last_name": null,
+              "email": "Krish@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "1.17",
+              "sub_user_id": 322003,
+              "latitude": "30.6997090",
+              "longitude": "76.7205230",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 322004,
+              "first_name": "Kirandeep",
+              "last_name": "Kaur",
+              "email": "Kirandeep.Kaur@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "3.07",
+              "sub_user_id": 322004,
+              "latitude": "30.6862796",
+              "longitude": "76.7027055",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 322007,
+              "first_name": "Karandeep",
+              "last_name": "Singh",
+              "email": "Karandeep.Singh@yopmail.com",
+              "shift_type": "1",
+              "office_distance": "2.94",
+              "sub_user_id": 322007,
+              "latitude": "30.6858231",
+              "longitude": "76.7044235",
+              "staff_language": null,
+              "schedule_date": null
+            },
+            {
+              "id": 322009,
+              "first_name": "Om Sahu",
+              "last_name": "Sahu",
+              "email": "",
+              "shift_type": "1",
+              "office_distance": "5.19",
+              "sub_user_id": 322009,
+              "latitude": "30.6503857",
+              "longitude": "76.7365380",
+              "staff_language": null,
+              "schedule_date": null
+            }
+          ],
+          "drivers": {
+            "driversAssigned": [],
+            "driversUnassigned": [
+              {
+                "id": 322010,
+                "first_name": "Ram ",
+                "last_name": "Jeevan",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322010,
+                "latitude": "30.6727404",
+                "longitude": "76.7206652",
+                "vehicle_id": 164,
+                "vehicle_name": "2022",
+                "vehicle_no": "454rt4",
+                "capacity": 5,
+                "chasis_no": "3434",
+                "color": "red",
+                "registration_no": "54545",
+                "shift_type_id": 1
+              },
+              {
+                "id": 322012,
+                "first_name": "Gurpreet ",
+                "last_name": "Kaur",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322012,
+                "latitude": "30.6727404",
+                "longitude": "76.7206652",
+                "vehicle_id": 166,
+                "vehicle_name": "2022",
+                "vehicle_no": "r4r4r4r",
+                "capacity": 7,
+                "chasis_no": "r34r4",
+                "color": "white",
+                "registration_no": "45454577",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322013,
+                "first_name": "PRINKAL",
+                "last_name": "",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322013,
+                "latitude": "30.6498769",
+                "longitude": "76.8066956",
+                "vehicle_id": 167,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01D8244",
+                "capacity": 7,
+                "chasis_no": "MA3B3C62SNF494132",
+                "color": "SILVER",
+                "registration_no": "PB01D8244",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322014,
+                "first_name": "Ranjeet",
+                "last_name": "Soni",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322014,
+                "latitude": "30.6425496",
+                "longitude": "76.8173359",
+                "vehicle_id": 168,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01C8244",
+                "capacity": 7,
+                "chasis_no": "MA3BNC22SMG365288",
+                "color": "WHITE",
+                "registration_no": "PB01C8244",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322015,
+                "first_name": "SWARGJEET",
+                "last_name": "SONI",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322015,
+                "latitude": "30.6425496",
+                "longitude": "76.8173359",
+                "vehicle_id": 169,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01C9298",
+                "capacity": 7,
+                "chasis_no": "MA3BNC22SMJ389043",
+                "color": "WHITE",
+                "registration_no": "PB01C9298",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322016,
+                "first_name": "DESHRAJ",
+                "last_name": "VERMA",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322016,
+                "latitude": "30.7078770",
+                "longitude": "76.7833820",
+                "vehicle_id": 170,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01C7853",
+                "capacity": 5,
+                "chasis_no": "MA3CZFB3SMF806448",
+                "color": "WHITE",
+                "registration_no": "PB01C7853",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322017,
+                "first_name": "KHUSHNASIB",
+                "last_name": "SINGH",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322017,
+                "latitude": "30.6613097",
+                "longitude": "76.8607247",
+                "vehicle_id": 171,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01C8462",
+                "capacity": 5,
+                "chasis_no": "MA3JMT31SNB630407",
+                "color": "GRAY",
+                "registration_no": "PB01C8462",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322018,
+                "first_name": "RAKESH",
+                "last_name": "THAKUR",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322018,
+                "latitude": "30.7252649",
+                "longitude": "76.6509078",
+                "vehicle_id": 172,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01D1499",
+                "capacity": 5,
+                "chasis_no": "MA3JMTB1SNC655032",
+                "color": "WHITE",
+                "registration_no": "PB01D1499",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322019,
+                "first_name": "GURDEEP",
+                "last_name": "SINGH",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322019,
+                "latitude": "30.7499495",
+                "longitude": "76.7372594",
+                "vehicle_id": 173,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01D5400",
+                "capacity": 7,
+                "chasis_no": "MA3BNC62SNL551329",
+                "color": "WHITE",
+                "registration_no": "PB01D1500",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322020,
+                "first_name": "ARSHPREET",
+                "last_name": "SINGH",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322020,
+                "latitude": "30.7284075",
+                "longitude": "76.6982815",
+                "vehicle_id": 174,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01D1910",
+                "capacity": 5,
+                "chasis_no": "MBHCZFB3SNJ320495",
+                "color": "WHITE",
+                "registration_no": "PB01D1501",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322021,
+                "first_name": "SUKHWINDER",
+                "last_name": "PAL",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322021,
+                "latitude": "30.6569890",
+                "longitude": "76.6708693",
+                "vehicle_id": 175,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01D6109",
+                "capacity": 5,
+                "chasis_no": "MALB341CLPM95605",
+                "color": "WHITE",
+                "registration_no": "PB01D1502",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322022,
+                "first_name": "JYOTISAROOP",
+                "last_name": "",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322022,
+                "latitude": "30.8992905",
+                "longitude": "76.2703593",
+                "vehicle_id": 176,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01C1324",
+                "capacity": 7,
+                "chasis_no": "MAT614703JRG07941",
+                "color": "WHITE",
+                "registration_no": "PB01D1503",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322023,
+                "first_name": "KULVEER",
+                "last_name": "SINGH",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322023,
+                "latitude": "30.3819446",
+                "longitude": "75.5467979",
+                "vehicle_id": 177,
+                "vehicle_name": "2024",
+                "vehicle_no": "PBO1E6079",
+                "capacity": 5,
+                "chasis_no": "MA3CZFB3SRB865035",
+                "color": "WHITE",
+                "registration_no": "PB01D1504",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322024,
+                "first_name": "Meghnath",
+                "last_name": "kumar",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322024,
+                "latitude": "30.6881808",
+                "longitude": "76.7062336",
+                "vehicle_id": 178,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01D5310",
+                "capacity": 5,
+                "chasis_no": "MA3JMTB1SPE914711",
+                "color": "WHITE",
+                "registration_no": "PB01D1505",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322025,
+                "first_name": "Rishi",
+                "last_name": "",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322025,
+                "latitude": "30.7375409",
+                "longitude": "76.6978934",
+                "vehicle_id": 179,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB79A1321",
+                "capacity": 5,
+                "chasis_no": "Malb351CLNM335246",
+                "color": "WHITE",
+                "registration_no": "PB01D1506",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322026,
+                "first_name": "Sansarjeet",
+                "last_name": "singh",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322026,
+                "latitude": "30.6881808",
+                "longitude": "76.7062336",
+                "vehicle_id": 180,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01E0862",
+                "capacity": 7,
+                "chasis_no": "MA3BNC62SPL708221",
+                "color": "WHITE",
+                "registration_no": "PB01D1507",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322027,
+                "first_name": "Sukhwinder",
+                "last_name": "Singh",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322027,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 181,
+                "vehicle_name": "2023",
+                "vehicle_no": "Pb01E2565",
+                "capacity": 7,
+                "chasis_no": "MA3JMTB1SPJ971820",
+                "color": "WHITE",
+                "registration_no": "PB01D1508",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322028,
+                "first_name": "Jobanpreet",
+                "last_name": "Singh",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322028,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 182,
+                "vehicle_name": "2020",
+                "vehicle_no": "PB01C5681",
+                "capacity": 7,
+                "chasis_no": "MA3BN22SLA217768",
+                "color": "WHITE",
+                "registration_no": "PB01D1509",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322029,
+                "first_name": "SATNAM",
+                "last_name": "SINGH",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322029,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 183,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01D7146",
+                "capacity": 5,
+                "chasis_no": "MALB241CLPM202634",
+                "color": "WHITE",
+                "registration_no": "PB01D1510",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322030,
+                "first_name": "Anish",
+                "last_name": "",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322030,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 184,
+                "vehicle_name": "2023",
+                "vehicle_no": "PB01D7174",
+                "capacity": 7,
+                "chasis_no": "MA3BNC62SPD611992",
+                "color": "WHITE",
+                "registration_no": "PB01D1511",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322031,
+                "first_name": "Mohammad",
+                "last_name": "Ishaq",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322031,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 185,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01C9839",
+                "capacity": 5,
+                "chasis_no": "MA3TFC62SNA123930",
+                "color": "WHITE",
+                "registration_no": "PB01D1512",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322032,
+                "first_name": "SARABJEET",
+                "last_name": "SINGH",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322032,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 186,
+                "vehicle_name": "2019",
+                "vehicle_no": "PB27F3418",
+                "capacity": 7,
+                "chasis_no": "MA3BNC32SKE148958",
+                "color": "WHITE",
+                "registration_no": "PB01D1513",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322033,
+                "first_name": "Gulfam",
+                "last_name": "khan",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322033,
+                "latitude": "30.7046486",
+                "longitude": "76.7178726",
+                "vehicle_id": 187,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01D0741",
+                "capacity": 5,
+                "chasis_no": "MA3RFL41SNF381451",
+                "color": "WHITE",
+                "registration_no": "PB01D1514",
+                "shift_type_id": 2
+              },
+              {
+                "id": 322034,
+                "first_name": "SARDAR",
+                "last_name": "ALI",
+                "email": "",
+                "profile_image": null,
+                "sub_user_id": 322034,
+                "latitude": "30.7202260",
+                "longitude": "76.8374945",
+                "vehicle_id": 188,
+                "vehicle_name": "2022",
+                "vehicle_no": "PB01C7859",
+                "capacity": 5,
+                "chasis_no": "MAEUA61S00J87896",
+                "color": "WHITE",
+                "registration_no": "PB01D1515",
+                "shift_type_id": 2
+              }
+            ]
+          },
+          "shift": {
+            "id": 65,
+            "shift_name": "Evening shift",
+            "shift_time": {
+              "end": "02:30",
+              "start": "17:30"
+            },
+            "shift_days": {
+              "SUN": "0",
+              "MON": "1",
+              "TUE": "1",
+              "WED": "1",
+              "THU": "1",
+              "FRI": "1",
+              "SAT": "0"
+            },
+            "created_at": "2025-09-09T06:53:46.000000Z",
+            "updated_at": "2025-09-09T06:53:46.000000Z",
+            "shift_finishs_next_day": 1
+          },
+          "ride_settings": {
+            "pic_priority": 3
+          }
+        }
+      }
+    }
+  },
+  "assignment_execution": {
+    "start_time": "2025-09-11T18:04:25.023914",
+    "end_time": "2025-09-11T18:04:40.240096",
+    "duration_seconds": 15.216182,
+    "result": {
+      "status": "true",
+      "execution_time": 6.667874097824097,
+      "data": [
+        {
+          "driver_id": "322014",
+          "vehicle_id": "168",
+          "vehicle_type": 7,
+          "latitude": 30.6425496,
+          "longitude": 76.8173359,
+          "assigned_users": [
+            {
+              "user_id": "321966",
+              "lat": 30.7369481,
+              "lng": 76.7159763,
+              "office_distance": 4.72,
+              "first_name": "Nikhil",
+              "email": "rajeev.kumar@unifyrcm.com"
+            },
+            {
+              "user_id": "321967",
+              "lat": 30.7356432,
+              "lng": 76.7158129,
+              "office_distance": 4.59,
+              "first_name": "Gaurav",
+              "email": "manoj.sharma@unifyrcm.com"
+            },
+            {
+              "user_id": "321968",
+              "lat": 30.714478,
+              "lng": 76.7148927,
+              "office_distance": 2.57,
+              "first_name": "Manoj",
+              "email": "vikas.vedwal@unifyrcm.com"
+            }
+          ],
+          "centroid": [
+            30.729023099999996,
+            76.71556063333333
+          ],
+          "utilization": 0.42857142857142855,
+          "turning_score": 59.28409507732846,
+          "tortuosity_ratio": 1.100113440518917,
+          "direction_consistency": 0.25
+        },
+        {
+          "driver_id": "322018",
+          "vehicle_id": "172",
+          "vehicle_type": 5,
+          "latitude": 30.7252649,
+          "longitude": 76.6509078,
+          "assigned_users": [
+            {
+              "user_id": "321992",
+              "lat": 30.7224506,
+              "lng": 76.6840763,
+              "office_distance": 5.42,
+              "first_name": "Yagnik",
+              "email": "Yagnik@yopmail.com"
+            },
+            {
+              "user_id": "321987",
+              "lat": 30.7350742,
+              "lng": 76.6856658,
+              "office_distance": 6.16,
+              "first_name": "Rajat",
+              "email": "Rajat@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.7287624,
+            76.68487105
+          ],
+          "utilization": 0.4,
+          "turning_score": 108.40487021922723,
+          "tortuosity_ratio": 1.1915227576329095,
+          "direction_consistency": 0.6666666666666666
+        },
+        {
+          "driver_id": "322012",
+          "vehicle_id": "166",
+          "vehicle_type": 7,
+          "latitude": 30.6727404,
+          "longitude": 76.7206652,
+          "assigned_users": [
+            {
+              "user_id": "321991",
+              "lat": 30.7425893,
+              "lng": 76.6657449,
+              "office_distance": 8.15,
+              "first_name": "Swayam",
+              "email": "balwinder.kaur@unifyrcm.com"
+            },
+            {
+              "user_id": "321995",
+              "lat": 30.7385528,
+              "lng": 76.6614853,
+              "office_distance": 8.21,
+              "first_name": "Abhinandan",
+              "email": "Abhinandan@yopmail.com"
+            },
+            {
+              "user_id": "321980",
+              "lat": 30.7201545,
+              "lng": 76.6575149,
+              "office_distance": 7.61,
+              "first_name": "Sakshi",
+              "email": "Sakshi@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.733765533333337,
+            76.6615817
+          ],
+          "utilization": 0.42857142857142855,
+          "turning_score": 72.03793145116673,
+          "tortuosity_ratio": 1.175025400918808,
+          "direction_consistency": 0.0
+        },
+        {
+          "driver_id": "322029",
+          "vehicle_id": "183",
+          "vehicle_type": 5,
+          "latitude": 30.7046486,
+          "longitude": 76.7178726,
+          "assigned_users": [
+            {
+              "user_id": "321978",
+              "lat": 30.684973,
+              "lng": 76.7245833,
+              "office_distance": 1.52,
+              "first_name": "Aman",
+              "email": "Aman.Guleria@yopmail.com"
+            },
+            {
+              "user_id": "322002",
+              "lat": 30.6840764,
+              "lng": 76.7128778,
+              "office_distance": 2.35,
+              "first_name": "Aditya",
+              "email": "Aditya.Panwar@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.684524699999997,
+            76.71873055
+          ],
+          "utilization": 0.4,
+          "turning_score": 124.45401896089038,
+          "tortuosity_ratio": 1.3905677124320182,
+          "direction_consistency": 0.3333333333333333
+        },
+        {
+          "driver_id": "322013",
+          "vehicle_id": "167",
+          "vehicle_type": 7,
+          "latitude": 30.6498769,
+          "longitude": 76.8066956,
+          "assigned_users": [
+            {
+              "user_id": "321999",
+              "lat": 30.7000862,
+              "lng": 76.7099215,
+              "office_distance": 2.18,
+              "first_name": "Nandita",
+              "email": "Nandita.Brar@yopmail.com"
+            },
+            {
+              "user_id": "322007",
+              "lat": 30.6858231,
+              "lng": 76.7044235,
+              "office_distance": 2.94,
+              "first_name": "Karandeep",
+              "email": "Karandeep.Singh@yopmail.com"
+            },
+            {
+              "user_id": "322003",
+              "lat": 30.699709,
+              "lng": 76.720523,
+              "office_distance": 1.17,
+              "first_name": "Krish",
+              "email": "Krish@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.695206099999996,
+            76.71162266666666
+          ],
+          "utilization": 0.42857142857142855,
+          "turning_score": 105.55842453353051,
+          "tortuosity_ratio": 1.2781173100209742,
+          "direction_consistency": 0.25
+        },
+        {
+          "driver_id": "322025",
+          "vehicle_id": "179",
+          "vehicle_type": 5,
+          "latitude": 30.7375409,
+          "longitude": 76.6978934,
+          "assigned_users": [
+            {
+              "user_id": "321969",
+              "lat": 30.7040186,
+              "lng": 76.7296396,
+              "office_distance": 0.83,
+              "first_name": "Isha",
+              "email": "arun.kumar@unifyrcm.com"
+            },
+            {
+              "user_id": "321988",
+              "lat": 30.7293111,
+              "lng": 76.6946872,
+              "office_distance": 5.1,
+              "first_name": "Vikas Kumar",
+              "email": "Vikas.Kumar@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.71666485,
+            76.71216340000001
+          ],
+          "utilization": 0.4,
+          "turning_score": 172.17813246962126,
+          "tortuosity_ratio": 2.5399389395008876,
+          "direction_consistency": 0.6666666666666666
+        },
+        {
+          "driver_id": "322010",
+          "vehicle_id": "164",
+          "vehicle_type": 5,
+          "latitude": 30.6727404,
+          "longitude": 76.7206652,
+          "assigned_users": [
+            {
+              "user_id": "321990",
+              "lat": 30.7441945,
+              "lng": 76.6614853,
+              "office_distance": 8.58,
+              "first_name": "Anmol",
+              "email": "Anmol@yopmail.com"
+            },
+            {
+              "user_id": "321984",
+              "lat": 30.7389797,
+              "lng": 76.6464202,
+              "office_distance": 9.45,
+              "first_name": "Ashray",
+              "email": "raman.deep@unifyrcm.com"
+            }
+          ],
+          "centroid": [
+            30.7415871,
+            76.65395275
+          ],
+          "utilization": 0.4,
+          "turning_score": 102.46338128210434,
+          "tortuosity_ratio": 1.0951466606561022,
+          "direction_consistency": 0.0
+        },
+        {
+          "driver_id": "322015",
+          "vehicle_id": "169",
+          "vehicle_type": 7,
+          "latitude": 30.6425496,
+          "longitude": 76.8173359,
+          "assigned_users": [
+            {
+              "user_id": "321983",
+              "lat": 30.736152,
+              "lng": 76.6390512,
+              "office_distance": 9.93,
+              "first_name": "Arfat",
+              "email": "sanbir@unifyrcm.com"
+            },
+            {
+              "user_id": "322009",
+              "lat": 30.6503857,
+              "lng": 76.736538,
+              "office_distance": 5.19,
+              "first_name": "Om Sahu",
+              "email": ""
+            },
+            {
+              "user_id": "321972",
+              "lat": 30.692844,
+              "lng": 76.734185,
+              "office_distance": 0.48,
+              "first_name": "Shruti",
+              "email": "Shruti@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.693127233333332,
+            76.70325806666666
+          ],
+          "utilization": 0.42857142857142855,
+          "turning_score": 107.48459333362092,
+          "tortuosity_ratio": 2.5526819415230366,
+          "direction_consistency": 0.5
+        },
+        {
+          "driver_id": "322034",
+          "vehicle_id": "188",
+          "vehicle_type": 5,
+          "latitude": 30.720226,
+          "longitude": 76.8374945,
+          "assigned_users": [
+            {
+              "user_id": "321986",
+              "lat": 30.7431337,
+              "lng": 76.6390944,
+              "office_distance": 10.29,
+              "first_name": "Pankaj",
+              "email": "Pankaj@yopmail.com"
+            },
+            {
+              "user_id": "321994",
+              "lat": 30.7505159,
+              "lng": 76.6401003,
+              "office_distance": 10.65,
+              "first_name": "Pushkar",
+              "email": "Pushkar.Tyagi@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.7468248,
+            76.63959735
+          ],
+          "utilization": 0.4,
+          "turning_score": 103.16400891847425,
+          "tortuosity_ratio": 1.0337354648200814,
+          "direction_consistency": 0.3333333333333333
+        },
+        {
+          "driver_id": "322017",
+          "vehicle_id": "171",
+          "vehicle_type": 5,
+          "latitude": 30.6613097,
+          "longitude": 76.8607247,
+          "assigned_users": [
+            {
+              "user_id": "321989",
+              "lat": 30.7539742,
+              "lng": 76.6434754,
+              "office_distance": 10.6,
+              "first_name": "Jagjeet",
+              "email": "Jagjeet@yopmail.com"
+            },
+            {
+              "user_id": "321971",
+              "lat": 30.720226,
+              "lng": 76.8374945,
+              "office_distance": 10.38,
+              "first_name": "Kunal",
+              "email": "Kunal@yopmail.com"
+            },
+            {
+              "user_id": "321975",
+              "lat": 30.7196023,
+              "lng": 76.8300875,
+              "office_distance": 9.68,
+              "first_name": "Manish",
+              "email": "Manish.Rana@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.7312675,
+            76.77035246666667
+          ],
+          "utilization": 0.6,
+          "turning_score": 112.488388815297,
+          "tortuosity_ratio": 3.1065611620732514,
+          "direction_consistency": 0.75
+        },
+        {
+          "driver_id": "322016",
+          "vehicle_id": "170",
+          "vehicle_type": 5,
+          "latitude": 30.707877,
+          "longitude": 76.783382,
+          "assigned_users": [
+            {
+              "user_id": "322004",
+              "lat": 30.6862796,
+              "lng": 76.7027055,
+              "office_distance": 3.07,
+              "first_name": "Kirandeep",
+              "email": "Kirandeep.Kaur@yopmail.com"
+            },
+            {
+              "user_id": "321979",
+              "lat": 30.7173637,
+              "lng": 76.7632286,
+              "office_distance": 3.73,
+              "first_name": "Inderpreet",
+              "email": "Inderpreet.Kaur@yopmail.com"
+            },
+            {
+              "user_id": "321977",
+              "lat": 30.7069528,
+              "lng": 76.7529498,
+              "office_distance": 2.26,
+              "first_name": "Hridesh",
+              "email": "Hridesh@yopmail.com"
+            }
+          ],
+          "centroid": [
+            30.70353203333333,
+            76.73962796666666
+          ],
+          "utilization": 0.6,
+          "turning_score": 115.89852265133317,
+          "tortuosity_ratio": 3.561303038988647,
+          "direction_consistency": 0.75
+        }
+      ],
+      "unassignedUsers": [],
+      "unassignedDrivers": [
+        {
+          "driver_id": "322019",
+          "capacity": 7,
+          "vehicle_id": "173",
+          "latitude": 30.7499495,
+          "longitude": 76.7372594
+        },
+        {
+          "driver_id": "322020",
+          "capacity": 5,
+          "vehicle_id": "174",
+          "latitude": 30.7284075,
+          "longitude": 76.6982815
+        },
+        {
+          "driver_id": "322021",
+          "capacity": 5,
+          "vehicle_id": "175",
+          "latitude": 30.656989,
+          "longitude": 76.6708693
+        },
+        {
+          "driver_id": "322022",
+          "capacity": 7,
+          "vehicle_id": "176",
+          "latitude": 30.8992905,
+          "longitude": 76.2703593
+        },
+        {
+          "driver_id": "322023",
+          "capacity": 5,
+          "vehicle_id": "177",
+          "latitude": 30.3819446,
+          "longitude": 75.5467979
+        },
+        {
+          "driver_id": "322024",
+          "capacity": 5,
+          "vehicle_id": "178",
+          "latitude": 30.6881808,
+          "longitude": 76.7062336
+        },
+        {
+          "driver_id": "322026",
+          "capacity": 7,
+          "vehicle_id": "180",
+          "latitude": 30.6881808,
+          "longitude": 76.7062336
+        },
+        {
+          "driver_id": "322027",
+          "capacity": 7,
+          "vehicle_id": "181",
+          "latitude": 30.7046486,
+          "longitude": 76.7178726
+        },
+        {
+          "driver_id": "322028",
+          "capacity": 7,
+          "vehicle_id": "182",
+          "latitude": 30.7046486,
+          "longitude": 76.7178726
+        },
+        {
+          "driver_id": "322030",
+          "capacity": 7,
+          "vehicle_id": "184",
+          "latitude": 30.7046486,
+          "longitude": 76.7178726
+        },
+        {
+          "driver_id": "322031",
+          "capacity": 5,
+          "vehicle_id": "185",
+          "latitude": 30.7046486,
+          "longitude": 76.7178726
+        },
+        {
+          "driver_id": "322032",
+          "capacity": 7,
+          "vehicle_id": "186",
+          "latitude": 30.7046486,
+          "longitude": 76.7178726
+        },
+        {
+          "driver_id": "322033",
+          "capacity": 5,
+          "vehicle_id": "187",
+          "latitude": 30.7046486,
+          "longitude": 76.7178726
+        }
+      ],
+      "clustering_analysis": {
+        "method": "route_optimized_adaptive",
+        "clusters": 3
+      },
+      "optimization_mode": "route_optimization",
+      "parameter": 1
+    }
+  },
+  "summary": {
+    "api_request_successful": true,
+    "assignment_successful": true,
+    "total_api_response_size": 15310,
+    "routes_generated": 11,
+    "users_from_api": 0,
+    "drivers_from_api": 0,
+    "api_has_drivers": false
+  }
+}
