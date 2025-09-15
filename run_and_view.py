@@ -4,11 +4,11 @@ import time
 import webbrowser
 import sys
 import argparse
-import os 
+import os
 import json
 from assignment import run_assignment, analyze_assignment_quality
 
-SOURCE_ID = "UC_frontdev"  # <-- Replace with your real source_id
+SOURCE_ID = "UC_unify_dev"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
 STRING_PARAM = "Evening%20shift" # Example string parameter
 
@@ -24,7 +24,7 @@ def detect_algorithm_from_api():
     print("   Priority 3 → 🗺️ ROAD-AWARE ROUTING (assign_route.py)")
     print("   Default   → 🎯 ROUTE EFFICIENCY (assignment.py)")
     print()
-    
+
     return True  # Always proceed with automatic detection
 
 def start_fastapi():
@@ -352,16 +352,16 @@ def load_assignment_result():
     # Delete ALL cached files to force fresh assignment with latest code
     cache_files = [
         "drivers_and_routes.json",
-        "drivers_and_routes_capacity.json", 
+        "drivers_and_routes_capacity.json",
         "drivers_and_routes_balance.json",
         "drivers_and_routes_road_aware.json"
     ]
-    
+
     for cache_file in cache_files:
         if os.path.exists(cache_file):
             os.remove(cache_file)
             print(f"Deleted cached file: {cache_file}")
-    
+
     print("All cached routes deleted to use latest code changes...")
 
     # Run fresh assignment with correct source ID
@@ -386,34 +386,37 @@ if __name__ == "__main__":
         if args.mode:
             mode_names = {1: "CAPACITY OPTIMIZATION", 2: "BALANCED OPTIMIZATION", 3: "ROAD-AWARE ROUTING", 4: "ROUTE EFFICIENCY"}
             print(f"⚠️ Command line mode {args.mode} ignored - using automatic detection from API")
-        
+
         detect_algorithm_from_api()
         print("-" * 50)
 
         # Use the main assignment function which will automatically route to the correct algorithm
         from assignment import run_assignment
         assignment_func = run_assignment
-        
+
         # Delete all cached files before running assignment
         cache_files = [
             "drivers_and_routes.json",
-            "drivers_and_routes_capacity.json", 
+            "drivers_and_routes_capacity.json",
             "drivers_and_routes_balance.json",
             "drivers_and_routes_road_aware.json"
         ]
-        
+
         for cache_file in cache_files:
             if os.path.exists(cache_file):
                 os.remove(cache_file)
-        
+
         print(f"⏳ Running assignment with automatic algorithm detection...")
+        print("=" * 60)
+        print("📊 REAL-TIME ASSIGNMENT PROGRESS")
+        print("=" * 60)
         result = assignment_func(SOURCE_ID, PARAMETER, STRING_PARAM)
 
         if result["status"] == "true":
             # Get the algorithm name from the result
             algorithm_name = result.get("optimization_mode", "AUTO-DETECTED ALGORITHM")
             algorithm_name = algorithm_name.replace("_", " ").upper()
-            
+
             print(f"✅ {algorithm_name} assignment completed successfully!")
 
             # Save results to default file for visualization compatibility
