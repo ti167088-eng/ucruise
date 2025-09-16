@@ -281,7 +281,7 @@ def load_and_validate_config():
 from assignment import (
     validate_input_data, load_env_and_fetch_data, extract_office_coordinates,
     prepare_user_driver_dataframes, haversine_distance, bearing_difference,
-    calculate_bearing_vectorized, calculate_bearing,
+    calculate_bearing,
     calculate_bearings_and_features, coords_to_km, dbscan_clustering_metric,
     kmeans_clustering_metric, estimate_clusters, create_geographic_clusters,
     sweep_clustering, polar_sector_clustering, create_capacity_subclusters,
@@ -1161,7 +1161,8 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
                 efficiency_score = turning_score * 0.5 + (
                     tortuosity - 1.0) * 20  # Route quality
                 capacity_score = (
-                    1.0 - utilization) * 100  # Underutilization penalty
+                    1.0 - utilization
+                ) * 100  # Underutilization penalty
 
                 # Route weight to both components
                 route_optimized_score = efficiency_score * 0.5 + capacity_score * 0.5
@@ -2738,8 +2739,35 @@ def step_2_non_destructive_optimization(routes, unassigned_users, driver_df, use
     unassigned_users = [u for u in unassigned_users if u['user_id'] not in assigned_user_ids]
 
     print(f"✅ Created {len(new_routes)} corridor-based routes")
+
+    # Phase 2C: Assign leftover unassigned users with new drivers
+    if len(unassigned_users) > 0:
+        print(f"🚗 Phase 2C: Assigning {len(unassigned_users)} leftover users with new drivers")
+
+        # Find remaining available drivers
+        all_assigned_driver_ids = {route['driver_id'] for route in routes}
+        remaining_drivers = driver_df[~driver_df['driver_id'].isin(all_assigned_driver_ids)]
+
+        if len(remaining_drivers) > 0:
+            # Simple assignment: each driver gets users up to their capacity
+            leftover_routes = assign_leftover_users_to_drivers(
+                unassigned_users, remaining_drivers, office_lat, office_lon)
+
+            # Add leftover routes
+            routes.extend(leftover_routes)
+
+            # Update unassigned users list
+            assigned_user_ids_leftover = {user['user_id'] for route in leftover_routes for user in route['assigned_users']}
+            unassigned_users = [u for u in unassigned_users if u['user_id'] not in assigned_user_ids_leftover]
+
+            print(f"✅ Created {len(leftover_routes)} additional routes for leftover users")
+            logger.info(f"✅ Created {len(leftover_routes)} additional routes for leftover users")
+        else:
+            print("⚠️ No remaining drivers available for leftover users")
+            logger.warning("⚠️ No remaining drivers available for leftover users")
+
     print(f"🎯 Step 2 complete: {len(unassigned_users)} users remain unassigned")
-    logger.info(f"🎯 Step 2 complete: created {len(new_routes)} corridor routes")
+    logger.info(f"🎯 Step 2 complete: created {len(new_routes)} corridor routes + leftover routes")
 
     return routes, unassigned_users, driver_df
 
@@ -3753,3 +3781,117 @@ def validate_and_cleanup_routes(routes, office_lat, office_lon):
                 validated_routes.append(route)  # Keep anyway to avoid losing users
 
     return validated_routes
+
+
+def create_corridor_route(user_group, driver, office_lat, office_lon):
+    """
+    Create route for a corridor-based user group
+    """
+    route = {
+        'driver_id': str(driver['driver_id']),
+        'vehicle_id': str(driver.get('vehicle_id', '')),
+        'vehicle_type': int(driver['capacity']),
+        'latitude': float(driver['latitude']),
+        'longitude': float(driver['longitude']),
+        'assigned_users': []
+    }
+
+    # Add users to route ensuring we don't exceed capacity
+    users_added = 0
+    max_users = min(len(user_group), driver["capacity"])  # Ensure we don't exceed capacity
+    for user in user_group[:max_users]:
+        user_data = {
+            'user_id': str(user['user_id']),
+            'lat': float(user['lat']),
+            'lng': float(user['lng']),
+            'office_distance': float(user.get('office_distance', 0))
+        }
+        if 'first_name' in user and pd.notna(user['first_name']):
+            user_data['first_name'] = str(user['first_name'])
+        if 'email' in user and pd.notna(user['email']):
+            user_data['email'] = str(user['email'])
+
+        route['assigned_users'].append(user_data)
+        users_added += 1
+
+    # Optimize sequence based on distance to office (corridor principle)
+    route['assigned_users'].sort(key=lambda u: haversine_distance(
+        u['lat'], u['lng'], office_lat, office_lon), reverse=True)
+
+    # Update route metrics
+    update_route_metrics_improved(route, office_lat, office_lon)
+
+    utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
+    print(f"   🛣️ Created corridor route: Driver {driver['driver_id']} with {len(route['assigned_users'])}/{route['vehicle_type']} users ({utilization:.1f}%)")
+
+    return route
+
+
+def assign_leftover_users_to_drivers(unassigned_users, available_drivers, office_lat, office_lon):
+    """
+    Assign leftover unassigned users to available drivers with simple proximity-based assignment
+    """
+    leftover_routes = []
+    remaining_users = unassigned_users.copy()
+
+    # Sort drivers by capacity (prefer higher capacity first) and priority
+    sorted_drivers = available_drivers.sort_values(['capacity', 'priority'], ascending=[False, True])
+
+    for _, driver in sorted_drivers.iterrows():
+        if not remaining_users:
+            break
+
+        vehicle_capacity = int(driver['capacity'])
+        driver_pos = (driver['latitude'], driver['longitude'])
+
+        # Find closest users to this driver (simple distance-based assignment)
+        user_distances = []
+        for user in remaining_users:
+            distance = haversine_distance(driver['latitude'], driver['longitude'],
+                                        user['lat'], user['lng'])
+            user_distances.append((distance, user))
+
+        # Sort by distance and take up to vehicle capacity
+        user_distances.sort(key=lambda x: x[0])
+        users_for_driver = [user for _, user in user_distances[:vehicle_capacity]]
+
+        if users_for_driver:
+            # Create route for this driver
+            route = {
+                'driver_id': str(driver['driver_id']),
+                'vehicle_id': str(driver.get('vehicle_id', '')),
+                'vehicle_type': vehicle_capacity,
+                'latitude': float(driver['latitude']),
+                'longitude': float(driver['longitude']),
+                'assigned_users': []
+            }
+
+            # Add users to route
+            for user in users_for_driver:
+                user_data = {
+                    'user_id': str(user['user_id']),
+                    'lat': float(user['lat']),
+                    'lng': float(user['lng']),
+                    'office_distance': float(user.get('office_distance', 0))
+                }
+                if 'first_name' in user and pd.notna(user['first_name']):
+                    user_data['first_name'] = str(user['first_name'])
+                if 'email' in user and pd.notna(user['email']):
+                    user_data['email'] = str(user['email'])
+
+                route['assigned_users'].append(user_data)
+
+            # Optimize route sequence
+            route = optimize_route_sequence_improved(route, office_lat, office_lon)
+            update_route_metrics_improved(route, office_lat, office_lon)
+
+            leftover_routes.append(route)
+
+            # Remove assigned users from remaining list
+            assigned_user_ids = {u['user_id'] for u in users_for_driver}
+            remaining_users = [u for u in remaining_users if u['user_id'] not in assigned_user_ids]
+
+            utilization = len(route['assigned_users']) / vehicle_capacity * 100
+            print(f"   🚗 Created leftover route: Driver {driver['driver_id']} with {len(route['assigned_users'])}/{vehicle_capacity} users ({utilization:.1f}%)")
+
+    return leftover_routes
