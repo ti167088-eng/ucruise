@@ -233,7 +233,7 @@ def load_and_validate_config():
 from assignment import (
     validate_input_data, load_env_and_fetch_data, extract_office_coordinates,
     prepare_user_driver_dataframes, haversine_distance, bearing_difference,
-    calculate_bearing_vectorized, calculate_bearing,
+    calculate_bearing,
     calculate_bearings_and_features, coords_to_km, dbscan_clustering_metric,
     kmeans_clustering_metric, estimate_clusters, create_geographic_clusters,
     sweep_clustering, polar_sector_clustering, create_capacity_subclusters,
@@ -1062,94 +1062,56 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
             merged_routes.append(r1)
             used.add(i)
 
-    # Additional route optimized optimization pass
-    logger.info("  🗺️ Additional route optimization pass...")
+    # Add any routes that were not merged
+    for i in range(len(routes)):
+        if i not in used:
+            merged_routes.append(routes[i])
 
-    # Try to redistribute for better overall route optimization
-    optimization_made = True
-    while optimization_made:
-        optimization_made = False
+    # Final check for road network split logic
+    final_routes_after_split = []
+    for route in merged_routes:
+        should_split, split_groups = _should_split_route_by_road_network(
+            route, office_lat, office_lon)
+        if should_split:
+            logger.info(
+                f"  🚗 Splitting merged route {route['driver_id']} based on road network analysis."
+            )
+            # Create new routes from the split groups
+            for group_positions in split_groups:
+                new_route = route.copy()
+                # Filter assigned users based on positions
+                user_ids_in_group = set()
+                for pos in group_positions:
+                    for user in route['assigned_users']:
+                        # Using a small tolerance for floating point comparisons
+                        if abs(user['lat'] -
+                               pos[0]) < 0.0001 and abs(user['lng'] -
+                                                        pos[1]) < 0.0001:
+                            user_ids_in_group.add(user['user_id'])
+                            break
 
-        # Sort routes by efficiency score for route optimization
-        routes_with_scores = []
-        for route in merged_routes:
-            utilization = len(route['assigned_users']) / route['vehicle_type']
-            efficiency = route.get('turning_score', 0)
+                new_route['assigned_users'] = [
+                    u for u in route['assigned_users']
+                    if u['user_id'] in user_ids_in_group
+                ]
 
-            # Look for opportunities to optimize routes
-            if utilization < 0.7 and efficiency < 35:  # Good efficiency, poor capacity
-                routes_with_scores.append(('low_util', route))
-            elif utilization > 0.9 and efficiency > 45:  # Good capacity, poor efficiency
-                routes_with_scores.append(('high_util', route))
-            else:
-                routes_with_scores.append(('route_optimized', route))
+                # Recalculate route properties for the new sub-route
+                if new_route['assigned_users']:
+                    new_route['latitude'] = np.mean(
+                        [u['lat'] for u in new_route['assigned_users']])
+                    new_route['longitude'] = np.mean(
+                        [u['lng'] for u in new_route['assigned_users']])
 
-        # Try to swap users between unbalanced routes for better overall route optimization
-        low_util_routes = [r for t, r in routes_with_scores if t == 'low_util']
-        high_util_routes = [
-            r for t, r in routes_with_scores if t == 'high_util'
-        ]
+                    # Re-optimize the sequence and update metrics for the new sub-route
+                    new_route = optimize_route_sequence_improved(
+                        new_route, office_lat, office_lon)
+                    update_route_metrics_improved(new_route, office_lat,
+                                                  office_lon)
+                    final_routes_after_split.append(new_route)
+        else:
+            final_routes_after_split.append(route)
 
-        for low_route in low_util_routes:
-            for high_route in high_util_routes:
-                if len(high_route['assigned_users']) <= 1:
-                    continue
-
-                # Try moving one user from high-util to low-util route
-                available_capacity = low_route['vehicle_type'] - len(
-                    low_route['assigned_users'])
-                if available_capacity > 0:
-                    # Find user in high_route that's closest to low_route
-                    low_center = calculate_route_center_improved(low_route)
-                    best_user = None
-                    best_distance = float('inf')
-
-                    for user in high_route['assigned_users']:
-                        distance = haversine_distance(low_center[0],
-                                                      low_center[1],
-                                                      user['lat'], user['lng'])
-                        if distance < best_distance and distance <= MERGE_DISTANCE_KM:
-                            best_distance = distance
-                            best_user = user
-
-                    if best_user:
-                        # Move the user
-                        high_route['assigned_users'].remove(best_user)
-                        low_route['assigned_users'].append(best_user)
-
-                        # Re-optimize both routes
-                        low_route = optimize_route_sequence_improved(
-                            low_route, office_lat, office_lon)
-                        high_route = optimize_route_sequence_improved(
-                            high_route, office_lat, office_lon)
-                        update_route_metrics_improved(low_route, office_lat,
-                                                      office_lon)
-                        update_route_metrics_improved(high_route, office_lat,
-                                                      office_lon)
-
-                        optimization_made = True
-                        logger.info(
-                            "    🗺️ Route optimization redistribution: User moved between routes for better optimization"
-                        )
-                        break
-            if optimization_made:
-                break
-
-    # Final statistics
-    total_seats = sum(r['vehicle_type'] for r in merged_routes)
-    total_users = sum(len(r['assigned_users']) for r in merged_routes)
-    avg_utilization = (total_users / total_seats *
-                       100) if total_seats > 0 else 0
-    avg_turning = np.mean([r.get('turning_score', 0) for r in merged_routes])
-
-    logger.info(
-        f"  🗺️ Route optimized merge: {len(routes)} → {len(merged_routes)} routes"
-    )
-    logger.info(
-        f"  🗺️ Final route optimization: {avg_utilization:.1f}% utilization, {avg_turning:.1f}° avg turning"
-    )
-
-    return merged_routes
+    return final_routes_after_split
 
 
 # ROAD NETWORK HELPER FUNCTIONS FOR MERGING AND SPLITTING
@@ -1279,6 +1241,69 @@ def _find_optimal_road_based_split(driver_pos, user_positions, office_pos):
                 best_split = (group1_positions, group2_positions)
 
     return best_split
+
+
+def calculate_merge_quality_score(route1, route2, merged_route, office_lat,
+                                  office_lon, config):
+    """
+    Calculates a quality score for merging two routes, considering road network coherence.
+    """
+    total_users = len(route1['assigned_users']) + len(route2['assigned_users'])
+    max_capacity = max(route1['vehicle_type'], route2['vehicle_type'])
+    utilization = total_users / max_capacity if max_capacity else 0
+
+    turning_score = merged_route.get('turning_score', 0)
+    tortuosity = merged_route.get('tortuosity_ratio', 1.0)
+
+    coherence = 0.0
+    if road_network:
+        driver_pos = (merged_route['latitude'], merged_route['longitude'])
+        user_positions = [(u['lat'], u['lng'])
+                          for u in merged_route['assigned_users']]
+        coherence = road_network.get_route_coherence_score(
+            driver_pos, user_positions, (office_lat, office_lon))
+
+    # Route optimized scoring: prioritize efficiency, coherence, then capacity
+    # These weights are heuristic and can be tuned.
+    efficiency_weight = 0.4
+    coherence_weight = 0.4
+    capacity_weight = 0.2
+
+    # Normalize scores to be comparable
+    # Lower turning/tortuosity is better; higher coherence/utilization is better.
+    # We'll penalize higher turning/tortuosity and lower utilization.
+
+    # Penalties for inefficiency (higher is worse)
+    turning_penalty = turning_score / config.get('MAX_TURNING_ANGLE', 40)
+    tortuosity_penalty = (tortuosity -
+                          1.0) / (config.get('max_tortuosity_ratio', 1.5) -
+                                  1.0) if tortuosity > 1.0 else 0
+
+    # Penalty for underutilization (higher is worse)
+    capacity_penalty = (1.0 - utilization) * 2  # Scale this penalty
+
+    # Coherence score (higher is better)
+    coherence_score = coherence / 0.7  # Normalize to a target good coherence
+
+    # Combine scores: Lower is better for penalties, higher is better for coherence
+    # We want to minimize the total "badness"
+
+    # Combine penalties: lower is better
+    efficiency_and_capacity_score = (turning_penalty * 0.5 +
+                                     tortuosity_penalty * 0.5 +
+                                     capacity_penalty * 0.5)
+
+    # Combine all factors. For simplicity, let's aim to minimize a composite score.
+    # Lower scores are better.
+    # Higher turning, tortuosity, capacity penalty increase the score.
+    # Higher coherence decreases the score.
+
+    score = (efficiency_weight * (turning_penalty + tortuosity_penalty) +
+             capacity_weight * capacity_penalty -
+             coherence_weight * coherence_score)
+
+    # Ensure score is not excessively low due to very high coherence.
+    return score
 
 
 def perform_quality_merge_improved(routes, config, office_lat, office_lon):
@@ -1443,69 +1468,6 @@ def perform_quality_merge_improved(routes, config, office_lat, office_lon):
             final_routes_after_split.append(route)
 
     return final_routes_after_split
-
-
-def calculate_merge_quality_score(route1, route2, merged_route, office_lat,
-                                  office_lon, config):
-    """
-    Calculates a quality score for merging two routes, considering road network coherence.
-    """
-    total_users = len(route1['assigned_users']) + len(route2['assigned_users'])
-    max_capacity = max(route1['vehicle_type'], route2['vehicle_type'])
-    utilization = total_users / max_capacity if max_capacity else 0
-
-    turning_score = merged_route.get('turning_score', 0)
-    tortuosity = merged_route.get('tortuosity_ratio', 1.0)
-
-    coherence = 0.0
-    if road_network:
-        driver_pos = (merged_route['latitude'], merged_route['longitude'])
-        user_positions = [(u['lat'], u['lng'])
-                          for u in merged_route['assigned_users']]
-        coherence = road_network.get_route_coherence_score(
-            driver_pos, user_positions, (office_lat, office_lon))
-
-    # Route optimized scoring: prioritize efficiency, coherence, then capacity
-    # These weights are heuristic and can be tuned.
-    efficiency_weight = 0.4
-    coherence_weight = 0.4
-    capacity_weight = 0.2
-
-    # Normalize scores to be comparable
-    # Lower turning/tortuosity is better; higher coherence/utilization is better.
-    # We'll penalize higher turning/tortuosity and lower utilization.
-
-    # Penalties for inefficiency (higher is worse)
-    turning_penalty = turning_score / config.get('MAX_TURNING_ANGLE', 40)
-    tortuosity_penalty = (tortuosity -
-                          1.0) / (config.get('max_tortuosity_ratio', 1.5) -
-                                  1.0) if tortuosity > 1.0 else 0
-
-    # Penalty for underutilization (higher is worse)
-    capacity_penalty = (1.0 - utilization) * 2  # Scale this penalty
-
-    # Coherence score (higher is better)
-    coherence_score = coherence / 0.7  # Normalize to a target good coherence
-
-    # Combine scores: Lower is better for penalties, higher is better for coherence
-    # We want to minimize the total "badness"
-
-    # Combine penalties: lower is better
-    efficiency_and_capacity_score = (turning_penalty * 0.5 +
-                                     tortuosity_penalty * 0.5 +
-                                     capacity_penalty * 0.5)
-
-    # Combine all factors. For simplicity, let's aim to minimize a composite score.
-    # Lower scores are better.
-    # Higher turning, tortuosity, capacity penalty increase the score.
-    # Higher coherence decreases the score.
-
-    score = (efficiency_weight * (turning_penalty + tortuosity_penalty) +
-             capacity_weight * capacity_penalty -
-             coherence_weight * coherence_score)
-
-    # Ensure score is not excessively low due to very high coherence.
-    return score
 
 
 def quality_preserving_route_merging(routes, config, office_lat, office_lon):
@@ -1866,12 +1828,124 @@ def run_road_aware_assignment(source_id: str,
             f"📋 User accounting: {users_accounted_for}/{total_users_in_api} users"
         )
 
+        # Extract additional data for rich response
+        company_info = data.get("company", {})
+        shift_info = data.get("shift", {})
+
+        # Enhance route data with rich information
+        enhanced_routes = []
+        for route in routes:
+            enhanced_route = route.copy()
+
+            # Add enhanced driver information
+            driver_id = route['driver_id']
+            driver_info = None
+
+            # Find driver in original data
+            if "drivers" in data:
+                all_drivers_data = data["drivers"].get("driversUnassigned", []) + data["drivers"].get("driversAssigned", [])
+            else:
+                all_drivers_data = data.get("driversUnassigned", []) + data.get("driversAssigned", [])
+
+            for driver in all_drivers_data:
+                if str(driver.get('id', driver.get('sub_user_id', ''))) == driver_id:
+                    driver_info = driver
+                    break
+
+            if driver_info:
+                # Add driver details directly to route level instead of nested driver_info
+                enhanced_route.update({
+                    'first_name': driver_info.get('first_name', ''),
+                    'last_name': driver_info.get('last_name', ''),
+                    'email': driver_info.get('email', ''),
+                    'vehicle_name': driver_info.get('vehicle_name', ''),
+                    'vehicle_no': driver_info.get('vehicle_no', ''),
+                    'capacity': driver_info.get('capacity', ''),
+                    'chasis_no': driver_info.get('chasis_no', ''),
+                    'color': driver_info.get('color', ''),
+                    'registration_no': driver_info.get('registration_no', ''),
+                    'shift_type_id': driver_info.get('shift_type_id', '')
+                })
+
+            # Enhance user information
+            enhanced_users = []
+            original_users = data.get('users', [])
+
+            for user in route['assigned_users']:
+                enhanced_user = user.copy()
+
+                # Find user in original data
+                for orig_user in original_users:
+                    if str(orig_user.get('id', orig_user.get('sub_user_id', ''))) == user['user_id']:
+                        enhanced_user.update({
+                            'address': orig_user.get('address', ''),
+                            'employee_shift': orig_user.get('employee_shift', ''),
+                            'shift_type': orig_user.get('shift_type', ''),
+                            'last_name': orig_user.get('last_name', '')
+                        })
+                        break
+
+                enhanced_users.append(enhanced_user)
+
+            enhanced_route['assigned_users'] = enhanced_users
+            enhanced_routes.append(enhanced_route)
+
+        # Enhance unassigned users
+        enhanced_unassigned_users = []
+        original_users = data.get('users', [])
+
+        for user in unassigned_users:
+            enhanced_user = user.copy()
+
+            # Find user in original data
+            for orig_user in original_users:
+                if str(orig_user.get('id', orig_user.get('sub_user_id', ''))) == user['user_id']:
+                    enhanced_user.update({
+                        'address': orig_user.get('address', ''),
+                        'employee_shift': orig_user.get('employee_shift', ''),
+                        'shift_type': orig_user.get('shift_type', ''),
+                        'last_name': orig_user.get('last_name', '')
+                    })
+                    break
+
+            enhanced_unassigned_users.append(enhanced_user)
+
+        # Enhance unassigned drivers
+        enhanced_unassigned_drivers = []
+        if "drivers" in data:
+            all_drivers_data = data["drivers"].get("driversUnassigned", []) + data["drivers"].get("driversAssigned", [])
+        else:
+            all_drivers_data = data.get("driversUnassigned", []) + data.get("driversAssigned", [])
+
+        for driver in unassigned_drivers:
+            enhanced_driver = driver.copy()
+
+            # Find driver in original data
+            for orig_driver in all_drivers_data:
+                if str(orig_driver.get('id', orig_driver.get('sub_user_id', ''))) == driver['driver_id']:
+                    enhanced_driver.update({
+                        'first_name': orig_driver.get('first_name', ''),
+                        'last_name': orig_driver.get('last_name', ''),
+                        'email': orig_driver.get('email', ''),
+                        'vehicle_name': orig_driver.get('vehicle_name', ''),
+                        'vehicle_no': orig_driver.get('vehicle_no', ''),
+                        'chasis_no': orig_driver.get('chasis_no', ''),
+                        'color': orig_driver.get('color', ''),
+                        'registration_no': orig_driver.get('registration_no', ''),
+                        'shift_type_id': orig_driver.get('shift_type_id', '')
+                    })
+                    break
+
+            enhanced_unassigned_drivers.append(enhanced_driver)
+
         return {
             "status": "true",
             "execution_time": execution_time,
-            "data": routes,
-            "unassignedUsers": unassigned_users,
-            "unassignedDrivers": unassigned_drivers,
+            "company": company_info,
+            "shift": shift_info,
+            "data": enhanced_routes,
+            "unassignedUsers": enhanced_unassigned_users,
+            "unassignedDrivers": enhanced_unassigned_drivers,
             "clustering_analysis": clustering_results,
             "optimization_mode": "balanced_optimization",
             "parameter": parameter,

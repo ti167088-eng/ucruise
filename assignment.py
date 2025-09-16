@@ -3012,12 +3012,16 @@ def handle_remaining_users_improved(unassigned_users_df, driver_df, routes,
 
                         # Create the route
                         new_route = {
-                            'driver_id': str(best_driver['driver_id']),
+                            'driver_id':
+                            str(best_driver['driver_id']),
                             'vehicle_id':
                             str(best_driver.get('vehicle_id', '')),
-                            'vehicle_type': int(best_driver['capacity']),
-                            'latitude': float(best_driver['latitude']),
-                            'longitude': float(best_driver['longitude']),
+                            'vehicle_type':
+                            int(best_driver['capacity']),
+                            'latitude':
+                            float(best_driver['latitude']),
+                            'longitude':
+                            float(best_driver['longitude']),
                             'assigned_users': route_users
                         }
 
@@ -3168,7 +3172,7 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     Main assignment function that automatically routes to the appropriate algorithm
     based on ride_settings priority value from the API response:
     - Priority 1 → assign_capacity.py (Capacity Optimization)
-    - Priority 2 → assign_balance.py (Balanced Optimization) 
+    - Priority 2 → assign_balance.py (Balanced Optimization)
     - Priority 3 → assign_route.py (Road-Aware Routing)
     - Default → assignment.py (Route Efficiency)
     """
@@ -3641,12 +3645,124 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
         )
 
         # Final results assembly
+        # Extract additional data for rich response
+        company_info = data.get("company", {})
+        shift_info = data.get("shift", {})
+
+        # Enhance route data with rich information
+        enhanced_routes = []
+        for route in routes:
+            enhanced_route = route.copy()
+
+            # Add enhanced driver information
+            driver_id = route['driver_id']
+            driver_info = None
+
+            # Find driver in original data
+            if "drivers" in data:
+                all_drivers_data = data["drivers"].get("driversUnassigned", []) + data["drivers"].get("driversAssigned", [])
+            else:
+                all_drivers_data = data.get("driversUnassigned", []) + data.get("driversAssigned", [])
+
+            for driver in all_drivers_data:
+                if str(driver.get('id', driver.get('sub_user_id', ''))) == driver_id:
+                    driver_info = driver
+                    break
+
+            if driver_info:
+                # Add driver details directly to route level instead of nested driver_info
+                enhanced_route.update({
+                    'first_name': driver_info.get('first_name', ''),
+                    'last_name': driver_info.get('last_name', ''),
+                    'email': driver_info.get('email', ''),
+                    'vehicle_name': driver_info.get('vehicle_name', ''),
+                    'vehicle_no': driver_info.get('vehicle_no', ''),
+                    'capacity': driver_info.get('capacity', ''),
+                    'chasis_no': driver_info.get('chasis_no', ''),
+                    'color': driver_info.get('color', ''),
+                    'registration_no': driver_info.get('registration_no', ''),
+                    'shift_type_id': driver_info.get('shift_type_id', '')
+                })
+
+            # Enhance user information
+            enhanced_users = []
+            original_users = data.get('users', [])
+
+            for user in route['assigned_users']:
+                enhanced_user = user.copy()
+
+                # Find user in original data
+                for orig_user in original_users:
+                    if str(orig_user.get('id', orig_user.get('sub_user_id', ''))) == user['user_id']:
+                        enhanced_user.update({
+                            'address': orig_user.get('address', ''),
+                            'employee_shift': orig_user.get('employee_shift', ''),
+                            'shift_type': orig_user.get('shift_type', ''),
+                            'last_name': orig_user.get('last_name', '')
+                        })
+                        break
+
+                enhanced_users.append(enhanced_user)
+
+            enhanced_route['assigned_users'] = enhanced_users
+            enhanced_routes.append(enhanced_route)
+
+        # Enhance unassigned users
+        enhanced_unassigned_users = []
+        original_users = data.get('users', [])
+
+        for user in unassigned_users:
+            enhanced_user = user.copy()
+
+            # Find user in original data
+            for orig_user in original_users:
+                if str(orig_user.get('id', orig_user.get('sub_user_id', ''))) == user['user_id']:
+                    enhanced_user.update({
+                        'address': orig_user.get('address', ''),
+                        'employee_shift': orig_user.get('employee_shift', ''),
+                        'shift_type': orig_user.get('shift_type', ''),
+                        'last_name': orig_user.get('last_name', '')
+                    })
+                    break
+
+            enhanced_unassigned_users.append(enhanced_user)
+
+        # Enhance unassigned drivers
+        enhanced_unassigned_drivers = []
+        if "drivers" in data:
+            all_drivers_data = data["drivers"].get("driversUnassigned", []) + data["drivers"].get("driversAssigned", [])
+        else:
+            all_drivers_data = data.get("driversUnassigned", []) + data.get("driversAssigned", [])
+
+        for driver in unassigned_drivers:
+            enhanced_driver = driver.copy()
+
+            # Find driver in original data
+            for orig_driver in all_drivers_data:
+                if str(orig_driver.get('id', orig_driver.get('sub_user_id', ''))) == driver['driver_id']:
+                    enhanced_driver.update({
+                        'first_name': orig_driver.get('first_name', ''),
+                        'last_name': orig_driver.get('last_name', ''),
+                        'email': orig_driver.get('email', ''),
+                        'vehicle_name': orig_driver.get('vehicle_name', ''),
+                        'vehicle_no': orig_driver.get('vehicle_no', ''),
+                        'chasis_no': orig_driver.get('chasis_no', ''),
+                        'color': orig_driver.get('color', ''),
+                        'registration_no': orig_driver.get('registration_no', ''),
+                        'shift_type_id': orig_driver.get('shift_type_id', '')
+                    })
+                    break
+
+            enhanced_unassigned_drivers.append(enhanced_driver)
+
         result = {
             "status": "true",
             "execution_time": execution_time,
-            "data": routes,
-            "unassignedUsers": unassigned_users,
-            "unassignedDrivers": unassigned_drivers,
+            "company": company_info,
+            "shift": shift_info,
+            "data": enhanced_routes,
+            "unassignedUsers": enhanced_unassigned_users,
+            "unassignedDrivers": enhanced_unassigned_drivers,
             "clustering_analysis": clustering_results,
             "optimization_mode": "route_efficiency",
             "parameter": parameter,
