@@ -631,6 +631,10 @@ def apply_lenient_2opt_capacity_focused(sequence, driver_pos, office_pos):
 
 # MAIN ASSIGNMENT FUNCTION FOR CAPACITY OPTIMIZATION
 def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: str = ""):
+    """Main entry point for capacity optimization assignment"""
+    return run_assignment_capacity_internal(source_id, parameter, string_param)
+
+def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_param: str = ""):
     """
     Main assignment function optimized for capacity utilization:
     - Prioritizes filling vehicle seats over route efficiency
@@ -835,7 +839,8 @@ def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: st
                             'address': orig_user.get('address', ''),
                             'employee_shift': orig_user.get('employee_shift', ''),
                             'shift_type': orig_user.get('shift_type', ''),
-                            'last_name': orig_user.get('last_name', '')
+                            'last_name': orig_user.get('last_name', ''),
+                            'phone': orig_user.get('phone', '')
                         })
                         break
 
@@ -858,7 +863,8 @@ def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: st
                         'address': orig_user.get('address', ''),
                         'employee_shift': orig_user.get('employee_shift', ''),
                         'shift_type': orig_user.get('shift_type', ''),
-                        'last_name': orig_user.get('last_name', '')
+                        'last_name': orig_user.get('last_name', ''),
+                        'phone': orig_user.get('phone', '')
                     })
                     break
 

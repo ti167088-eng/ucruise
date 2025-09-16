@@ -2628,7 +2628,8 @@ def run_road_aware_assignment(source_id: str,
                             'address': orig_user.get('address', ''),
                             'employee_shift': orig_user.get('employee_shift', ''),
                             'shift_type': orig_user.get('shift_type', ''),
-                            'last_name': orig_user.get('last_name', '')
+                            'last_name': orig_user.get('last_name', ''),
+                            'phone': orig_user.get('phone', '')
                         })
                         break
 
@@ -2651,7 +2652,8 @@ def run_road_aware_assignment(source_id: str,
                         'address': orig_user.get('address', ''),
                         'employee_shift': orig_user.get('employee_shift', ''),
                         'shift_type': orig_user.get('shift_type', ''),
-                        'last_name': orig_user.get('last_name', '')
+                        'last_name': orig_user.get('last_name', ''),
+                        'phone': orig_user.get('phone', '')
                     })
                     break
 

@@ -260,6 +260,159 @@ from assignment import (
     _get_all_drivers_as_unassigned, _convert_users_to_unassigned_format,
     analyze_assignment_quality, get_progress_tracker)
 
+# MAIN ASSIGNMENT FUNCTION FOR BALANCED OPTIMIZATION
+def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = ""):
+    """Main entry point for balanced optimization assignment"""
+    start_time = time.time()
+
+    # Reload configuration for balanced optimization
+    global _config
+    _config = load_and_validate_config()
+    
+    logger.info(f"🚀 Starting BALANCED OPTIMIZATION assignment for source_id: {source_id}")
+    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}")
+
+    try:
+        # Load and validate data
+        data = load_env_and_fetch_data(source_id, parameter, string_param)
+        
+        # Edge case handling
+        users = data.get('users', [])
+        if not users:
+            logger.info("⚠️ No users found - returning empty assignment")
+            return {
+                "status": "true",
+                "execution_time": time.time() - start_time,
+                "data": [],
+                "unassignedUsers": [],
+                "unassignedDrivers": _get_all_drivers_as_unassigned(data),
+                "clustering_analysis": {"method": "No Users", "clusters": 0},
+                "optimization_mode": "balanced_optimization",
+                "parameter": parameter,
+                "string_param": string_param
+            }
+
+        # Get all drivers
+        all_drivers = []
+        if "drivers" in data:
+            drivers_data = data["drivers"]
+            all_drivers.extend(drivers_data.get("driversUnassigned", []))
+            all_drivers.extend(drivers_data.get("driversAssigned", []))
+        else:
+            all_drivers.extend(data.get("driversUnassigned", []))
+            all_drivers.extend(data.get("driversAssigned", []))
+
+        if not all_drivers:
+            logger.info("⚠️ No drivers available - all users unassigned")
+            unassigned_users = _convert_users_to_unassigned_format(users)
+            return {
+                "status": "true",
+                "execution_time": time.time() - start_time,
+                "data": [],
+                "unassignedUsers": unassigned_users,
+                "unassignedDrivers": [],
+                "clustering_analysis": {"method": "No Drivers", "clusters": 0},
+                "optimization_mode": "balanced_optimization",
+                "parameter": parameter,
+                "string_param": string_param
+            }
+
+        logger.info(f"📥 Data loaded - Users: {len(users)}, Total Drivers: {len(all_drivers)}")
+
+        # Extract office coordinates and validate data
+        office_lat, office_lon = extract_office_coordinates(data)
+        validate_input_data(data)
+        logger.info("✅ Data validation passed")
+
+        # Prepare dataframes
+        user_df, driver_df = prepare_user_driver_dataframes(data)
+        
+        logger.info(f"📊 DataFrames prepared - Users: {len(user_df)}, Drivers: {len(driver_df)}")
+
+        # STEP 1: Geographic clustering
+        user_df = create_geographic_clusters(user_df, office_lat, office_lon, _config)
+        clustering_results = {"method": "balanced_" + _config['clustering_method'], 
+                            "clusters": user_df['geo_cluster'].nunique()}
+
+        # STEP 2: Capacity-based sub-clustering
+        user_df = create_capacity_subclusters(user_df, office_lat, office_lon, _config)
+
+        # STEP 3: Balanced driver assignment
+        routes, assigned_user_ids = assign_drivers_by_priority_route_optimized(
+            user_df, driver_df, office_lat, office_lon)
+
+        # STEP 4: Local optimization
+        routes = local_optimization(routes, office_lat, office_lon)
+
+        # STEP 5: Global optimization
+        routes, unassigned_users = global_optimization(routes, user_df,
+                                                       assigned_user_ids, driver_df, office_lat, office_lon)
+
+        # STEP 6: Final-pass merge
+        routes = final_pass_merge_route_optimized(routes, _config, office_lat, office_lon)
+
+        # Filter out routes with no assigned users
+        filtered_routes = []
+        for route in routes:
+            if route['assigned_users'] and len(route['assigned_users']) > 0:
+                filtered_routes.append(route)
+        
+        routes = filtered_routes
+
+        # Build unassigned drivers list
+        assigned_driver_ids = {route['driver_id'] for route in routes}
+        unassigned_drivers_df = driver_df[~driver_df['driver_id'].isin(assigned_driver_ids)]
+        unassigned_drivers = []
+        
+        for _, driver in unassigned_drivers_df.iterrows():
+            driver_data = {
+                'driver_id': str(driver.get('driver_id', '')),
+                'capacity': int(driver.get('capacity', 0)),
+                'vehicle_id': str(driver.get('vehicle_id', '')),
+                'latitude': float(driver.get('latitude', 0.0)),
+                'longitude': float(driver.get('longitude', 0.0))
+            }
+            unassigned_drivers.append(driver_data)
+
+        # Final metrics update for all routes
+        for route in routes:
+            update_route_metrics_improved(route, office_lat, office_lon)
+
+        execution_time = time.time() - start_time
+
+        # Final user count verification
+        total_users_in_api = len(users)
+        users_assigned = sum(len(r['assigned_users']) for r in routes)
+        users_unassigned = len(unassigned_users)
+        users_accounted_for = users_assigned + users_unassigned
+        
+        logger.info(f"✅ Balanced optimization complete in {execution_time:.2f}s")
+        logger.info(f"📊 Final routes: {len(routes)}")
+        logger.info(f"🎯 Users assigned: {users_assigned}")
+        logger.info(f"👥 Users unassigned: {users_unassigned}")
+
+        # Extract additional data for rich response
+        company_info = data.get("company", {})
+        shift_info = data.get("shift", {})
+
+        return {
+            "status": "true",
+            "execution_time": execution_time,
+            "company": company_info,
+            "shift": shift_info,
+            "data": routes,
+            "unassignedUsers": unassigned_users,
+            "unassignedDrivers": unassigned_drivers,
+            "clustering_analysis": clustering_results,
+            "optimization_mode": "balanced_optimization",
+            "parameter": parameter,
+            "string_param": string_param
+        }
+
+    except Exception as e:
+        logger.error(f"Assignment failed: {e}", exc_info=True)
+        return {"status": "false", "details": str(e), "data": [], "parameter": parameter, "string_param": string_param}
+
 # Load validated configuration - always route optimization
 _config = load_and_validate_config()
 MAX_FILL_DISTANCE_KM = _config['MAX_FILL_DISTANCE_KM']
@@ -1881,7 +2034,8 @@ def run_road_aware_assignment(source_id: str,
                             'address': orig_user.get('address', ''),
                             'employee_shift': orig_user.get('employee_shift', ''),
                             'shift_type': orig_user.get('shift_type', ''),
-                            'last_name': orig_user.get('last_name', '')
+                            'last_name': orig_user.get('last_name', ''),
+                            'phone': orig_user.get('phone', '')
                         })
                         break
 
@@ -1904,7 +2058,8 @@ def run_road_aware_assignment(source_id: str,
                         'address': orig_user.get('address', ''),
                         'employee_shift': orig_user.get('employee_shift', ''),
                         'shift_type': orig_user.get('shift_type', ''),
-                        'last_name': orig_user.get('last_name', '')
+                        'last_name': orig_user.get('last_name', ''),
+                        'phone': orig_user.get('phone', '')
                     })
                     break
 
