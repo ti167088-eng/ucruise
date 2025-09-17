@@ -1,395 +1,2392 @@
 [
   {
-    "driver_id": "2573",
-    "vehicle_id": "37",
+    "driver_id": "325354",
+    "vehicle_id": "1696",
     "vehicle_type": 7,
-    "latitude": 30.6969081,
-    "longitude": 76.7323704,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
     "assigned_users": [
       {
-        "user_id": "2391",
-        "lat": 30.6711366,
-        "lng": 76.7215556,
-        "office_distance": 5.26,
-        "first_name": "Kirandeep Kaur",
-        "email": "test@gmail.com",
-        "address": "MPCC+FJ3, Sector 80, Mauli Baidwan, Sahibzada Ajit Singh Nagar, Punjab 140308, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
+        "user_id": "324053",
+        "lat": 30.7382816,
+        "lng": 76.7177688,
+        "office_distance": 6.343924644487474,
+        "first_name": "Bipan",
+        "email": "None"
+      },
+      {
+        "user_id": "323659",
+        "lat": 30.728284,
+        "lng": 76.6972712,
+        "office_distance": 5.860316795857995,
+        "bearing_from_office": 332.2344455438742,
+        "first_name": "Saiteja",
+        "email": "None"
+      },
+      {
+        "user_id": "323771",
+        "lat": 30.7277324,
+        "lng": 76.6961204,
+        "office_distance": 5.8586723082672885,
+        "bearing_from_office": 331.0030287449623,
+        "first_name": "Shakti",
+        "email": "None"
+      },
+      {
+        "user_id": "323729",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Sapna",
+        "email": "None"
+      },
+      {
+        "user_id": "323766",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Navish",
+        "email": "None"
+      },
+      {
+        "user_id": "323924",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Abhishek",
+        "email": "None"
+      },
+      {
+        "user_id": "323945",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Saurabh",
+        "email": "None"
       }
-    ],
-    "centroid": [
-      30.6711366,
-      76.7215556
-    ],
-    "utilization": 0.14285714285714285,
-    "turning_score": 0,
-    "tortuosity_ratio": 1.0,
-    "direction_consistency": 1.0,
-    "first_name": "Breanna",
-    "last_name": null,
-    "email": "breanna@yopmail.com",
-    "vehicle_name": "BMW2",
-    "vehicle_no": "BR11BH834",
-    "capacity": 7,
-    "chasis_no": "67UT31",
-    "color": "#733f3f",
-    "registration_no": "1212",
-    "shift_type_id": 2
-  },
-  {
-    "driver_id": "2539",
-    "vehicle_id": "34",
-    "vehicle_type": 5,
-    "latitude": 30.7498676,
-    "longitude": 76.6411094,
-    "assigned_users": [
-      {
-        "user_id": "2475",
-        "lat": 30.7320213,
-        "lng": 76.6911172,
-        "office_distance": 5.004,
-        "first_name": "Krish Raj",
-        "email": "Krish@unifylogisticsolutions.com",
-        "address": "# 392 Ekta Colony, near Shiv Mandir Ekta Colony Balongi, Sector 119, Balongi, Sahibzada Ajit Singh Nagar, Punjab 160055, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
-      },
-      {
-        "user_id": "2482",
-        "lat": 30.7066882,
-        "lng": 76.6543566,
-        "office_distance": 4.425,
-        "first_name": "Nandini Verma",
-        "email": "naya.williams@unifylogisticsolutions.com",
-        "address": "Ansal Api, Sector 114, Sahibzada Ajit Singh Nagar, Punjab 140307, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "0",
-        "last_name": null
-      },
-      {
-        "user_id": "2481",
-        "lat": 30.7066882,
-        "lng": 76.6543566,
-        "office_distance": 4.202,
-        "first_name": "Vikas Kumar Thakur",
-        "email": "viky@unifylogisticsolutions.com",
-        "address": "Ansal Api, Sector 114, Sahibzada Ajit Singh Nagar, Punjab 140307, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "0",
-        "last_name": null
-      },
-      {
-        "user_id": "2589",
-        "lat": 30.7319649,
-        "lng": 76.6640944,
-        "office_distance": 7.527,
-        "first_name": "Jagjeet",
-        "email": "jagjeetkaur@gmail.com",
-        "address": "Chhaju Majra Colony, Sahibzada Ajit Singh Nagar, Punjab 140301, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": "Kaur"
-      },
-      {
-        "user_id": "2473",
-        "lat": 30.7442252,
-        "lng": 76.6614863,
-        "office_distance": 6.946,
-        "first_name": "Anmol Sharma",
-        "email": "Anmol@dummy.com",
-        "address": "Sunny Enclave, Mundi Kharar, Kharar, Punjab 140301, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
-      }
-    ],
-    "centroid": [
-      30.724317559999996,
-      76.66508222
     ],
     "utilization": 1.0,
-    "turning_score": 91.44871251780108,
-    "tortuosity_ratio": 2.939013156971247,
-    "direction_consistency": 0.3333333333333333,
-    "first_name": "Marcus",
-    "last_name": null,
-    "email": "marcus.lee@example.com",
-    "vehicle_name": "67bqwdhb",
-    "vehicle_no": "TN22BB8899",
-    "capacity": 5,
-    "chasis_no": "CH7890123456",
-    "color": "#983a3a",
-    "registration_no": "REG654",
-    "shift_type_id": 1
+    "turning_score": 49.71582697089245,
+    "total_distance": 22.96125820131686
   },
   {
-    "driver_id": "2577",
-    "vehicle_id": "41",
+    "driver_id": "325355",
+    "vehicle_id": "1697",
+    "vehicle_type": 8,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323930",
+        "lat": 30.729775,
+        "lng": 76.719705,
+        "office_distance": 5.382991658590235,
+        "first_name": "Kanchan",
+        "email": "None"
+      },
+      {
+        "user_id": "323882",
+        "lat": 30.7377406,
+        "lng": 76.7181398,
+        "office_distance": 6.279965840065952,
+        "first_name": "Sumit",
+        "email": "None"
+      },
+      {
+        "user_id": "323912",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Rishav",
+        "email": "None"
+      },
+      {
+        "user_id": "323995",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Abhishek",
+        "email": "None"
+      },
+      {
+        "user_id": "324025",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Kanta",
+        "email": "None"
+      },
+      {
+        "user_id": "324031",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Sourav",
+        "email": "None"
+      },
+      {
+        "user_id": "324037",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Sushant",
+        "email": "None"
+      },
+      {
+        "user_id": "324038",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Sunny",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 50.092920463499546,
+    "total_distance": 22.868841062437113
+  },
+  {
+    "driver_id": "325358",
+    "vehicle_id": "1700",
+    "vehicle_type": 8,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "324090",
+        "lat": 30.7317822,
+        "lng": 76.7205186,
+        "office_distance": 5.59731181388068,
+        "first_name": "Harsimranjeet",
+        "email": "None"
+      },
+      {
+        "user_id": "323997",
+        "lat": 30.7293111,
+        "lng": 76.6946872,
+        "office_distance": 6.07872625333805,
+        "bearing_from_office": 330.67632992004917,
+        "first_name": "Amit",
+        "email": "None"
+      },
+      {
+        "user_id": "323984",
+        "lat": 30.7317094,
+        "lng": 76.6963193,
+        "office_distance": 6.240463601094636,
+        "bearing_from_office": 333.12532837333055,
+        "first_name": "Satvinder",
+        "email": "None"
+      },
+      {
+        "user_id": "323867",
+        "lat": 30.7318152,
+        "lng": 76.6939254,
+        "office_distance": 6.357549783579449,
+        "bearing_from_office": 331.33387793089594,
+        "first_name": "Balbir",
+        "email": "None"
+      },
+      {
+        "user_id": "323902",
+        "lat": 30.7317329,
+        "lng": 76.6930192,
+        "office_distance": 6.391598038993663,
+        "bearing_from_office": 330.61332907451435,
+        "first_name": "Diksha",
+        "email": "None"
+      },
+      {
+        "user_id": "323596",
+        "lat": 30.7320213,
+        "lng": 76.6911172,
+        "office_distance": 6.510351541465651,
+        "bearing_from_office": 329.35798652138385,
+        "first_name": "Tanuja",
+        "email": "None"
+      },
+      {
+        "user_id": "323646",
+        "lat": 30.7320213,
+        "lng": 76.6911172,
+        "office_distance": 6.510351541465651,
+        "bearing_from_office": 329.35798652138385,
+        "first_name": "Pankaj",
+        "email": "None"
+      },
+      {
+        "user_id": "324075",
+        "lat": 30.7646253,
+        "lng": 76.6556781,
+        "office_distance": 11.405838649553893,
+        "first_name": "Rajnish",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 77.30476864193479,
+    "total_distance": 33.23161158663498
+  },
+  {
+    "driver_id": "325361",
+    "vehicle_id": "1703",
+    "vehicle_type": 7,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323899",
+        "lat": 30.7319588,
+        "lng": 76.7259069,
+        "office_distance": 5.593843122333594,
+        "first_name": "Abhishek",
+        "email": "None"
+      },
+      {
+        "user_id": "323702",
+        "lat": 30.7372861,
+        "lng": 76.6972468,
+        "office_distance": 6.7629891093720715,
+        "bearing_from_office": 336.17257873214464,
+        "first_name": "Punit",
+        "email": "None"
+      },
+      {
+        "user_id": "323923",
+        "lat": 30.7350742,
+        "lng": 76.6856658,
+        "office_distance": 7.073417351406422,
+        "bearing_from_office": 327.1292504075508,
+        "first_name": "Nishu",
+        "email": "None"
+      },
+      {
+        "user_id": "324022",
+        "lat": 30.7356979,
+        "lng": 76.686365,
+        "office_distance": 7.09598253741158,
+        "bearing_from_office": 327.8864580952287,
+        "first_name": "Ujjwal",
+        "email": "None"
+      },
+      {
+        "user_id": "323859",
+        "lat": 30.7486287,
+        "lng": 76.6414517,
+        "office_distance": 10.97879097364232,
+        "first_name": "Karan",
+        "email": "None"
+      },
+      {
+        "user_id": "323617",
+        "lat": 30.7552243,
+        "lng": 76.6474506,
+        "office_distance": 11.09363478828051,
+        "first_name": "Hardeep",
+        "email": "None"
+      },
+      {
+        "user_id": "324076",
+        "lat": 30.7646375,
+        "lng": 76.6546719,
+        "office_distance": 11.463743496110796,
+        "first_name": "Vidushi",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 78.1973664908505,
+    "total_distance": 35.44696739198142
+  },
+  {
+    "driver_id": "325533",
+    "vehicle_id": "1875",
+    "vehicle_type": 8,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "323616",
+        "lat": 30.6549797,
+        "lng": 76.8107961,
+        "bearing_from_office": 110.02937735530674,
+        "first_name": "Deepak",
+        "email": "None"
+      },
+      {
+        "user_id": "323892",
+        "lat": 30.6498769,
+        "lng": 76.8066956,
+        "bearing_from_office": 114.53227299034063,
+        "first_name": "Nidhi",
+        "email": "None"
+      },
+      {
+        "user_id": "323764",
+        "lat": 30.6519473,
+        "lng": 76.8063383,
+        "bearing_from_office": 113.19759274010994,
+        "first_name": "Anupam",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.375,
+    "turning_score": 98.21381031716466,
+    "total_distance": 22.646201105456633
+  },
+  {
+    "driver_id": "325310",
+    "vehicle_id": "1652",
+    "vehicle_type": 8,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323730",
+        "lat": 30.6467617,
+        "lng": 76.8146663,
+        "office_distance": 9.340423479160789,
+        "bearing_from_office": 114.51938676316627,
+        "first_name": "Shivali",
+        "email": "None"
+      },
+      {
+        "user_id": "323713",
+        "lat": 30.6472549,
+        "lng": 76.8152512,
+        "office_distance": 9.368799568157414,
+        "bearing_from_office": 114.07209392843663,
+        "first_name": "Rahul",
+        "email": "None"
+      },
+      {
+        "user_id": "323813",
+        "lat": 30.6474352,
+        "lng": 76.8187218,
+        "office_distance": 9.664859050386315,
+        "bearing_from_office": 113.15930475737645,
+        "first_name": "Sumit",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.375,
+    "turning_score": 122.83457555598322,
+    "total_distance": 16.93915263847381
+  },
+  {
+    "driver_id": "325534",
+    "vehicle_id": "1876",
+    "vehicle_type": 8,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "323689",
+        "lat": 30.6425496,
+        "lng": 76.8173359,
+        "office_distance": 9.772644946899852,
+        "bearing_from_office": 116.39465615106496,
+        "first_name": "Yuvraj",
+        "email": "None"
+      },
+      {
+        "user_id": "323749",
+        "lat": 30.6425496,
+        "lng": 76.8173359,
+        "office_distance": 9.772644946899852,
+        "bearing_from_office": 116.39465615106496,
+        "first_name": "Manpreet",
+        "email": "None"
+      },
+      {
+        "user_id": "323797",
+        "lat": 30.6425496,
+        "lng": 76.8173359,
+        "office_distance": 9.772644946899852,
+        "bearing_from_office": 116.39465615106496,
+        "first_name": "Mahavir",
+        "email": "None"
+      },
+      {
+        "user_id": "323798",
+        "lat": 30.6425496,
+        "lng": 76.8173359,
+        "office_distance": 9.772644946899852,
+        "bearing_from_office": 116.39465615106496,
+        "first_name": "Gursewak",
+        "email": "None"
+      },
+      {
+        "user_id": "323806",
+        "lat": 30.6425496,
+        "lng": 76.8173359,
+        "office_distance": 9.772644946899852,
+        "bearing_from_office": 116.39465615106496,
+        "first_name": "Charanjit",
+        "email": "None"
+      },
+      {
+        "user_id": "323790",
+        "lat": 30.652482,
+        "lng": 76.825442,
+        "office_distance": 10.06398037475986,
+        "bearing_from_office": 108.77641175270111,
+        "first_name": "Harkirat",
+        "email": "None"
+      },
+      {
+        "user_id": "323828",
+        "lat": 30.666498,
+        "lng": 76.8424554,
+        "office_distance": 11.279947460038127,
+        "bearing_from_office": 98.56161522621943,
+        "first_name": "Sapna",
+        "email": "None"
+      },
+      {
+        "user_id": "323987",
+        "lat": 30.666498,
+        "lng": 76.8424554,
+        "office_distance": 11.279947460038127,
+        "bearing_from_office": 98.56161522621943,
+        "first_name": "Stuti",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 36.61899540998158,
+    "total_distance": 29.41744218736192
+  },
+  {
+    "driver_id": "325363",
+    "vehicle_id": "1705",
+    "vehicle_type": 8,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323801",
+        "lat": 30.7310491,
+        "lng": 76.657154,
+        "bearing_from_office": 309.93083286173754,
+        "first_name": "Kulwinder",
+        "email": "None"
+      },
+      {
+        "user_id": "323878",
+        "lat": 30.7309198,
+        "lng": 76.6593401,
+        "bearing_from_office": 310.7705707651762,
+        "first_name": "Sourabh",
+        "email": "None"
+      },
+      {
+        "user_id": "323712",
+        "lat": 30.7290915,
+        "lng": 76.6628289,
+        "bearing_from_office": 311.2255242742135,
+        "first_name": "Ankush",
+        "email": "None"
+      },
+      {
+        "user_id": "323808",
+        "lat": 30.7135201,
+        "lng": 76.655001,
+        "bearing_from_office": 297.63770669402334,
+        "first_name": "Ravina",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.5,
+    "turning_score": 86.59670598244111,
+    "total_distance": 28.335769493247106
+  },
+  {
+    "driver_id": "325311",
+    "vehicle_id": "1653",
+    "vehicle_type": 5,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323706",
+        "lat": 30.7382187,
+        "lng": 76.6636448,
+        "office_distance": 8.6550326734202,
+        "bearing_from_office": 316.62917339333495,
+        "first_name": "Rohit",
+        "email": "None"
+      },
+      {
+        "user_id": "323787",
+        "lat": 30.7335726,
+        "lng": 76.658265,
+        "office_distance": 8.66369063560519,
+        "bearing_from_office": 311.8053053326778,
+        "first_name": "Mahesh",
+        "email": "None"
+      },
+      {
+        "user_id": "323960",
+        "lat": 30.7486287,
+        "lng": 76.6414517,
+        "office_distance": 10.97879097364232,
+        "first_name": "Yamini",
+        "email": "None"
+      },
+      {
+        "user_id": "323681",
+        "lat": 30.7498676,
+        "lng": 76.6411094,
+        "office_distance": 11.096525814897152,
+        "first_name": "Simranjit",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.8,
+    "turning_score": 81.998167939042,
+    "total_distance": 33.73780973957582
+  },
+  {
+    "driver_id": "325360",
+    "vehicle_id": "1702",
     "vehicle_type": 5,
     "latitude": 30.6425496,
     "longitude": 76.8173359,
     "assigned_users": [
       {
-        "user_id": "2474",
-        "lat": 30.6364521,
-        "lng": 76.8155946,
-        "office_distance": 19.35,
-        "first_name": "Jaspal Singh Takkar",
-        "email": "jas@unifylogisticsolutions.com",
-        "address": "GS Tower-2, VIP Enclave, 1, VIP Rd, Zirakpur, Punjab 140603, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
-      }
-    ],
-    "centroid": [
-      30.6364521,
-      76.8155946
-    ],
-    "utilization": 0.2,
-    "turning_score": 0,
-    "tortuosity_ratio": 1.0,
-    "direction_consistency": 1.0,
-    "first_name": "Zohan",
-    "last_name": null,
-    "email": "zohan@yopmail.com",
-    "vehicle_name": "Tata Nexon",
-    "vehicle_no": "BR11BH8349",
-    "capacity": 5,
-    "chasis_no": "67UT31",
-    "color": "#865050",
-    "registration_no": "8339",
-    "shift_type_id": 2
-  },
-  {
-    "driver_id": "2533",
-    "vehicle_id": "28",
-    "vehicle_type": 7,
-    "latitude": 30.7498676,
-    "longitude": 76.6411094,
-    "assigned_users": [
-      {
-        "user_id": "2484",
-        "lat": 30.7395761,
-        "lng": 76.6466769,
-        "office_distance": 9.884,
-        "first_name": "Ashray Amrate",
-        "email": "logan@unifylogisticsolutions.com",
-        "address": "Hira Singh Nagar, Near, Kharar, Sector 127, Main Bazar, Sahibzada Ajit Singh Nagar, Punjab 140301, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
+        "user_id": "324068",
+        "lat": 30.730005,
+        "lng": 76.6641748,
+        "office_distance": 7.978557097050073,
+        "bearing_from_office": 312.3829337570244,
+        "first_name": "Ashutosh",
+        "email": "None"
       },
       {
-        "user_id": "2592",
-        "lat": 30.7461367,
-        "lng": 76.6391288,
-        "office_distance": 9.147,
-        "first_name": "Pankaj",
-        "email": "pankaj@gmail.com",
-        "address": "Anaj Mandi Rd, Garden Colony, Kharar, Punjab 140301, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
+        "user_id": "323686",
+        "lat": 30.7335726,
+        "lng": 76.658265,
+        "office_distance": 8.66369063560519,
+        "bearing_from_office": 311.8053053326778,
+        "first_name": "Sahil",
+        "email": "None"
       },
       {
-        "user_id": "2483",
+        "user_id": "323652",
+        "lat": 30.7338619,
+        "lng": 76.6568654,
+        "office_distance": 8.78512989283123,
+        "bearing_from_office": 311.3806014374071,
+        "first_name": "Harvind",
+        "email": "None"
+      },
+      {
+        "user_id": "323965",
+        "lat": 30.7325292,
+        "lng": 76.6554249,
+        "office_distance": 8.792925437882616,
+        "bearing_from_office": 310.0629040995682,
+        "first_name": "Mohit",
+        "email": "None"
+      },
+      {
+        "user_id": "323897",
         "lat": 30.7498676,
         "lng": 76.6411094,
-        "office_distance": 5.591,
-        "first_name": "Chumphila Bhutia",
-        "email": "Chum.taylor@unifylogisticsolutions.com",
-        "address": "Kharar, Punjab, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
-      },
-      {
-        "user_id": "2457",
-        "lat": 30.7505972,
-        "lng": 76.6312165,
-        "office_distance": 10.194,
-        "first_name": "Abhishek",
-        "email": "avi@unifylogisticsolutions.com",
-        "address": "22 A, Sector 12, Garden Colony, Kharar, Punjab 140301, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
-      },
-      {
-        "user_id": "2587",
-        "lat": 30.7678352,
-        "lng": 76.6302656,
-        "office_distance": 12.804,
-        "first_name": "Riya",
-        "email": "riyachauhan@gmail.com",
-        "address": "GBP Camellia, NH-21, Chandigarh-Manali Highway, Kharar, Sahibzada Ajit Singh Nagar, Aujala, Punjab 140301, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "0",
-        "last_name": "Chauhan"
+        "office_distance": 11.096525814897152,
+        "first_name": "Gagandeep",
+        "email": "None"
       }
     ],
-    "centroid": [
-      30.75080256,
-      76.63767944
-    ],
-    "utilization": 0.7142857142857143,
-    "turning_score": 113.40176051504234,
-    "tortuosity_ratio": 2.0213344334547996,
-    "direction_consistency": 0.3333333333333333,
-    "first_name": "Olivia",
-    "last_name": null,
-    "email": "olivia.green@example.com",
-    "vehicle_name": "Tata Intra",
-    "vehicle_no": "MH14XY1234",
-    "capacity": 7,
-    "chasis_no": "CH9081726354",
-    "color": "Silver",
-    "registration_no": "REG888",
-    "shift_type_id": 1
+    "utilization": 1.0,
+    "turning_score": 70.77052958039836,
+    "total_distance": 32.07115658047197
   },
   {
-    "driver_id": "2572",
-    "vehicle_id": "36",
-    "vehicle_type": 5,
-    "latitude": 30.7293111,
-    "longitude": 76.6946872,
+    "driver_id": "325366",
+    "vehicle_id": "1708",
+    "vehicle_type": 8,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
     "assigned_users": [
       {
-        "user_id": "2588",
-        "lat": 30.7333213,
-        "lng": 76.6951525,
-        "office_distance": 4.652,
-        "first_name": "Om",
-        "email": "OmSahu@gmail.com",
-        "address": "Showroom No.2040, Ncm Road, Village Balongi, Balongi, Sahibzada Ajit Singh Nagar, Punjab 160055, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": "Sahu"
+        "user_id": "323943",
+        "lat": 30.7207577,
+        "lng": 76.6527907,
+        "bearing_from_office": 301.9270529352169,
+        "first_name": "Minakshi",
+        "email": "None"
       }
     ],
-    "centroid": [
-      30.7333213,
-      76.6951525
+    "utilization": 0.125,
+    "turning_score": 0,
+    "total_distance": 26.205242438398017
+  },
+  {
+    "driver_id": "325312",
+    "vehicle_id": "1654",
+    "vehicle_type": 5,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323819",
+        "lat": 30.7463567,
+        "lng": 76.6687038,
+        "office_distance": 9.032857106923453,
+        "bearing_from_office": 322.81323120893984,
+        "first_name": "Gurpreet",
+        "email": "None"
+      },
+      {
+        "user_id": "323846",
+        "lat": 30.7463567,
+        "lng": 76.6687038,
+        "office_distance": 9.032857106923453,
+        "bearing_from_office": 322.81323120893984,
+        "first_name": "Kamal",
+        "email": "None"
+      },
+      {
+        "user_id": "323672",
+        "lat": 30.7441945,
+        "lng": 76.6614853,
+        "office_distance": 9.284678081030938,
+        "bearing_from_office": 318.52176788897896,
+        "first_name": "Hardeep",
+        "email": "None"
+      },
+      {
+        "user_id": "323820",
+        "lat": 30.7441945,
+        "lng": 76.6614853,
+        "office_distance": 9.284678081030938,
+        "bearing_from_office": 318.52176788897896,
+        "first_name": "Aniket",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.8,
+    "turning_score": 107.33002534741404,
+    "total_distance": 29.250262733882053
+  },
+  {
+    "driver_id": "325365",
+    "vehicle_id": "1707",
+    "vehicle_type": 5,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323678",
+        "lat": 30.7230856,
+        "lng": 76.6399449,
+        "bearing_from_office": 299.31659924932535,
+        "first_name": "Jaspreet",
+        "email": "None"
+      },
+      {
+        "user_id": "323947",
+        "lat": 30.7396023,
+        "lng": 76.6544242,
+        "bearing_from_office": 313.3650706889214,
+        "first_name": "Mandeep",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.4,
+    "turning_score": 97.72674046611846,
+    "total_distance": 30.869451289802036
+  },
+  {
+    "driver_id": "325313",
+    "vehicle_id": "1655",
+    "vehicle_type": 5,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323587",
+        "lat": 30.7256942,
+        "lng": 76.640459,
+        "office_distance": 9.518837731105602,
+        "bearing_from_office": 300.9844597580504,
+        "first_name": "Arun",
+        "email": "None"
+      },
+      {
+        "user_id": "323956",
+        "lat": 30.725149,
+        "lng": 76.639854,
+        "office_distance": 9.53761868840455,
+        "bearing_from_office": 300.493474068469,
+        "first_name": "Vandana",
+        "email": "None"
+      },
+      {
+        "user_id": "323895",
+        "lat": 30.7389797,
+        "lng": 76.6464202,
+        "office_distance": 9.913253979807356,
+        "bearing_from_office": 310.0384574008933,
+        "first_name": "Maroof",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.6,
+    "turning_score": 107.40077711455005,
+    "total_distance": 32.9897470538245
+  },
+  {
+    "driver_id": "325369",
+    "vehicle_id": "1711",
+    "vehicle_type": 8,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "324033",
+        "lat": 30.7402957,
+        "lng": 76.6999606,
+        "office_distance": 6.974203131728089,
+        "bearing_from_office": 339.2342797199705,
+        "first_name": "Foiyaj",
+        "email": "None"
+      },
+      {
+        "user_id": "323888",
+        "lat": 30.743171,
+        "lng": 76.6747265,
+        "office_distance": 8.406194407864646,
+        "bearing_from_office": 324.4774391707741,
+        "first_name": "Rahul",
+        "email": "None"
+      },
+      {
+        "user_id": "323890",
+        "lat": 30.748509,
+        "lng": 76.674759,
+        "office_distance": 8.894116761278669,
+        "bearing_from_office": 326.71736358538635,
+        "first_name": "Rajat",
+        "email": "None"
+      },
+      {
+        "user_id": "323964",
+        "lat": 30.7544759,
+        "lng": 76.6659308,
+        "office_distance": 9.9177516304746,
+        "bearing_from_office": 324.7490572182974,
+        "first_name": "Kajal",
+        "email": "None"
+      },
+      {
+        "user_id": "323946",
+        "lat": 30.7456025,
+        "lng": 76.653003,
+        "office_distance": 9.95192088433104,
+        "bearing_from_office": 315.623307996697,
+        "first_name": "Babita",
+        "email": "None"
+      },
+      {
+        "user_id": "324070",
+        "lat": 30.7475784,
+        "lng": 76.6515718,
+        "office_distance": 10.204732599876465,
+        "bearing_from_office": 315.9380972955863,
+        "first_name": "Jyoti",
+        "email": "None"
+      },
+      {
+        "user_id": "323823",
+        "lat": 30.750105,
+        "lng": 76.6527998,
+        "office_distance": 10.328613038977716,
+        "bearing_from_office": 317.4903365662676,
+        "first_name": "Saahil",
+        "email": "None"
+      },
+      {
+        "user_id": "323853",
+        "lat": 30.750105,
+        "lng": 76.6527998,
+        "office_distance": 10.328613038977716,
+        "bearing_from_office": 317.4903365662676,
+        "first_name": "Mukesh",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 69.95081588419526,
+    "total_distance": 32.19610348637413
+  },
+  {
+    "driver_id": "325367",
+    "vehicle_id": "1709",
+    "vehicle_type": 5,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323739",
+        "lat": 30.7474736,
+        "lng": 76.6492502,
+        "bearing_from_office": 315.0113652614773,
+        "first_name": "Amarjeet",
+        "email": "None"
+      }
     ],
     "utilization": 0.2,
     "turning_score": 0,
-    "tortuosity_ratio": 1.0,
-    "direction_consistency": 1.0,
-    "first_name": "Alejandro",
-    "last_name": null,
-    "email": "alejandro@yopmail.com",
-    "vehicle_name": "BMW2",
-    "vehicle_no": "BR11BH8331",
-    "capacity": 5,
-    "chasis_no": "6256",
-    "color": "#b63535",
-    "registration_no": "123",
-    "shift_type_id": 2
+    "total_distance": 30.212097460218416
   },
   {
-    "driver_id": "2574",
-    "vehicle_id": "38",
+    "driver_id": "325314",
+    "vehicle_id": "1656",
     "vehicle_type": 7,
-    "latitude": 30.7333148,
-    "longitude": 76.7794179,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
     "assigned_users": [
       {
-        "user_id": "2467",
-        "lat": 30.7069528,
-        "lng": 76.7529498,
-        "office_distance": 9.543,
-        "first_name": "Hridesh Kumar",
-        "email": "matt@unifylogisticsolutions.com",
-        "address": "CHANDIGARH BAPTIST SCHOOL, Sector 45D, 45D, Sector 45, Chandigarh, \u091a\u0902\u0921\u0940\u0917\u0922\u093c 160047, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
+        "user_id": "324054",
+        "lat": 30.7573438,
+        "lng": 76.6623403,
+        "office_distance": 10.376687080711198,
+        "bearing_from_office": 324.2196672965074,
+        "first_name": "Rishav",
+        "email": "None"
       },
       {
-        "user_id": "2605",
-        "lat": 30.7106641,
-        "lng": 76.7542394,
-        "office_distance": 9.495,
-        "first_name": "inderpreet",
-        "email": "inderpreetkaur@gmail.com",
-        "address": "Hospital Site 1 And 2, 44C, Sector 44, Chandigarh, 160047, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": "kaur"
+        "user_id": "323975",
+        "lat": 30.7585116,
+        "lng": 76.6625902,
+        "office_distance": 10.468451443049158,
+        "bearing_from_office": 324.7415228448874,
+        "first_name": "Kavita",
+        "email": "None"
       },
       {
-        "user_id": "2604",
-        "lat": 30.7168089,
-        "lng": 76.7786791,
-        "office_distance": 12.465,
-        "first_name": "Aadi",
-        "email": "Aadisharma@gmail.com",
-        "address": "2799, 20C, Sector 20, Chandigarh, 160020, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": "sharma"
+        "user_id": "324056",
+        "lat": 30.7534147,
+        "lng": 76.6525219,
+        "office_distance": 10.620175578403297,
+        "bearing_from_office": 318.72745223149514,
+        "first_name": "Vishvjeet",
+        "email": "None"
       }
     ],
-    "centroid": [
-      30.711475266666667,
-      76.7619561
-    ],
     "utilization": 0.42857142857142855,
-    "turning_score": 128.00905777499645,
-    "tortuosity_ratio": 1.5250458076641729,
-    "direction_consistency": 0.5,
-    "first_name": "Aaron",
-    "last_name": null,
-    "email": "aaron@yopmail.com",
-    "vehicle_name": "BMW2",
-    "vehicle_no": "BR11BH834",
-    "capacity": 7,
-    "chasis_no": "67UT34",
-    "color": "#974e4e",
-    "registration_no": "8339",
-    "shift_type_id": 2
+    "turning_score": 103.92283493250426,
+    "total_distance": 32.07498255311479
   },
   {
-    "driver_id": "321543",
-    "vehicle_id": "44",
-    "vehicle_type": 2,
+    "driver_id": "325368",
+    "vehicle_id": "1710",
+    "vehicle_type": 5,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323842",
+        "lat": 30.7543019,
+        "lng": 76.6533858,
+        "office_distance": 10.640542502689481,
+        "bearing_from_office": 319.4120354131779,
+        "first_name": "Priyanka",
+        "email": "None"
+      },
+      {
+        "user_id": "323822",
+        "lat": 30.7541399,
+        "lng": 76.6531113,
+        "office_distance": 10.643996300917419,
+        "bearing_from_office": 319.2417336745707,
+        "first_name": "Neha",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.4,
+    "turning_score": 84.6207117265235,
+    "total_distance": 30.679334940053636
+  },
+  {
+    "driver_id": "325315",
+    "vehicle_id": "1657",
+    "vehicle_type": 7,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323780",
+        "lat": 30.7564459,
+        "lng": 76.6554135,
+        "office_distance": 10.699602473382308,
+        "bearing_from_office": 321.0309725012884,
+        "first_name": "Ritika",
+        "email": "None"
+      },
+      {
+        "user_id": "323900",
+        "lat": 30.7564459,
+        "lng": 76.6554135,
+        "office_distance": 10.699602473382308,
+        "bearing_from_office": 321.0309725012884,
+        "first_name": "Isha",
+        "email": "None"
+      },
+      {
+        "user_id": "324007",
+        "lat": 30.7558341,
+        "lng": 76.6513787,
+        "office_distance": 10.894785281004397,
+        "bearing_from_office": 319.229891448053,
+        "first_name": "Nitin",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.42857142857142855,
+    "turning_score": 97.10578564613093,
+    "total_distance": 32.081232302577014
+  },
+  {
+    "driver_id": "325537",
+    "vehicle_id": "1879",
+    "vehicle_type": 8,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "324050",
+        "lat": 30.703992,
+        "lng": 76.8067348,
+        "office_distance": 8.124723657950888,
+        "bearing_from_office": 72.17652258424624,
+        "first_name": "Komal",
+        "email": "None"
+      },
+      {
+        "user_id": "323817",
+        "lat": 30.6721794,
+        "lng": 76.8203468,
+        "office_distance": 9.099878682473937,
+        "bearing_from_office": 96.6228774392693,
+        "first_name": "Shashank",
+        "email": "None"
+      },
+      {
+        "user_id": "324079",
+        "lat": 30.685809,
+        "lng": 76.8252375,
+        "office_distance": 9.51698848050482,
+        "bearing_from_office": 87.19083759023749,
+        "first_name": "Vinod",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.375,
+    "turning_score": 107.05842620154418,
+    "total_distance": 26.552495174481855
+  },
+  {
+    "driver_id": "325316",
+    "vehicle_id": "1658",
+    "vehicle_type": 4,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323611",
+        "lat": 30.6746529,
+        "lng": 76.8250664,
+        "office_distance": 9.521804696986443,
+        "bearing_from_office": 94.66311661310885,
+        "first_name": "Mukesh",
+        "email": "None"
+      },
+      {
+        "user_id": "323588",
+        "lat": 30.6749722,
+        "lng": 76.8261454,
+        "office_distance": 9.621829185073405,
+        "bearing_from_office": 94.40190987097952,
+        "first_name": "Pawan",
+        "email": "None"
+      },
+      {
+        "user_id": "324059",
+        "lat": 30.6581109,
+        "lng": 76.8356727,
+        "office_distance": 10.826378356321648,
+        "bearing_from_office": 103.96399150278984,
+        "first_name": "Ravi",
+        "email": "None"
+      },
+      {
+        "user_id": "323865",
+        "lat": 30.6784137,
+        "lng": 76.8613935,
+        "office_distance": 12.96875559350256,
+        "bearing_from_office": 91.55655712160916,
+        "first_name": "Arun",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 122.96692080988866,
+    "total_distance": 22.532767022501965
+  },
+  {
+    "driver_id": "325530",
+    "vehicle_id": "1872",
+    "vehicle_type": 5,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "323645",
+        "lat": 30.6708533,
+        "lng": 76.8277413,
+        "office_distance": 9.819638524194309,
+        "bearing_from_office": 96.99792846774511,
+        "first_name": "Arun",
+        "email": "None"
+      },
+      {
+        "user_id": "323759",
+        "lat": 30.6708533,
+        "lng": 76.8277413,
+        "office_distance": 9.819638524194309,
+        "bearing_from_office": 96.99792846774511,
+        "first_name": "Kalash",
+        "email": "None"
+      },
+      {
+        "user_id": "324009",
+        "lat": 30.6708533,
+        "lng": 76.8277413,
+        "office_distance": 9.819638524194309,
+        "bearing_from_office": 96.99792846774511,
+        "first_name": "Kuldeep",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.6,
+    "turning_score": 62.97798251785438,
+    "total_distance": 24.06100846374597
+  },
+  {
+    "driver_id": "325372",
+    "vehicle_id": "1714",
+    "vehicle_type": 7,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323863",
+        "lat": 30.6738222,
+        "lng": 76.8294888,
+        "office_distance": 9.951074805758545,
+        "bearing_from_office": 94.99299279765569,
+        "first_name": "Sagar",
+        "email": "None"
+      },
+      {
+        "user_id": "323962",
+        "lat": 30.659505,
+        "lng": 76.8516119,
+        "office_distance": 12.278996237959143,
+        "bearing_from_office": 101.53753148511737,
+        "first_name": "Surjit",
+        "email": "None"
+      },
+      {
+        "user_id": "323667",
+        "lat": 30.6496995,
+        "lng": 76.8533575,
+        "office_distance": 12.704028444243246,
+        "bearing_from_office": 106.20818166784244,
+        "first_name": "Karandeep",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.42857142857142855,
+    "turning_score": 89.26395964589996,
+    "total_distance": 20.12153306312789
+  },
+  {
+    "driver_id": "325306",
+    "vehicle_id": "1648",
+    "vehicle_type": 8,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323607",
+        "lat": 30.6928325,
+        "lng": 76.8444489,
+        "office_distance": 11.410406268001708,
+        "bearing_from_office": 83.71479762342375,
+        "first_name": "Kripanshi",
+        "email": "None"
+      },
+      {
+        "user_id": "323993",
+        "lat": 30.6897656,
+        "lng": 76.8350214,
+        "office_distance": 10.480055253973667,
+        "bearing_from_office": 85.03375772133211,
+        "first_name": "Hitesh",
+        "email": "None"
+      },
+      {
+        "user_id": "323805",
+        "lat": 30.6918985,
+        "lng": 76.8259612,
+        "office_distance": 9.642210485771416,
+        "bearing_from_office": 83.18845156432508,
+        "first_name": "Harpal",
+        "email": "None"
+      },
+      {
+        "user_id": "323862",
+        "lat": 30.6916264,
+        "lng": 76.8216396,
+        "office_distance": 9.22831239695717,
+        "bearing_from_office": 83.07292714121093,
+        "first_name": "Sandeep",
+        "email": "None"
+      },
+      {
+        "user_id": "323671",
+        "lat": 30.6978504,
+        "lng": 76.8171821,
+        "office_distance": 8.918665018100853,
+        "bearing_from_office": 78.3254600029843,
+        "first_name": "Rahul",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.625,
+    "turning_score": 40.629047286056824,
+    "total_distance": 13.556376862194497
+  },
+  {
+    "driver_id": "325455",
+    "vehicle_id": "1797",
+    "vehicle_type": 7,
     "latitude": 30.7046486,
     "longitude": 76.7178726,
     "assigned_users": [
       {
-        "user_id": "2383",
-        "lat": 30.7102616,
-        "lng": 76.7214608,
-        "office_distance": 5.147,
-        "first_name": "Priyanka Bhatia",
-        "email": "grace.wilson@unifylogisticsolutions.com",
-        "address": "1499, ph, 3B2, Phase 3B-2, Sector 60, Sahibzada Ajit Singh Nagar, Punjab 160059, India",
-        "employee_shift": "Evening Shift",
-        "shift_type": "1",
-        "last_name": null
+        "user_id": "323784",
+        "lat": 30.7098266,
+        "lng": 76.7279818,
+        "office_distance": 3.1395784180362165,
+        "bearing_from_office": 3.7511250990303324,
+        "first_name": "Archana",
+        "email": "None"
+      },
+      {
+        "user_id": "323942",
+        "lat": 30.710915,
+        "lng": 76.728866,
+        "office_distance": 3.266769842341152,
+        "bearing_from_office": 5.091726059151142,
+        "first_name": "Vishal",
+        "email": "None"
+      },
+      {
+        "user_id": "323941",
+        "lat": 30.7303686,
+        "lng": 76.7269784,
+        "office_distance": 5.418122678922091,
+        "first_name": "Kavita",
+        "email": "None"
       }
     ],
-    "centroid": [
-      30.7102616,
-      76.7214608
+    "utilization": 0.42857142857142855,
+    "turning_score": 79.35185063604443,
+    "total_distance": 8.86138446733446
+  },
+  {
+    "driver_id": "325317",
+    "vehicle_id": "1659",
+    "vehicle_type": 5,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323753",
+        "lat": 30.7316264,
+        "lng": 76.7340129,
+        "office_distance": 5.611632869025403,
+        "first_name": "Pratik",
+        "email": "None"
+      },
+      {
+        "user_id": "323910",
+        "lat": 30.7339832,
+        "lng": 76.7329307,
+        "office_distance": 5.85836953827248,
+        "first_name": "Vikul",
+        "email": "None"
+      },
+      {
+        "user_id": "323829",
+        "lat": 30.7315427,
+        "lng": 76.7502447,
+        "office_distance": 6.018501887955075,
+        "first_name": "Kamal",
+        "email": "None"
+      },
+      {
+        "user_id": "323925",
+        "lat": 30.7356851,
+        "lng": 76.7501714,
+        "office_distance": 6.442997132246818,
+        "first_name": "Simranpreet",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.8,
+    "turning_score": 107.10750590124856,
+    "total_distance": 21.65597226427701
+  },
+  {
+    "driver_id": "325373",
+    "vehicle_id": "1715",
+    "vehicle_type": 7,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323986",
+        "lat": 30.7097521,
+        "lng": 76.7319031,
+        "office_distance": 3.178008850993266,
+        "bearing_from_office": 10.52083346844131,
+        "first_name": "Prashant",
+        "email": "None"
+      },
+      {
+        "user_id": "323973",
+        "lat": 30.7142067,
+        "lng": 76.7234265,
+        "office_distance": 3.6272024586162637,
+        "bearing_from_office": 356.36313319039175,
+        "first_name": "Sumedha",
+        "email": "None"
+      },
+      {
+        "user_id": "323625",
+        "lat": 30.7161425,
+        "lng": 76.7193243,
+        "office_distance": 3.885312779102841,
+        "bearing_from_office": 350.78445044814094,
+        "first_name": "Naman",
+        "email": "None"
+      },
+      {
+        "user_id": "323634",
+        "lat": 30.7161425,
+        "lng": 76.7193243,
+        "office_distance": 3.885312779102841,
+        "bearing_from_office": 350.78445044814094,
+        "first_name": "Vinay",
+        "email": "None"
+      },
+      {
+        "user_id": "323970",
+        "lat": 30.718863,
+        "lng": 76.7215119,
+        "office_distance": 4.158230104013858,
+        "bearing_from_office": 354.298627018734,
+        "first_name": "Naveen",
+        "email": "None"
+      },
+      {
+        "user_id": "323841",
+        "lat": 30.7191067,
+        "lng": 76.72102,
+        "office_distance": 4.190099413154877,
+        "bearing_from_office": 353.6956437624939,
+        "first_name": "Sonia",
+        "email": "None"
+      },
+      {
+        "user_id": "323896",
+        "lat": 30.7570685,
+        "lng": 76.6396163,
+        "office_distance": 11.757907059261196,
+        "first_name": "Hardesh",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 52.682457857351835,
+    "total_distance": 33.50063643715461
+  },
+  {
+    "driver_id": "325370",
+    "vehicle_id": "1712",
+    "vehicle_type": 5,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323856",
+        "lat": 30.722697,
+        "lng": 76.721462,
+        "office_distance": 4.583069354666537,
+        "bearing_from_office": 354.7689727829787,
+        "first_name": "Amit",
+        "email": "None"
+      },
+      {
+        "user_id": "324078",
+        "lat": 30.7195227,
+        "lng": 76.7054829,
+        "office_distance": 4.638791721919917,
+        "bearing_from_office": 335.2056886932181,
+        "first_name": "Pranav",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.4,
+    "turning_score": 79.50852332365662,
+    "total_distance": 18.992443575608924
+  },
+  {
+    "driver_id": "325318",
+    "vehicle_id": "1660",
+    "vehicle_type": 7,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323921",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Anshika",
+        "email": "None"
+      },
+      {
+        "user_id": "323977",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Suksham",
+        "email": "None"
+      },
+      {
+        "user_id": "323786",
+        "lat": 30.7278128,
+        "lng": 76.7218036,
+        "office_distance": 5.147263081341544,
+        "first_name": "Akshay",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.42857142857142855,
+    "turning_score": 84.80913479449602,
+    "total_distance": 21.696902249596675
+  },
+  {
+    "driver_id": "325374",
+    "vehicle_id": "1716",
+    "vehicle_type": 8,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323933",
+        "lat": 30.6981991,
+        "lng": 76.7233473,
+        "office_distance": 1.855223809527461,
+        "bearing_from_office": 352.6389502134104,
+        "first_name": "Rohit",
+        "email": "None"
+      },
+      {
+        "user_id": "323632",
+        "lat": 30.698186,
+        "lng": 76.721185,
+        "office_distance": 1.8914407374869624,
+        "bearing_from_office": 346.4099549190146,
+        "first_name": "Vishal",
+        "email": "None"
+      },
+      {
+        "user_id": "323661",
+        "lat": 30.7015699,
+        "lng": 76.713994,
+        "office_distance": 2.4873044631863896,
+        "bearing_from_office": 332.92917092234893,
+        "first_name": "Neeraj",
+        "email": "None"
+      },
+      {
+        "user_id": "323594",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Gagandeep",
+        "email": "None"
+      },
+      {
+        "user_id": "323776",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Mohsin",
+        "email": "None"
+      },
+      {
+        "user_id": "323873",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Neeraj",
+        "email": "None"
+      },
+      {
+        "user_id": "323905",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Atul",
+        "email": "None"
+      },
+      {
+        "user_id": "323992",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Suhail",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 35.378346580380644,
+    "total_distance": 18.74942957005516
+  },
+  {
+    "driver_id": "325376",
+    "vehicle_id": "1718",
+    "vehicle_type": 7,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "324018",
+        "lat": 30.712819,
+        "lng": 76.714574,
+        "office_distance": 3.6289483119719974,
+        "bearing_from_office": 342.7460608716075,
+        "first_name": "Poonam",
+        "email": "None"
+      },
+      {
+        "user_id": "323612",
+        "lat": 30.7278469,
+        "lng": 76.7190776,
+        "office_distance": 5.177064724107271,
+        "first_name": "Brijneep",
+        "email": "None"
+      },
+      {
+        "user_id": "323980",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Pankaj",
+        "email": "None"
+      },
+      {
+        "user_id": "323999",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Anmol",
+        "email": "None"
+      },
+      {
+        "user_id": "324024",
+        "lat": 30.720394,
+        "lng": 76.707316,
+        "office_distance": 4.65750976272833,
+        "bearing_from_office": 337.66321064010526,
+        "first_name": "Sumit",
+        "email": "None"
+      },
+      {
+        "user_id": "323922",
+        "lat": 30.7211811,
+        "lng": 76.707062,
+        "office_distance": 4.747702343637243,
+        "bearing_from_office": 337.7937800496765,
+        "first_name": "Payal",
+        "email": "None"
+      },
+      {
+        "user_id": "324034",
+        "lat": 30.7188189,
+        "lng": 76.7020915,
+        "office_distance": 4.715125002137969,
+        "bearing_from_office": 331.22758048477084,
+        "first_name": "Karan",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 77.42090551627494,
+    "total_distance": 21.026270789182398
+  },
+  {
+    "driver_id": "325308",
+    "vehicle_id": "1650",
+    "vehicle_type": 7,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323959",
+        "lat": 30.686664,
+        "lng": 76.7072554,
+        "office_distance": 1.861904370959092,
+        "bearing_from_office": 287.4209092578072,
+        "first_name": "Sonia",
+        "email": "None"
+      },
+      {
+        "user_id": "324067",
+        "lat": 30.719608,
+        "lng": 76.715384,
+        "office_distance": 4.3371285735089975,
+        "bearing_from_office": 346.68490543332825,
+        "first_name": "Jaswinder",
+        "email": "None"
+      },
+      {
+        "user_id": "324065",
+        "lat": 30.7260205,
+        "lng": 76.7226719,
+        "office_distance": 4.942779981221513,
+        "bearing_from_office": 356.49495655641533,
+        "first_name": "Anshul",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.42857142857142855,
+    "turning_score": 89.90990607129321,
+    "total_distance": 24.367932490549332
+  },
+  {
+    "driver_id": "325319",
+    "vehicle_id": "1661",
+    "vehicle_type": 4,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "324086",
+        "lat": 30.7267448,
+        "lng": 76.7325361,
+        "office_distance": 5.054854179980029,
+        "bearing_from_office": 7.281626543426285,
+        "first_name": "Sumeet",
+        "email": "None"
+      },
+      {
+        "user_id": "323815",
+        "lat": 30.7270193,
+        "lng": 76.7199006,
+        "office_distance": 5.076379207531307,
+        "bearing_from_office": 353.5861978395926,
+        "first_name": "Gouravpreet",
+        "email": "None"
+      },
+      {
+        "user_id": "323966",
+        "lat": 30.7270193,
+        "lng": 76.7199006,
+        "office_distance": 5.076379207531307,
+        "bearing_from_office": 353.5861978395926,
+        "first_name": "Ritik",
+        "email": "None"
+      },
+      {
+        "user_id": "323677",
+        "lat": 30.7571666,
+        "lng": 76.6395136,
+        "office_distance": 11.772565429503482,
+        "first_name": "Surbhi",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 82.02983145801447,
+    "total_distance": 34.12591709528557
+  },
+  {
+    "driver_id": "325356",
+    "vehicle_id": "1698",
+    "vehicle_type": 4,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323791",
+        "lat": 30.7275954,
+        "lng": 76.6615167,
+        "office_distance": 7.994351480797853,
+        "bearing_from_office": 309.73613119216935,
+        "first_name": "Parry",
+        "email": "None"
+      },
+      {
+        "user_id": "323603",
+        "lat": 30.7493692,
+        "lng": 76.6232202,
+        "office_distance": 12.366151413113107,
+        "bearing_from_office": 307.5364186776675,
+        "first_name": "Pankaj",
+        "email": "None"
+      },
+      {
+        "user_id": "323723",
+        "lat": 30.7493692,
+        "lng": 76.6232202,
+        "office_distance": 12.366151413113107,
+        "bearing_from_office": 307.5364186776675,
+        "first_name": "Mandeep",
+        "email": "None"
+      },
+      {
+        "user_id": "323725",
+        "lat": 30.7493692,
+        "lng": 76.6232202,
+        "office_distance": 12.366151413113107,
+        "bearing_from_office": 307.5364186776675,
+        "first_name": "Simranjit",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 46.260654341727005,
+    "total_distance": 34.40250770204276
+  },
+  {
+    "driver_id": "325454",
+    "vehicle_id": "1796",
+    "vehicle_type": 4,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "323824",
+        "lat": 30.7690673,
+        "lng": 76.7498044,
+        "office_distance": 9.986526762046427,
+        "first_name": "Hemant",
+        "email": "None"
+      },
+      {
+        "user_id": "323891",
+        "lat": 30.7690673,
+        "lng": 76.7498044,
+        "office_distance": 9.986526762046427,
+        "first_name": "Vaneet",
+        "email": "None"
+      }
     ],
     "utilization": 0.5,
+    "turning_score": 94.89924373902168,
+    "total_distance": 17.772601031722537
+  },
+  {
+    "driver_id": "325320",
+    "vehicle_id": "1662",
+    "vehicle_type": 8,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323714",
+        "lat": 30.7678577,
+        "lng": 76.7558829,
+        "office_distance": 10.006714838835407,
+        "first_name": "Diksha",
+        "email": "None"
+      },
+      {
+        "user_id": "323694",
+        "lat": 30.7571666,
+        "lng": 76.6395136,
+        "office_distance": 11.772565429503482,
+        "first_name": "Keshar",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.25,
+    "turning_score": 86.92410897379634,
+    "total_distance": 35.884613012535816
+  },
+  {
+    "driver_id": "325359",
+    "vehicle_id": "1701",
+    "vehicle_type": 4,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323777",
+        "lat": 30.7263984,
+        "lng": 76.6506427,
+        "office_distance": 8.742678523831408,
+        "bearing_from_office": 304.70741357176917,
+        "first_name": "Chetan",
+        "email": "None"
+      },
+      {
+        "user_id": "323685",
+        "lat": 30.7728873,
+        "lng": 76.6188876,
+        "office_distance": 14.401885558582457,
+        "bearing_from_office": 314.8094712440139,
+        "first_name": "Vinay",
+        "email": "None"
+      },
+      {
+        "user_id": "323855",
+        "lat": 30.7728873,
+        "lng": 76.6188876,
+        "office_distance": 14.401885558582457,
+        "bearing_from_office": 314.8094712440139,
+        "first_name": "Abhishek",
+        "email": "None"
+      },
+      {
+        "user_id": "323954",
+        "lat": 30.7728873,
+        "lng": 76.6188876,
+        "office_distance": 14.401885558582457,
+        "bearing_from_office": 314.8094712440139,
+        "first_name": "Nitin",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 48.5971848228628,
+    "total_distance": 38.86288150683236
+  },
+  {
+    "driver_id": "325364",
+    "vehicle_id": "1706",
+    "vehicle_type": 4,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323881",
+        "lat": 30.7436538,
+        "lng": 76.6760324,
+        "office_distance": 8.37836677844445,
+        "bearing_from_office": 325.3853227674972,
+        "first_name": "Pravesh",
+        "email": "None"
+      },
+      {
+        "user_id": "323991",
+        "lat": 30.743171,
+        "lng": 76.6747265,
+        "office_distance": 8.406194407864646,
+        "bearing_from_office": 324.4774391707741,
+        "first_name": "Harpreet",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.5,
+    "turning_score": 82.67381678916843,
+    "total_distance": 26.118747503409008
+  },
+  {
+    "driver_id": "325321",
+    "vehicle_id": "1663",
+    "vehicle_type": 7,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323715",
+        "lat": 30.7694591,
+        "lng": 76.6730821,
+        "office_distance": 10.988810535298532,
+        "bearing_from_office": 332.70023067201095,
+        "first_name": "Nisha",
+        "email": "None"
+      },
+      {
+        "user_id": "324082",
+        "lat": 30.7681456,
+        "lng": 76.6690679,
+        "office_distance": 11.042658252284747,
+        "bearing_from_office": 330.5839698809542,
+        "first_name": "Sarita",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.2857142857142857,
+    "turning_score": 72.26141676717475,
+    "total_distance": 31.229906194588935
+  },
+  {
+    "driver_id": "325535",
+    "vehicle_id": "1877",
+    "vehicle_type": 7,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "324084",
+        "lat": 30.7332939,
+        "lng": 76.7773459,
+        "office_distance": 7.564893202948375,
+        "first_name": "Dixya",
+        "email": "None"
+      },
+      {
+        "user_id": "324087",
+        "lat": 30.7333148,
+        "lng": 76.7794179,
+        "office_distance": 7.697055064426142,
+        "first_name": "Anjali",
+        "email": "None"
+      },
+      {
+        "user_id": "323810",
+        "lat": 30.7486324,
+        "lng": 76.779096,
+        "office_distance": 9.02197976018344,
+        "first_name": "Angrej",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.42857142857142855,
+    "turning_score": 84.3577566307291,
+    "total_distance": 20.28790036046132
+  },
+  {
+    "driver_id": "325322",
+    "vehicle_id": "1664",
+    "vehicle_type": 4,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323969",
+        "lat": 30.7522006,
+        "lng": 76.7786303,
+        "office_distance": 9.327986567520854,
+        "first_name": "Atul",
+        "email": "None"
+      },
+      {
+        "user_id": "323778",
+        "lat": 30.7217456,
+        "lng": 76.8333971,
+        "office_distance": 11.208861800269048,
+        "bearing_from_office": 66.53574536858764,
+        "first_name": "Komal",
+        "email": "None"
+      },
+      {
+        "user_id": "323887",
+        "lat": 30.7217456,
+        "lng": 76.8333971,
+        "office_distance": 11.208861800269048,
+        "bearing_from_office": 66.53574536858764,
+        "first_name": "Mohit",
+        "email": "None"
+      },
+      {
+        "user_id": "324080",
+        "lat": 30.720226,
+        "lng": 76.8374945,
+        "office_distance": 11.50536409594828,
+        "bearing_from_office": 68.0830392944826,
+        "first_name": "Karan",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 136.10713911661537,
+    "total_distance": 28.311211227880364
+  },
+  {
+    "driver_id": "325457",
+    "vehicle_id": "1799",
+    "vehicle_type": 8,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "323963",
+        "lat": 30.6898706,
+        "lng": 76.7248816,
+        "office_distance": 0.9183647226066742,
+        "bearing_from_office": 354.3131048712914,
+        "first_name": "Jasleen",
+        "email": "None"
+      },
+      {
+        "user_id": "324061",
+        "lat": 30.7008489,
+        "lng": 76.712728,
+        "office_distance": 2.475225428659123,
+        "bearing_from_office": 329.5877895024142,
+        "first_name": "Manpreet",
+        "email": "None"
+      },
+      {
+        "user_id": "323650",
+        "lat": 30.7008489,
+        "lng": 76.712728,
+        "office_distance": 2.475225428659123,
+        "bearing_from_office": 329.5877895024142,
+        "first_name": "Ranjeet",
+        "email": "None"
+      },
+      {
+        "user_id": "324073",
+        "lat": 30.70563,
+        "lng": 76.74342,
+        "office_distance": 3.1522120510464102,
+        "bearing_from_office": 32.235418724042916,
+        "first_name": "Rachana",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.5,
+    "turning_score": 103.60829349035401,
+    "total_distance": 9.59443196206533
+  },
+  {
+    "driver_id": "325323",
+    "vehicle_id": "1665",
+    "vehicle_type": 7,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "324005",
+        "lat": 30.7079677,
+        "lng": 76.7610647,
+        "office_distance": 4.462116063098391,
+        "bearing_from_office": 49.0124679886261,
+        "first_name": "Divyansh",
+        "email": "None"
+      },
+      {
+        "user_id": "323985",
+        "lat": 30.7147941,
+        "lng": 76.6921125,
+        "office_distance": 4.896518867673648,
+        "bearing_from_office": 318.82632583913954,
+        "first_name": "Neha",
+        "email": "None"
+      },
+      {
+        "user_id": "323804",
+        "lat": 30.7008554,
+        "lng": 76.6788091,
+        "office_distance": 4.977704733276025,
+        "bearing_from_office": 295.4143688345735,
+        "first_name": "Menka",
+        "email": "None"
+      },
+      {
+        "user_id": "324006",
+        "lat": 30.7264811,
+        "lng": 76.7236547,
+        "office_distance": 4.989096089011231,
+        "bearing_from_office": 357.60781885629194,
+        "first_name": "Sagar",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.5714285714285714,
+    "turning_score": 86.00274173955215,
+    "total_distance": 28.41260645327534
+  },
+  {
+    "driver_id": "325458",
+    "vehicle_id": "1800",
+    "vehicle_type": 7,
+    "latitude": 30.7046486,
+    "longitude": 76.7178726,
+    "assigned_users": [
+      {
+        "user_id": "323979",
+        "lat": 30.6903563,
+        "lng": 76.7102024,
+        "office_distance": 1.7806973310385406,
+        "bearing_from_office": 302.9278457326129,
+        "first_name": "Raj",
+        "email": "None"
+      },
+      {
+        "user_id": "324036",
+        "lat": 30.7017127,
+        "lng": 76.7277611,
+        "office_distance": 2.2382294413261348,
+        "bearing_from_office": 4.723600901050702,
+        "first_name": "Sandeep",
+        "email": "None"
+      },
+      {
+        "user_id": "323839",
+        "lat": 30.67215,
+        "lng": 76.66124,
+        "office_distance": 6.26703237181018,
+        "bearing_from_office": 260.3102827058522,
+        "first_name": "Samreen",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.42857142857142855,
+    "turning_score": 161.49878174804095,
+    "total_distance": 17.278284833582596
+  },
+  {
+    "driver_id": "325324",
+    "vehicle_id": "1666",
+    "vehicle_type": 4,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323779",
+        "lat": 30.6877012,
+        "lng": 76.6571447,
+        "bearing_from_office": 275.86431715334464,
+        "first_name": "Shweta",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.25,
     "turning_score": 0,
-    "tortuosity_ratio": 1.0,
-    "direction_consistency": 1.0,
-    "first_name": "tests",
-    "last_name": null,
-    "email": "testd1256@gmail.com",
-    "vehicle_name": "Innovas",
-    "vehicle_no": "4234",
-    "capacity": 2,
-    "chasis_no": "7845",
-    "color": "#f32020",
-    "registration_no": "343r3",
-    "shift_type_id": 1
+    "total_distance": 26.06732896403281
+  },
+  {
+    "driver_id": "325539",
+    "vehicle_id": "1881",
+    "vehicle_type": 5,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "323874",
+        "lat": 30.691482,
+        "lng": 76.7927981,
+        "office_distance": 6.496092153956556,
+        "bearing_from_office": 80.29632337148166,
+        "first_name": "Iqbal",
+        "email": "None"
+      },
+      {
+        "user_id": "323857",
+        "lat": 30.6886893,
+        "lng": 76.8003402,
+        "office_distance": 7.167629458577141,
+        "bearing_from_office": 83.7135202069212,
+        "first_name": "Nawazish",
+        "email": "None"
+      },
+      {
+        "user_id": "323731",
+        "lat": 30.7730251,
+        "lng": 76.793527,
+        "office_distance": 12.04559362268959,
+        "first_name": "Ashu",
+        "email": "None"
+      },
+      {
+        "user_id": "323751",
+        "lat": 30.7730251,
+        "lng": 76.793527,
+        "office_distance": 12.04559362268959,
+        "first_name": "Aayush",
+        "email": "None"
+      },
+      {
+        "user_id": "324049",
+        "lat": 30.7730251,
+        "lng": 76.793527,
+        "office_distance": 12.04559362268959,
+        "first_name": "Ritu",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 56.61215715684123,
+    "total_distance": 32.70554427059812
+  },
+  {
+    "driver_id": "325307",
+    "vehicle_id": "1649",
+    "vehicle_type": 5,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323931",
+        "lat": 30.6738056,
+        "lng": 76.7218725,
+        "office_distance": 0.9511768739013446,
+        "bearing_from_office": 203.4683929831419,
+        "first_name": "Shagun",
+        "email": "None"
+      },
+      {
+        "user_id": "323950",
+        "lat": 30.6727404,
+        "lng": 76.7206652,
+        "office_distance": 1.107363534473312,
+        "bearing_from_office": 206.50951914441538,
+        "first_name": "Ishpreet",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.4,
+    "turning_score": 99.1474859769123,
+    "total_distance": 14.72818068186324
+  },
+  {
+    "driver_id": "325325",
+    "vehicle_id": "1667",
+    "vehicle_type": 5,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323903",
+        "lat": 30.6736311,
+        "lng": 76.7183987,
+        "office_distance": 1.1406185160804245,
+        "bearing_from_office": 218.56251517895754,
+        "first_name": "Nitin",
+        "email": "None"
+      },
+      {
+        "user_id": "323918",
+        "lat": 30.6695962,
+        "lng": 76.7182317,
+        "office_distance": 1.5249982589726545,
+        "bearing_from_office": 208.47267637215623,
+        "first_name": "Neha",
+        "email": "None"
+      },
+      {
+        "user_id": "323627",
+        "lat": 30.6503857,
+        "lng": 76.736538,
+        "office_distance": 3.6242992544344554,
+        "bearing_from_office": 163.58804743840562,
+        "first_name": "Preeti",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.6,
+    "turning_score": 92.29628467055026,
+    "total_distance": 20.62148226689807
+  },
+  {
+    "driver_id": "325371",
+    "vehicle_id": "1713",
+    "vehicle_type": 4,
+    "latitude": 30.6425496,
+    "longitude": 76.8173359,
+    "assigned_users": [
+      {
+        "user_id": "323916",
+        "lat": 30.7273663,
+        "lng": 76.6747772,
+        "bearing_from_office": 316.1736179913118,
+        "first_name": "Varun",
+        "email": "None"
+      },
+      {
+        "user_id": "323957",
+        "lat": 30.7221809,
+        "lng": 76.6718539,
+        "bearing_from_office": 311.14161028402987,
+        "first_name": "Amrit",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.5,
+    "turning_score": 86.79937734839567,
+    "total_distance": 24.069062404666685
+  },
+  {
+    "driver_id": "325326",
+    "vehicle_id": "1668",
+    "vehicle_type": 7,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323747",
+        "lat": 30.7232486,
+        "lng": 76.6505601,
+        "office_distance": 8.554946012810156,
+        "bearing_from_office": 302.7477223251521,
+        "first_name": "Manglungin",
+        "email": "None"
+      },
+      {
+        "user_id": "323858",
+        "lat": 30.7301709,
+        "lng": 76.649066,
+        "office_distance": 9.108932470339795,
+        "bearing_from_office": 306.3385233116823,
+        "first_name": "Ashish",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.2857142857142857,
+    "turning_score": 103.55445241032294,
+    "total_distance": 30.2268071042387
+  },
+  {
+    "driver_id": "325309",
+    "vehicle_id": "1651",
+    "vehicle_type": 4,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "324016",
+        "lat": 30.6926245,
+        "lng": 76.6878919,
+        "office_distance": 3.8277556895701,
+        "bearing_from_office": 288.5965062645762,
+        "first_name": "Akshay",
+        "email": "None"
+      },
+      {
+        "user_id": "324055",
+        "lat": 30.6917282,
+        "lng": 76.6860267,
+        "office_distance": 3.967946791300145,
+        "bearing_from_office": 286.4114241817524,
+        "first_name": "Mahender",
+        "email": "None"
+      },
+      {
+        "user_id": "323967",
+        "lat": 30.6886945,
+        "lng": 76.6816664,
+        "office_distance": 4.295479359404294,
+        "bearing_from_office": 280.5150551873609,
+        "first_name": "Vaishali",
+        "email": "None"
+      },
+      {
+        "user_id": "323586",
+        "lat": 30.7320213,
+        "lng": 76.6911172,
+        "office_distance": 6.510351541465651,
+        "bearing_from_office": 329.35798652138385,
+        "first_name": "Vikas",
+        "email": "None"
+      }
+    ],
+    "utilization": 1.0,
+    "turning_score": 79.18038292075033,
+    "total_distance": 28.664225740429828
+  },
+  {
+    "driver_id": "325540",
+    "vehicle_id": "1882",
+    "vehicle_type": 4,
+    "latitude": 30.7061996,
+    "longitude": 76.6845922,
+    "assigned_users": [
+      {
+        "user_id": "323994",
+        "lat": 30.6801768,
+        "lng": 76.7457055,
+        "office_distance": 1.9074490248479121,
+        "bearing_from_office": 94.92895502429246,
+        "first_name": "Jaswinderdeep",
+        "email": "None"
+      },
+      {
+        "user_id": "323974",
+        "lat": 30.67796,
+        "lng": 76.7427095,
+        "office_distance": 1.665292825586301,
+        "bearing_from_office": 104.26829346376348,
+        "first_name": "Manpreet",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.5,
+    "turning_score": 83.97438727247982,
+    "total_distance": 8.563967120620596
+  },
+  {
+    "driver_id": "325327",
+    "vehicle_id": "1669",
+    "vehicle_type": 8,
+    "latitude": 30.6942091,
+    "longitude": 76.860565,
+    "assigned_users": [
+      {
+        "user_id": "323904",
+        "lat": 30.6920169,
+        "lng": 76.7113104,
+        "office_distance": 1.804678309955835,
+        "bearing_from_office": 309.6926324727185,
+        "first_name": "Anamika",
+        "email": "None"
+      },
+      {
+        "user_id": "323660",
+        "lat": 30.7015699,
+        "lng": 76.713994,
+        "office_distance": 2.4873044631863896,
+        "bearing_from_office": 332.92917092234893,
+        "first_name": "Naveen",
+        "email": "None"
+      }
+    ],
+    "utilization": 0.25,
+    "turning_score": 121.93178668709123,
+    "total_distance": 17.853612554864792
   }
 ]
