@@ -1,3 +1,4 @@
+
 import os
 import math
 import requests
@@ -1089,7 +1090,7 @@ def final_pass_merge_balanced(routes, config, office_lat, office_lon):
                     )
                     road_coherence_acceptable = False
 
-                # Balanced: Check bearing
+                # Balanced: Bearing check
                 bearing1 = calculate_average_bearing_improved(r1, office_lat,
                                                               office_lon)
                 bearing2 = calculate_average_bearing_improved(r2, office_lat,
@@ -1102,7 +1103,7 @@ def final_pass_merge_balanced(routes, config, office_lat, office_lon):
                     )
                     road_coherence_acceptable = False
 
-                # Balanced: Check distance
+                # Balanced: Distance check
                 road_distance = road_network.get_road_distance(c1[0], c1[1],
                                                                c2[0], c2[1])
                 if road_distance > 4.5:  # Balanced distance requirement
@@ -1189,7 +1190,7 @@ def global_optimization_with_driver_injection(routes, user_df, assigned_user_ids
 
     # Get unassigned users
     unassigned_users_df = user_df[~user_df['user_id'].isin(assigned_user_ids)].copy()
-
+    
     if unassigned_users_df.empty:
         logger.info("✅ All users already assigned, proceeding with standard optimization")
         return global_optimization(routes, user_df, assigned_user_ids, driver_df, office_lat, office_lon)
@@ -1201,73 +1202,73 @@ def global_optimization_with_driver_injection(routes, user_df, assigned_user_ids
     routes = quality_controlled_route_filling(routes, unassigned_users_df,
                                               assigned_user_ids, office_lat,
                                               office_lon)
-
+    
     # Update assigned users after filling
     for route in routes:
         for user in route['assigned_users']:
             assigned_user_ids.add(user['user_id'])
-
+    
     # Check remaining unassigned users
-    remaining_unassigned = user_df[~user_df['user_id'].isin(assigned_user_ids)]
-
+    remaining_unassigned = user_df[~user_df['user_id'].isin(assigned_user_ids)].copy()
+    
     if remaining_unassigned.empty:
         logger.info("✅ All users assigned after route filling!")
         return routes, []
 
     logger.info(f"🚗 Phase 2: Injecting drivers for {len(remaining_unassigned)} remaining users")
-
+    
     # Phase 2: Inject additional drivers for remaining users
     used_driver_ids = {route['driver_id'] for route in routes}
     available_drivers = driver_df[~driver_df['driver_id'].isin(used_driver_ids)].copy()
-
+    
     if available_drivers.empty:
         logger.warning("❌ No more drivers available for injection")
         unassigned_list = handle_remaining_users_improved(
             remaining_unassigned, driver_df, routes, office_lat, office_lon)
         return routes, unassigned_list
-
+    
     logger.info(f"📋 Available drivers for injection: {len(available_drivers)}")
-
+    
     # Create geographic clusters for remaining users
     remaining_unassigned = calculate_bearings_and_features(remaining_unassigned, office_lat, office_lon)
-
+    
     # Sort available drivers by capacity and priority
     available_drivers = available_drivers.sort_values(['capacity', 'priority'], ascending=[False, True])
-
+    
     additional_routes = []
     newly_assigned_ids = set()
-
+    
     # Try to assign drivers to unassigned users
     for _, driver in available_drivers.iterrows():
         if newly_assigned_ids.issuperset(set(remaining_unassigned['user_id'])):
             break  # All users assigned
-
+            
         remaining_users = remaining_unassigned[~remaining_unassigned['user_id'].isin(newly_assigned_ids)]
         if remaining_users.empty:
             break
-
+            
         vehicle_capacity = int(driver['capacity'])
         driver_pos = (driver['latitude'], driver['longitude'])
-
+        
         # Calculate main route bearing for directional consistency
         main_route_bearing = calculate_bearing(office_lat, office_lon,
                                                driver['latitude'],
                                                driver['longitude'])
-
+        
         # Find compatible users for this driver
         compatible_users = []
         max_distance_limit = MAX_FILL_DISTANCE_KM * 1.4  # Slightly more lenient for driver injection
         max_bearing_deviation = 35  # Balanced bearing constraint
-
+        
         for _, user in remaining_users.iterrows():
             distance = haversine_distance(driver['latitude'], driver['longitude'],
                                           user['latitude'], user['longitude'])
-
+            
             office_to_user_bearing = calculate_bearing(office_lat, office_lon,
                                                        user['latitude'], user['longitude'])
-
+            
             bearing_diff = bearing_difference(main_route_bearing, office_to_user_bearing)
-
+            
             # Check basic compatibility
             if distance <= max_distance_limit and bearing_diff <= max_bearing_deviation:
                 # Road network validation for driver injection
@@ -1277,7 +1278,7 @@ def global_optimization_with_driver_injection(routes, user_df, assigned_user_ids
                         driver_pos_tuple = (driver['latitude'], driver['longitude'])
                         user_pos_tuple = (user['latitude'], user['longitude'])
                         office_pos_tuple = (office_lat, office_lon)
-
+                        
                         is_compatible = road_network.is_user_on_route_path(
                             driver_pos_tuple,
                             [],
@@ -1288,66 +1289,62 @@ def global_optimization_with_driver_injection(routes, user_df, assigned_user_ids
                     except Exception as e:
                         logger.warning(f"Road validation failed for driver injection: {e}")
                         is_compatible = True  # Be lenient on validation failures
-
+                
                 if is_compatible:
                     score = distance * 0.6 + bearing_diff * 0.08
                     compatible_users.append((score, user))
-
+        
         if compatible_users:
             # Sort by score and take up to capacity
             compatible_users.sort(key=lambda x: x[0])
             users_to_assign = []
-
+            
             for score, user in compatible_users[:vehicle_capacity]:
                 users_to_assign.append(user)
-
+            
             if len(users_to_assign) >= 1:  # Accept even single-user routes for complete coverage
                 # Create new route
                 cluster_df = pd.DataFrame(users_to_assign)
                 new_route = assign_best_driver_to_cluster_balanced(
                     cluster_df, pd.DataFrame([driver]), used_driver_ids,
                     office_lat, office_lon)
-
+                
                 if new_route:
                     additional_routes.append(new_route)
                     for user in new_route['assigned_users']:
                         newly_assigned_ids.add(user['user_id'])
                         assigned_user_ids.add(user['user_id'])
-
+                    
                     utilization = len(new_route['assigned_users']) / vehicle_capacity * 100
                     logger.info(
                         f"  🚗 Injected driver {driver['driver_id']}: {len(new_route['assigned_users'])}/{vehicle_capacity} seats ({utilization:.1f}%)"
                     )
-
+    
     # Add newly created routes to the main routes list
     routes.extend(additional_routes)
-
+    
     # Phase 3: Standard global optimization for route quality
     logger.info("  🔧 Phase 3: Standard route optimization...")
     routes = fix_single_user_routes_improved(routes, user_df, assigned_user_ids, driver_df, office_lat, office_lon)
     routes = quality_preserving_route_merging(routes, driver_df, office_lat, office_lon)
     routes = enhanced_route_splitting(routes, driver_df, office_lat, office_lon)
-
+    
     # Handle any remaining unassigned users
     final_unassigned = user_df[~user_df['user_id'].isin(assigned_user_ids)]
     unassigned_list = handle_remaining_users_improved(
         final_unassigned, driver_df, routes, office_lat, office_lon)
-
+    
     logger.info(f"  ✅ Global optimization with injection complete: {len(unassigned_list)} users remain unassigned")
-
+    
     return routes, unassigned_list
 
 
 # MAIN ASSIGNMENT FUNCTION FOR BALANCED OPTIMIZATION
-def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = ""):
     """Main entry point for balanced optimization assignment"""
-    return run_assignment_balance_internal(source_id, parameter, string_param, ridesetting)
+    return run_assignment_balance_internal(source_id, parameter, string_param)
 
-def run_assignment_balance_with_data(data, source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
-    """Main entry point for balanced optimization assignment with pre-loaded data"""
-    return run_assignment_balance_internal_with_data(data, source_id, parameter, string_param, ridesetting)
-
-def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_param: str = ""):
     """
     Main assignment function optimized for balanced route efficiency and capacity utilization:
     - Equal weight to route efficiency and capacity utilization
@@ -1360,7 +1357,7 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
     # Reload configuration for balanced optimization
     global _config
     _config = load_and_validate_config()
-
+    
     # Update global variables from new config
     global MAX_FILL_DISTANCE_KM, MERGE_DISTANCE_KM, MAX_BEARING_DIFFERENCE, UTILIZATION_PENALTY_PER_SEAT
     MAX_FILL_DISTANCE_KM = _config['MAX_FILL_DISTANCE_KM']
@@ -1372,31 +1369,8 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
     logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}")
 
     try:
-        # Load and validate data - pass all parameters including ridesetting
-        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
-
-        return run_assignment_balance_internal_with_data(data, source_id, parameter, string_param, ridesetting)
-
-    except requests.exceptions.RequestException as req_err:
-        logger.error(f"API request failed: {req_err}")
-        return {"status": "false", "details": str(req_err), "data": []}
-    except ValueError as val_err:
-        logger.error(f"Data validation error: {val_err}")
-        return {"status": "false", "details": str(val_err), "data": []}
-    except Exception as e:
-        logger.error(f"Assignment failed: {e}", exc_info=True)
-        return {"status": "false", "details": str(e), "data": []}
-
-
-def run_assignment_balance_internal_with_data(data, source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
-    """
-    Internal function that processes assignment with pre-loaded data
-    """
-    start_time = time.time()
-
-    logger.info(f"🚀 Starting BALANCED OPTIMIZATION assignment with pre-loaded data")
-
-    try:
+        # Load and validate data
+        data = load_env_and_fetch_data(source_id, parameter, string_param)
 
         # Edge case handling
         users = data.get('users', [])
@@ -1452,7 +1426,7 @@ def run_assignment_balance_internal_with_data(data, source_id: str, parameter: i
 
         # Prepare dataframes
         user_df, driver_df = prepare_user_driver_dataframes(data)
-
+        
         logger.info(f"📊 DataFrames prepared - Users: {len(user_df)}, Drivers: {len(driver_df)}")
 
         # STEP 1: Geographic clustering (balanced approach)
@@ -1480,21 +1454,21 @@ def run_assignment_balance_internal_with_data(data, source_id: str, parameter: i
         # Filter out routes with no assigned users and move those drivers to unassigned
         filtered_routes = []
         empty_route_driver_ids = set()
-
+        
         for route in routes:
             if route['assigned_users'] and len(route['assigned_users']) > 0:
                 filtered_routes.append(route)
             else:
                 empty_route_driver_ids.add(route['driver_id'])
                 logger.info(f"  📋 Moving driver {route['driver_id']} with no users to unassigned drivers")
-
+        
         routes = filtered_routes
-
+        
         # Build unassigned drivers list (including drivers from empty routes)
         assigned_driver_ids = {route['driver_id'] for route in routes}
         unassigned_drivers_df = driver_df[~driver_df['driver_id'].isin(assigned_driver_ids)]
         unassigned_drivers = []
-
+        
         for _, driver in unassigned_drivers_df.iterrows():
             driver_data = {
                 'driver_id': str(driver.get('driver_id', '')),
@@ -1516,7 +1490,7 @@ def run_assignment_balance_internal_with_data(data, source_id: str, parameter: i
         users_assigned = sum(len(r['assigned_users']) for r in routes)
         users_unassigned = len(unassigned_users)
         users_accounted_for = users_assigned + users_unassigned
-
+        
         logger.info(f"✅ Balanced optimization complete in {execution_time:.2f}s")
         logger.info(f"📊 Final routes: {len(routes)}")
         logger.info(f"🎯 Users assigned: {users_assigned}")
@@ -1648,6 +1622,12 @@ def run_assignment_balance_internal_with_data(data, source_id: str, parameter: i
             "parameter": parameter,
         }
 
+    except requests.exceptions.RequestException as req_err:
+        logger.error(f"API request failed: {req_err}")
+        return {"status": "false", "details": str(req_err), "data": []}
+    except ValueError as val_err:
+        logger.error(f"Data validation error: {val_err}")
+        return {"status": "false", "details": str(val_err), "data": []}
     except Exception as e:
         logger.error(f"Assignment failed: {e}", exc_info=True)
         return {"status": "false", "details": str(e), "data": []}

@@ -8,10 +8,9 @@ import os
 import json
 from assignment import run_assignment, analyze_assignment_quality
 
-SOURCE_ID = "UC_logisticllp"  # <-- Replace with your real source_id
+SOURCE_ID = "UC_unify_dev"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
 STRING_PARAM = "Evening%20shift" # Example string parameter
-RIDESETTING = "1"  # Default ridesetting parameter
 
 def detect_algorithm_from_api():
     """Detect which algorithm to use based on API response"""
@@ -366,7 +365,7 @@ def load_assignment_result():
     print("All cached routes deleted to use latest code changes...")
 
     # Run fresh assignment with correct source ID
-    return run_assignment(SOURCE_ID, PARAMETER, STRING_PARAM, RIDESETTING)
+    return run_assignment(SOURCE_ID, PARAMETER, STRING_PARAM)
 
 if __name__ == "__main__":
     # Parse command line arguments
@@ -411,8 +410,7 @@ if __name__ == "__main__":
         print("=" * 60)
         print("📊 REAL-TIME ASSIGNMENT PROGRESS")
         print("=" * 60)
-        # Add ridesetting parameter - you can modify this default value as needed
-        result = assignment_func(SOURCE_ID, PARAMETER, STRING_PARAM, RIDESETTING)
+        result = assignment_func(SOURCE_ID, PARAMETER, STRING_PARAM)
 
         if result["status"] == "true":
             # Get the algorithm name from the result

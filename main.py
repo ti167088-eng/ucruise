@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
@@ -16,97 +17,71 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 class AssignmentRequest(BaseModel):
     source_id: str
-
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-
-@app.post(
-    "/assign-drivers/{source_id}/{parameter}/{string_param}/{ridesetting}")
-def assign_drivers(source_id: str, parameter: int, string_param: str,
-                   ridesetting: str):
+@app.post("/assign-drivers/{source_id}/{parameter}/{string_param}")
+def assign_drivers(source_id: str, parameter: int, string_param: str):
     try:
-        print(
-            f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}, ridesetting: {ridesetting}"
-        )
-
+        print(f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}")
+        
         # Import here to avoid circular imports
         from assignment import load_env_and_fetch_data
-
+        
         # First, get the data to determine which algorithm to use
         try:
-            data = load_env_and_fetch_data(source_id, parameter, string_param,
-                                           ridesetting)
-
-            # Ensure data is a dictionary
-            if not isinstance(data, dict):
-                raise ValueError(
-                    f"Expected dictionary from API, got {type(data)}")
-
+            data = load_env_and_fetch_data(source_id, parameter, string_param)
+            
             # Get algorithm priority from ride_settings
             ride_settings = data.get("ride_settings", {})
-            if isinstance(ride_settings, dict):
-                pic_priority = ride_settings.get("pic_priority")
-                drop_priority = ride_settings.get("drop_priority")
-                algorithm_priority = pic_priority if pic_priority is not None else drop_priority
-            else:
-                algorithm_priority = None
-
+            pic_priority = ride_settings.get("pic_priority")
+            drop_priority = ride_settings.get("drop_priority")
+            algorithm_priority = pic_priority if pic_priority is not None else drop_priority
+            
             print(f"🤖 Detected algorithm priority: {algorithm_priority}")
-
-            # Route to appropriate algorithm based on priority, pass data directly
+            
+            # Route to appropriate algorithm based on priority
             if algorithm_priority == 1:
                 print("🎪 Using CAPACITY OPTIMIZATION (Priority 1)")
-                from assign_capacity import run_assignment_capacity_with_data
-                result = run_assignment_capacity_with_data(data, source_id, parameter,
-                                                          string_param, ridesetting)
+                from assign_capacity import run_assignment_capacity
+                result = run_assignment_capacity(source_id, parameter, string_param)
                 result["optimization_mode"] = "capacity_optimization"
-
+                
             elif algorithm_priority == 2:
                 print("⚖️ Using BALANCED OPTIMIZATION (Priority 2)")
-                from assign_balance import run_assignment_balance_with_data
-                result = run_assignment_balance_with_data(data, source_id, parameter,
-                                                         string_param, ridesetting)
+                from assign_balance import run_assignment_balance
+                result = run_assignment_balance(source_id, parameter, string_param)
                 result["optimization_mode"] = "balanced_optimization"
-
+                
             elif algorithm_priority == 3:
                 print("🗺️ Using ROAD-AWARE ROUTING (Priority 3)")
-                from assign_route import run_road_aware_assignment_with_data
-                result = run_road_aware_assignment_with_data(data, source_id, parameter,
-                                                            string_param, ridesetting)
+                from assign_route import run_road_aware_assignment
+                result = run_road_aware_assignment(source_id, parameter, string_param)
                 result["optimization_mode"] = "road_aware_route_optimization"
-
+                
             else:
                 print("🎯 Using ROUTE EFFICIENCY (Default)")
-                from assignment import run_assignment_with_data
-                result = run_assignment_with_data(data, source_id, parameter, string_param,
-                                                 ridesetting)
+                from assignment import run_assignment
+                result = run_assignment(source_id, parameter, string_param)
                 result["optimization_mode"] = "route_efficiency_default"
-
+                
         except Exception as api_error:
             print(f"⚠️ API error, using default algorithm: {api_error}")
             from assignment import run_assignment
-            result = run_assignment(source_id, parameter, string_param,
-                                    ridesetting)
+            result = run_assignment(source_id, parameter, string_param)
             result["optimization_mode"] = "route_efficiency_default"
 
         # Ensure result has proper structure
         if not isinstance(result, dict):
-            result = {
-                "status": "false",
-                "details": "Invalid result format",
-                "data": []
-            }
+            result = {"status": "false", "details": "Invalid result format", "data": []}
 
         # Add parameters to result
         result["parameter"] = parameter
         result["string_param"] = string_param
-        result["ridesetting"] = ridesetting
 
         # Ensure data is always an array
         if "data" not in result:
@@ -118,7 +93,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
 
         if result["status"] == "true":
             print(f"✅ Assignment successful. Routes: {len(result['data'])}")
-
+            
             # Save to the main file for /routes endpoint
             try:
                 with open("drivers_and_routes.json", "w") as f:
@@ -127,9 +102,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
             except Exception as save_error:
                 print(f"⚠️ Failed to save results: {save_error}")
         else:
-            print(
-                f"❌ Assignment failed: {result.get('details', 'Unknown error')}"
-            )
+            print(f"❌ Assignment failed: {result.get('details', 'Unknown error')}")
 
         return result
 
@@ -138,15 +111,13 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
         import traceback
         traceback.print_exc()
         return {
-            "status": "false",
-            "details": f"Server error: {str(e)}",
-            "data": [],
-            "parameter": parameter,
+            "status": "false", 
+            "details": f"Server error: {str(e)}", 
+            "data": [], 
+            "parameter": parameter, 
             "string_param": string_param,
-            "ridesetting": ridesetting,
             "optimization_mode": "error"
         }
-
 
 @app.get("/routes")
 def get_routes():
@@ -157,20 +128,16 @@ def get_routes():
                 data = json.load(f)
                 # Ensure data is valid
                 if isinstance(data, list):
-                    return FileResponse("drivers_and_routes.json",
-                                        media_type="application/json")
+                    return FileResponse("drivers_and_routes.json", media_type="application/json")
                 else:
-                    return {
-                        "status": "true",
-                        "data": data if data else [],
-                        "message": "Data loaded from drivers_and_routes.json"
-                    }
+                    return {"status": "true", "data": data if data else [], "message": "Data loaded from drivers_and_routes.json"}
         except (json.JSONDecodeError, Exception) as e:
             print(f"Error reading drivers_and_routes.json: {e}")
-
+    
     # Check other route files as backup
     route_files = [
-        "drivers_and_routes_capacity.json", "drivers_and_routes_balance.json",
+        "drivers_and_routes_capacity.json",
+        "drivers_and_routes_balance.json",
         "drivers_and_routes_road_aware.json"
     ]
 
@@ -180,52 +147,36 @@ def get_routes():
                 with open(filename, 'r') as f:
                     data = json.load(f)
                     if isinstance(data, list):
-                        return FileResponse(filename,
-                                            media_type="application/json")
+                        return FileResponse(filename, media_type="application/json")
                     else:
-                        return {
-                            "status": "true",
-                            "data": data if data else [],
-                            "message": f"Data loaded from {filename}"
-                        }
+                        return {"status": "true", "data": data if data else [], "message": f"Data loaded from {filename}"}
             except (json.JSONDecodeError, Exception) as e:
                 print(f"Error reading {filename}: {e}")
                 continue
 
     # Return empty but valid response
-    return {
-        "status": "false",
-        "message": "No valid routes data available. Run assignment first.",
-        "data": []
-    }
-
+    return {"status": "false", "message": "No valid routes data available. Run assignment first.", "data": []}
 
 @app.get("/visualize", response_class=HTMLResponse)
 def get_visualization():
     return FileResponse("visualize.html")
 
-
 @app.get("/")
 def root():
     return {
-        "message":
-        "Driver Assignment API with Multiple Optimization Modes",
+        "message": "Driver Assignment API with Multiple Optimization Modes",
         "endpoints": [
-            "/assign-drivers/{source_id}/{parameter}/{string_param}/{ridesetting}",
-            "/routes", "/visualize", "/health"
+            "/assign-drivers/{source_id}/{parameter}/{string_param}",
+            "/routes", 
+            "/visualize", 
+            "/health"
         ],
         "optimization_modes": {
-            "automatic_detection":
-            "System automatically selects algorithm based on API ride_settings priority",
-            "priority_1":
-            "Capacity Optimization (assign_capacity.py) - Maximizes seat utilization",
-            "priority_2":
-            "Balanced Optimization (assign_balance.py) - 50/50 route efficiency + capacity",
-            "priority_3":
-            "Road-Aware Routing (assign_route.py) - Uses road network data",
-            "default":
-            "Route Efficiency (assignment.py) - Prioritizes straight routes"
+            "automatic_detection": "System automatically selects algorithm based on API ride_settings priority",
+            "priority_1": "Capacity Optimization (assign_capacity.py) - Maximizes seat utilization",
+            "priority_2": "Balanced Optimization (assign_balance.py) - 50/50 route efficiency + capacity",
+            "priority_3": "Road-Aware Routing (assign_route.py) - Uses road network data",
+            "default": "Route Efficiency (assignment.py) - Prioritizes straight routes"
         },
-        "usage":
-        "Algorithm is automatically selected from API response _algorithm_priority value"
+        "usage": "Algorithm is automatically selected from API response _algorithm_priority value"
     }

@@ -301,8 +301,7 @@ def validate_input_data(data):
 
 def load_env_and_fetch_data(source_id: str,
                             parameter: int = 1,
-                            string_param: str = "",
-                            ridesetting: str = ""):
+                            string_param: str = ""):
     """Load environment variables and fetch data from API"""
     logger = get_logger()
     env_path = ".env"
@@ -316,8 +315,8 @@ def load_env_and_fetch_data(source_id: str,
     if not BASE_API_URL or not API_AUTH_TOKEN:
         raise ValueError("Both API_URL and API_AUTH_TOKEN must be set in .env")
 
-    # Send both parameters along with source_id and ridesetting in the API URL
-    API_URL = f"{BASE_API_URL.rstrip('/')}/{source_id}/{parameter}/{string_param}/{ridesetting}"
+    # Send both parameters along with source_id in the API URL
+    API_URL = f"{BASE_API_URL.rstrip('/')}/{source_id}/{parameter}/{string_param}"
     headers = {
         "Authorization": f"Bearer {API_AUTH_TOKEN}",
         "Content-Type": "application/json"
@@ -349,46 +348,27 @@ def load_env_and_fetch_data(source_id: str,
         raise ValueError(
             "Unexpected response format: 'status' or 'data' missing")
 
-    # Ensure payload["data"] is a dictionary, not a string
+    # Use the provided parameters
     data = payload["data"]
-    if isinstance(data, str):
-        try:
-            import json
-            data = json.loads(data)
-        except json.JSONDecodeError:
-            raise ValueError(f"API returned data as string but could not parse as JSON: {data[:200]}...")
-
-    if not isinstance(data, dict):
-        raise ValueError(f"API data must be a dictionary, got {type(data)}")
-
-    # Store all parameters in data for reuse in other modules
     data["_parameter"] = parameter
     data["_string_param"] = string_param
-    data["_ridesetting"] = ridesetting
 
     # Handle nested drivers structure
     if "drivers" in data:
         drivers_data = data["drivers"]
-        if isinstance(drivers_data, dict):
-            data["driversUnassigned"] = drivers_data.get("driversUnassigned", [])
-            data["driversAssigned"] = drivers_data.get("driversAssigned", [])
-        else:
-            data["driversUnassigned"] = []
-            data["driversAssigned"] = []
+        data["driversUnassigned"] = drivers_data.get("driversUnassigned", [])
+        data["driversAssigned"] = drivers_data.get("driversAssigned", [])
     else:
         data["driversUnassigned"] = data.get("driversUnassigned", [])
         data["driversAssigned"] = data.get("driversAssigned", [])
 
     # Extract ride_settings to determine algorithm
     ride_settings = data.get("ride_settings", {})
-    if isinstance(ride_settings, dict):
-        pic_priority = ride_settings.get("pic_priority")
-        drop_priority = ride_settings.get("drop_priority")
-        # Determine algorithm based on ride_settings priority value
-        algorithm_priority = pic_priority if pic_priority is not None else drop_priority
-    else:
-        algorithm_priority = None
+    pic_priority = ride_settings.get("pic_priority")
+    drop_priority = ride_settings.get("drop_priority")
 
+    # Determine algorithm based on ride_settings priority value
+    algorithm_priority = pic_priority if pic_priority is not None else drop_priority
     data["_algorithm_priority"] = algorithm_priority
 
     # Log the data structure for debugging
@@ -1176,24 +1156,6 @@ def calculate_optimal_sequence_improved(driver_pos, cluster_users, office_pos):
 
         # Add user_id as tiebreaker for consistency
         return (projection, user['user_id'])
-        # Distance from driver to user
-        distance = haversine_distance(driver_pos[0], driver_pos[1],
-                                      user['latitude'], user['longitude'])
-
-        # Bearing from driver to user
-        user_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
-                                         user['latitude'], user['longitude'])
-
-        # Bearing difference from main route direction
-        bearing_diff = normalize_bearing_difference(user_bearing -
-                                                    main_route_bearing)
-        bearing_diff_rad = math.radians(abs(bearing_diff))
-
-        # Geodesic projection: distance * cos(bearing_difference)
-        projection = distance * math.cos(bearing_diff_rad)
-
-        # Add user_id as tiebreaker for consistency
-        return (projection, user['user_id'])
 
     users_list.sort(key=geodesic_projection_score, reverse=True)
 
@@ -1627,8 +1589,7 @@ def calculate_route_turning_score_improved(users, driver_pos, office_pos):
                 # Single user: bearing from user to office
                 next_bearing = calculate_bearing(users[i]['lat'],
                                                  users[i]['lng'],
-                                                 office_pos[0],
-                                                 office_pos[1])
+                                                 office_pos[0], office_pos[1])
                 bearing_diff = bearing_difference(current_bearing,
                                                   next_bearing)
                 bearing_differences.append(bearing_diff)
@@ -1652,8 +1613,7 @@ def calculate_route_turning_score_improved(users, driver_pos, office_pos):
 
         if prev_bearing is not None:
             bearing_diff = bearing_difference(prev_bearing, current_bearing)
-            if bearing_diff > 0:
-                bearing_differences.append(bearing_diff)
+            bearing_differences.append(bearing_diff)
 
         prev_bearing = current_bearing
 
@@ -2063,7 +2023,8 @@ def fix_single_user_routes_improved(routes, user_df, assigned_user_ids,
             multi_user_routes.append(route)
 
     logger.info(
-        f"    📊 Found {len(single_user_routes)} single-user routes to optimize")
+        f"    📊 Found {len(single_user_routes)} single-user routes to optimize"
+    )
 
     # Strategy 1: Merge single users into compatible multi-user routes
     routes_to_keep = []
@@ -3206,11 +3167,7 @@ def find_best_driver_for_cluster_improved(cluster_users, available_drivers,
 
 
 # MAIN ASSIGNMENT FUNCTION
-def run_assignment_with_data(data, source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
-    """Main entry point for route efficiency assignment with pre-loaded data"""
-    return run_assignment_internal_with_data(data, source_id, parameter, string_param, ridesetting)
-
-def run_assignment(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     """
     Main assignment function that automatically routes to the appropriate algorithm
     based on ride_settings priority value from the API response:
@@ -3244,7 +3201,7 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = "", r
         # STAGE 1: Data Loading & API Response Analysis
         progress.start_stage("Data Loading & Algorithm Detection",
                              "Loading data from API and detecting algorithm...")
-        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
+        data = load_env_and_fetch_data(source_id, parameter, string_param)
 
         # Get the algorithm priority from ride_settings
         algorithm_priority = data.get("_algorithm_priority")
@@ -3253,27 +3210,28 @@ def run_assignment(source_id: str, parameter: int = 1, string_param: str = "", r
         if algorithm_priority == 1:
             logger.info("🎪 Routing to CAPACITY OPTIMIZATION (assign_capacity.py)")
             from assign_capacity import run_assignment_capacity
-            return run_assignment_capacity(source_id, parameter, string_param, ridesetting)
+            return run_assignment_capacity(source_id, parameter, string_param)
         elif algorithm_priority == 2:
             logger.info("⚖️ Routing to BALANCED OPTIMIZATION (assign_balance.py)")
             from assign_balance import run_assignment_balance
-            return run_assignment_balance(source_id, parameter, string_param, ridesetting)
+            return run_assignment_balance(source_id, parameter, string_param)
         elif algorithm_priority == 3:
             logger.info("🗺️ Routing to ROAD-AWARE ROUTING (assign_route.py)")
             from assign_route import run_road_aware_assignment
-            return run_road_aware_assignment(source_id, parameter, string_param, ridesetting)
+            return run_road_aware_assignment(source_id, parameter, string_param)
         else:
             logger.info("🎯 Using default ROUTE EFFICIENCY algorithm (assignment.py)")
             # Continue with route efficiency algorithm (original assignment.py logic)
-            return run_route_efficiency_assignment(source_id, parameter, string_param, ridesetting)
+            return run_route_efficiency_assignment(source_id, parameter, string_param)
 
     except Exception as e:
+        logger.error(f"Error in algorithm routing: {e}", exc_info=True)
         # Fallback to route efficiency
         logger.info("🔄 Falling back to ROUTE EFFICIENCY algorithm")
-        return run_route_efficiency_assignment(source_id, parameter, string_param, ridesetting)
+        return run_route_efficiency_assignment(source_id, parameter, string_param)
 
 
-def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_param: str = ""):
     """
     Route efficiency assignment function (original assignment.py logic)
     - Prioritizes straight routes with minimal zigzag
@@ -3308,7 +3266,7 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
         # STAGE 1: Data Loading & Validation
         progress.start_stage("Data Loading & Validation",
                              "Loading data from API...")
-        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
+        data = load_env_and_fetch_data(source_id, parameter, string_param)
 
         progress.update_stage_progress("Validating data structure...")
 
@@ -3696,7 +3654,7 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
         for route in routes:
             enhanced_route = route.copy()
 
-            # Add driver information
+            # Add enhanced driver information
             driver_id = route['driver_id']
             driver_info = None
 
