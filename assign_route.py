@@ -678,7 +678,7 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
         f"  🗺️ Route optimized utilization: {total_users}/{total_seats} ({overall_utilization:.1f}%)"
     )
 
-    return routes, assigned_user_ids
+    return routes, assigned_user_ids, driver_df # Return all drivers for step 2 processing
 
 
 def assign_best_driver_to_cluster_route_optimized(cluster_users,
@@ -2404,6 +2404,10 @@ def perform_quality_merge_improved(routes, config, office_lat, office_lon):
 
 
 # MAIN ASSIGNMENT FUNCTION FOR ROUTE OPTIMIZATION
+def run_road_aware_assignment_with_data(data, source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+    """Main entry point for road aware assignment with pre-loaded data"""
+    return run_road_aware_assignment_internal_with_data(data, source_id, parameter, string_param, ridesetting)
+
 def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """
     Main assignment function optimized for route optimization approach:
@@ -2437,12 +2441,12 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
 
     logger.info(
         f"🚀 Starting ROUTE OPTIMIZATION assignment for source_id: {source_id}")
-    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}")
+    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}, Ridesetting: {ridesetting}")
     progress.start_stage("Data Loading", "Loading and validating input data")
 
     try:
-        # Load and validate data
-        data = load_env_and_fetch_data(source_id, parameter, string_param)
+        # Load and validate data - pass all parameters including ridesetting
+        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
         progress.update_stage_progress("Data loaded successfully")
 
         # Edge case handling
@@ -2840,7 +2844,7 @@ def step_2_non_destructive_optimization(routes, unassigned_users, driver_df, use
     print(f"🛣️ Created {len(corridor_groups)} corridor groups from unassigned users")
     logger.info(f"🛣️ Created {len(corridor_groups)} corridor groups")
 
-    # Assign drivers to corridors (any driver can serve any corridor)
+    # Assign drivers to corridors (driver location doesn't matter)
     new_routes = assign_drivers_to_corridors(corridor_groups, available_drivers, office_lat, office_lon)
 
     # Add new routes

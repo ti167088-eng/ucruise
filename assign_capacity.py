@@ -630,9 +630,13 @@ def apply_lenient_2opt_capacity_focused(sequence, driver_pos, office_pos):
 
 
 # MAIN ASSIGNMENT FUNCTION FOR CAPACITY OPTIMIZATION
+def run_assignment_capacity_with_data(data, source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+    """Main entry point for capacity optimization assignment with pre-loaded data"""
+    return run_assignment_capacity_internal_with_data(data, source_id, parameter, string_param, ridesetting)
+
 def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """Main entry point for capacity optimization assignment"""
-    return run_assignment_capacity_internal(source_id, parameter, string_param)
+    return run_assignment_capacity_internal(source_id, parameter, string_param, ridesetting)
 
 def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """
@@ -658,7 +662,7 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
     print(f"📋 Parameter: {parameter}, String parameter: {string_param}")
 
     try:
-        # Load and validate data
+        # Load and validate data - pass all parameters including ridesetting
         data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
 
         # Edge case handling

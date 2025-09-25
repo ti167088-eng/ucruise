@@ -357,11 +357,11 @@ def load_env_and_fetch_data(source_id: str,
             data = json.loads(data)
         except json.JSONDecodeError:
             raise ValueError(f"API returned data as string but could not parse as JSON: {data[:200]}...")
-    
+
     if not isinstance(data, dict):
         raise ValueError(f"API data must be a dictionary, got {type(data)}")
 
-    # Use the provided parameters
+    # Store all parameters in data for reuse in other modules
     data["_parameter"] = parameter
     data["_string_param"] = string_param
     data["_ridesetting"] = ridesetting
@@ -388,7 +388,7 @@ def load_env_and_fetch_data(source_id: str,
         algorithm_priority = pic_priority if pic_priority is not None else drop_priority
     else:
         algorithm_priority = None
-    
+
     data["_algorithm_priority"] = algorithm_priority
 
     # Log the data structure for debugging
@@ -1627,7 +1627,8 @@ def calculate_route_turning_score_improved(users, driver_pos, office_pos):
                 # Single user: bearing from user to office
                 next_bearing = calculate_bearing(users[i]['lat'],
                                                  users[i]['lng'],
-                                                 office_pos[0], office_pos[1])
+                                                 office_pos[0],
+                                                 office_pos[1])
                 bearing_diff = bearing_difference(current_bearing,
                                                   next_bearing)
                 bearing_differences.append(bearing_diff)
@@ -1651,7 +1652,8 @@ def calculate_route_turning_score_improved(users, driver_pos, office_pos):
 
         if prev_bearing is not None:
             bearing_diff = bearing_difference(prev_bearing, current_bearing)
-            bearing_differences.append(bearing_diff)
+            if bearing_diff > 0:
+                bearing_differences.append(bearing_diff)
 
         prev_bearing = current_bearing
 
@@ -2061,8 +2063,7 @@ def fix_single_user_routes_improved(routes, user_df, assigned_user_ids,
             multi_user_routes.append(route)
 
     logger.info(
-        f"    📊 Found {len(single_user_routes)} single-user routes to optimize"
-    )
+        f"    📊 Found {len(single_user_routes)} single-user routes to optimize")
 
     # Strategy 1: Merge single users into compatible multi-user routes
     routes_to_keep = []
@@ -3205,6 +3206,10 @@ def find_best_driver_for_cluster_improved(cluster_users, available_drivers,
 
 
 # MAIN ASSIGNMENT FUNCTION
+def run_assignment_with_data(data, source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+    """Main entry point for route efficiency assignment with pre-loaded data"""
+    return run_assignment_internal_with_data(data, source_id, parameter, string_param, ridesetting)
+
 def run_assignment(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """
     Main assignment function that automatically routes to the appropriate algorithm
