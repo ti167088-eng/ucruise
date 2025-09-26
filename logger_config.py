@@ -183,7 +183,7 @@ class RouteAssignmentLogger:
 
         self.info("="*80, file_context)
 
-    def log_accounting_check(self, total_api_users, final_assigned, final_unassigned, discrepancy, file_context):
+    def log_accounting_check(self, total_api_users, final_assigned, final_unassigned, discrepancy, file_context=None):
         """Log comprehensive user accounting check"""
         self.critical("USER ACCOUNTING CHECK", file_context)
         self.critical(f"API Users: {total_api_users}", file_context)

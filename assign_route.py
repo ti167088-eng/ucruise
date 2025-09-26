@@ -2404,9 +2404,7 @@ def perform_quality_merge_improved(routes, config, office_lat, office_lon):
 
 
 # MAIN ASSIGNMENT FUNCTION FOR ROUTE OPTIMIZATION
-def run_road_aware_assignment(source_id: str,
-                              parameter: int = 1,
-                              string_param: str = ""):
+def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """
     Main assignment function optimized for route optimization approach:
     - Routes capacity utilization and route efficiency

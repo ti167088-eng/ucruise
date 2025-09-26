@@ -630,11 +630,11 @@ def apply_lenient_2opt_capacity_focused(sequence, driver_pos, office_pos):
 
 
 # MAIN ASSIGNMENT FUNCTION FOR CAPACITY OPTIMIZATION
-def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: str = ""):
+def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """Main entry point for capacity optimization assignment"""
     return run_assignment_capacity_internal(source_id, parameter, string_param)
 
-def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_param: str = ""):
+def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """
     Main assignment function optimized for capacity utilization:
     - Prioritizes filling vehicle seats over route efficiency
@@ -659,7 +659,7 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
 
     try:
         # Load and validate data
-        data = load_env_and_fetch_data(source_id, parameter, string_param)
+        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
 
         # Edge case handling
         users = data.get('users', [])

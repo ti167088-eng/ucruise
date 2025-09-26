@@ -1340,11 +1340,11 @@ def global_optimization_with_driver_injection(routes, user_df, assigned_user_ids
 
 
 # MAIN ASSIGNMENT FUNCTION FOR BALANCED OPTIMIZATION
-def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = ""):
+def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """Main entry point for balanced optimization assignment"""
     return run_assignment_balance_internal(source_id, parameter, string_param)
 
-def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_param: str = ""):
+def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
     """
     Main assignment function optimized for balanced route efficiency and capacity utilization:
     - Equal weight to route efficiency and capacity utilization
@@ -1370,7 +1370,7 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
 
     try:
         # Load and validate data
-        data = load_env_and_fetch_data(source_id, parameter, string_param)
+        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
 
         # Edge case handling
         users = data.get('users', [])
