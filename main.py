@@ -23,62 +23,60 @@ class AssignmentRequest(BaseModel):
 def health_check():
     return {"status": "ok"}
 
-@app.post("/assign-drivers/{source_id}/{parameter}/{string_param}/{ridesetting}")
-def assign_drivers(source_id: str, parameter: int, string_param: str, ridesetting: str):
+@app.post("/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}")
+def assign_drivers(source_id: str, parameter: int, string_param: str, choice: str):
     try:
-        print(f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}, ridesetting: {ridesetting}")
+        print(f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}, choice: {choice}")
         
         # Import here to avoid circular imports
         from assignment import load_env_and_fetch_data
         
         # First, get the data to determine which algorithm to use
         try:
-            data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
-            
-            # Ensure data is a dictionary
-            if not isinstance(data, dict):
-                raise ValueError(f"Expected dictionary from API, got {type(data)}")
+            data = load_env_and_fetch_data(source_id, parameter, string_param, choice)
             
             # Get algorithm priority from ride_settings
             ride_settings = data.get("ride_settings", {})
-            if isinstance(ride_settings, dict):
-                pic_priority = ride_settings.get("pic_priority")
-                drop_priority = ride_settings.get("drop_priority")
-                algorithm_priority = pic_priority if pic_priority is not None else drop_priority
-            else:
-                algorithm_priority = None
+            pic_priority = ride_settings.get("pic_priority")
+            drop_priority = ride_settings.get("drop_priority")
+            
+            # Use pic_priority first, then drop_priority, then default to None
+            algorithm_priority = pic_priority
+            if algorithm_priority is None:
+                algorithm_priority = drop_priority
             
             print(f"🤖 Detected algorithm priority: {algorithm_priority}")
+            print(f"🔍 Raw ride_settings: {ride_settings}")
             
             # Route to appropriate algorithm based on priority
             if algorithm_priority == 1:
                 print("🎪 Using CAPACITY OPTIMIZATION (Priority 1)")
                 from assign_capacity import run_assignment_capacity
-                result = run_assignment_capacity(source_id, parameter, string_param, ridesetting)
+                result = run_assignment_capacity(source_id, parameter, string_param, choice)
                 result["optimization_mode"] = "capacity_optimization"
                 
             elif algorithm_priority == 2:
                 print("⚖️ Using BALANCED OPTIMIZATION (Priority 2)")
                 from assign_balance import run_assignment_balance
-                result = run_assignment_balance(source_id, parameter, string_param, ridesetting)
+                result = run_assignment_balance(source_id, parameter, string_param, choice)
                 result["optimization_mode"] = "balanced_optimization"
                 
             elif algorithm_priority == 3:
                 print("🗺️ Using ROAD-AWARE ROUTING (Priority 3)")
                 from assign_route import run_road_aware_assignment
-                result = run_road_aware_assignment(source_id, parameter, string_param, ridesetting)
+                result = run_road_aware_assignment(source_id, parameter, string_param, choice)
                 result["optimization_mode"] = "road_aware_route_optimization"
                 
             else:
-                print("🎯 Using ROUTE EFFICIENCY (Default)")
+                print(f"🎯 Using ROUTE EFFICIENCY (Default) - priority was: {algorithm_priority}")
                 from assignment import run_assignment
-                result = run_assignment(source_id, parameter, string_param, ridesetting)
+                result = run_assignment(source_id, parameter, string_param, choice)
                 result["optimization_mode"] = "route_efficiency_default"
                 
         except Exception as api_error:
             print(f"⚠️ API error, using default algorithm: {api_error}")
             from assignment import run_assignment
-            result = run_assignment(source_id, parameter, string_param, ridesetting)
+            result = run_assignment(source_id, parameter, string_param, choice)
             result["optimization_mode"] = "route_efficiency_default"
 
         # Ensure result has proper structure
@@ -88,7 +86,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str, ridesettin
         # Add parameters to result
         result["parameter"] = parameter
         result["string_param"] = string_param
-        result["ridesetting"] = ridesetting
+        result["choice"] = choice
 
         # Ensure data is always an array
         if "data" not in result:
@@ -123,7 +121,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str, ridesettin
             "data": [], 
             "parameter": parameter, 
             "string_param": string_param,
-            "ridesetting": ridesetting,
+            "choice": choice,
             "optimization_mode": "error"
         }
 
@@ -174,7 +172,7 @@ def root():
     return {
         "message": "Driver Assignment API with Multiple Optimization Modes",
         "endpoints": [
-            "/assign-drivers/{source_id}/{parameter}/{string_param}/{ridesetting}",
+            "/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}",
             "/routes", 
             "/visualize", 
             "/health"

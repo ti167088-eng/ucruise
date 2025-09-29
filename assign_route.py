@@ -2404,7 +2404,10 @@ def perform_quality_merge_improved(routes, config, office_lat, office_lon):
 
 
 # MAIN ASSIGNMENT FUNCTION FOR ROUTE OPTIMIZATION
-def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_road_aware_assignment(source_id: str,
+                              parameter: int = 1,
+                              string_param: str = "", 
+                              choice: str = ""):
     """
     Main assignment function optimized for route optimization approach:
     - Routes capacity utilization and route efficiency
@@ -2437,7 +2440,7 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
 
     logger.info(
         f"🚀 Starting ROUTE OPTIMIZATION assignment for source_id: {source_id}")
-    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}")
+    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}, Choice: {choice}")
     progress.start_stage("Data Loading", "Loading and validating input data")
 
     try:
@@ -2504,7 +2507,7 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
         office_lat, office_lon = extract_office_coordinates(data)
         validate_input_data(data)
         logger.info("✅ Data validation passed")
-        progress.update_stage_progress("Data validated")
+        progress.update_stage_progress("DataFrames prepared")
 
         # Prepare dataframes
         user_df, driver_df = prepare_user_driver_dataframes(data)
@@ -2516,7 +2519,7 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
 
         # Core assignment logic
         progress.start_stage("Local Optimization", "Running core assignment with road-aware optimization")
-        print(f"🧠 Running intelligent route optimization...")
+        print(f"🧠 Running intelligent route optimization with choice: {choice}...")
         routes, unassigned_users, driver_df_final = run_core_assignment_with_optimization(
             user_df, driver_df, office_lat, office_lon, _config)
         progress.update_stage_progress(f"Created {len(routes)} initial routes")
@@ -2569,7 +2572,7 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
         )
 
         clustering_results = {
-            "method": "route_optimized_with_driver_injection",
+            "method": "road_aware_route_optimization",
             "clusters": len(routes)
         }
 

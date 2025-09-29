@@ -1,4 +1,3 @@
-
 import os
 import math
 import requests
@@ -1340,11 +1339,11 @@ def global_optimization_with_driver_injection(routes, user_df, assigned_user_ids
 
 
 # MAIN ASSIGNMENT FUNCTION FOR BALANCED OPTIMIZATION
-def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = "", choice: str = ""):
     """Main entry point for balanced optimization assignment"""
-    return run_assignment_balance_internal(source_id, parameter, string_param)
+    return run_assignment_balance_internal(source_id, parameter, string_param, choice)
 
-def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_param: str = "", ridesetting: str = ""):
+def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_param: str = "", choice: str = ""):
     """
     Main assignment function optimized for balanced route efficiency and capacity utilization:
     - Equal weight to route efficiency and capacity utilization
@@ -1366,11 +1365,11 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
     UTILIZATION_PENALTY_PER_SEAT = _config['UTILIZATION_PENALTY_PER_SEAT']
 
     logger.info(f"🚀 Starting BALANCED OPTIMIZATION assignment for source_id: {source_id}")
-    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}")
+    logger.info(f"📋 Parameter: {parameter}, String parameter: {string_param}, Choice: {choice}")
 
     try:
         # Load and validate data
-        data = load_env_and_fetch_data(source_id, parameter, string_param, ridesetting)
+        data = load_env_and_fetch_data(source_id, parameter, string_param)
 
         # Edge case handling
         users = data.get('users', [])

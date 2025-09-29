@@ -6,39 +6,57 @@ import sys
 import argparse
 import os
 import json
-from assignment import run_assignment, analyze_assignment_quality
+import requests
+from logger_config import clear_logs
 
 SOURCE_ID = "UC_logisticllp"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
 STRING_PARAM = "Evening%20shift" # Example string parameter
-RIDESETTING = "1"  # Default ridesetting parameter
-
-def detect_algorithm_from_api():
-    """Detect which algorithm to use based on API response"""
-    print("\n🚗 ROUTEFLOW - INTELLIGENT ASSIGNMENT SYSTEM")
-    print("=" * 60)
-    print("🤖 Automatic algorithm detection based on ride_settings from API")
-    print()
-    print("Algorithm Mapping:")
-    print("   Priority 1 → 🎪 CAPACITY OPTIMIZATION (assign_capacity.py)")
-    print("   Priority 2 → ⚖️ BALANCED OPTIMIZATION (assign_balance.py)")
-    print("   Priority 3 → 🗺️ ROAD-AWARE ROUTING (assign_route.py)")
-    print("   Default   → 🎯 ROUTE EFFICIENCY (assignment.py)")
-    print()
-
-    return True  # Always proceed with automatic detection
+CHOICE = "default" # Example choice parameter
 
 def start_fastapi():
+    """Start the FastAPI server"""
     subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"])
 
 def launch_browser():
-    time.sleep(5)  # Wait longer for server to start
+    """Launch browser after server starts"""
+    time.sleep(5)  # Wait for server to start
     try:
         webbrowser.open("http://localhost:5000/visualize")
         print("🌐 Browser opened at: http://localhost:5000/visualize")
     except Exception as e:
         print(f"⚠️  Could not auto-open browser: {e}")
         print("   Please manually visit: http://localhost:5000/visualize")
+
+def call_assignment_api(source_id, parameter, string_param, choice):
+    """Call the FastAPI assignment endpoint"""
+    url = f"http://localhost:5000/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}"
+
+    try:
+        print(f"📡 Calling assignment API: {url}")
+        print("⏳ Processing assignment (this may take 30-60 seconds)...")
+        print("🔄 Server is running assignment algorithm...")
+        
+        response = requests.post(url, timeout=180)  # Increased timeout
+        response.raise_for_status()
+
+        result = response.json()
+        print("✅ API response received successfully!")
+        return result
+
+    except requests.exceptions.ConnectionError:
+        print("❌ Could not connect to FastAPI server. Make sure it's running on port 5000.")
+        return None
+    except requests.exceptions.Timeout:
+        print("❌ API request timed out. The assignment is taking longer than expected.")
+        print("💡 Try running 'python test_analysis.py' for direct assignment testing")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"❌ API request failed: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON response: {e}")
+        return None
 
 def display_detailed_analytics(result, algorithm_name):
     """Display comprehensive analytics in terminal with enhanced formatting"""
@@ -77,235 +95,50 @@ def display_detailed_analytics(result, algorithm_name):
     # Enhanced Overview Section
     print(f"\n📈 SYSTEM OVERVIEW")
     print("─" * 50)
-    print(f"   🤖 Algorithm Used: {result.get('algorithm_type', 'Unknown')}")
+    print(f"   🤖 Algorithm Used: {result.get('optimization_mode', 'Unknown')}")
     print(f"   🚗 Active Routes Created: {len(routes)}")
     print(f"   👥 Users Successfully Assigned: {total_assigned}")
     print(f"   ⚠️  Users Unassigned: {len(unassigned_users)}")
     print(f"   🚙 Drivers Deployed: {len(routes)}")
     print(f"   💤 Drivers Available: {len(unassigned_drivers)}")
     print(f"   🏆 Total Fleet Capacity: {total_capacity} passengers")
-    print(f"   📊 Overall Capacity Utilization: {(total_assigned/total_capacity*100):.1f}%")
+    if total_capacity > 0:
+        print(f"   📊 Overall Capacity Utilization: {(total_assigned/total_capacity*100):.1f}%")
+    else:
+        print(f"   📊 Overall Capacity Utilization: N/A (no capacity available)")
 
-    # Enhanced Route Performance Analysis
-    utilizations = []
-    high_efficiency = 0
-    medium_efficiency = 0
-    low_efficiency = 0
-    total_route_distance = 0
-
-    # Driver priority analysis
-    assigned_drivers = {route["driver_id"]: route for route in routes}
-    unassigned_driver_ids = {d["driver_id"] for d in unassigned_drivers}
-
+    # Route Performance Analysis
     print(f"\n🚗 DETAILED ROUTE PERFORMANCE ANALYSIS")
     print("─" * 50)
 
     for i, route in enumerate(routes):
         assigned = len(route["assigned_users"])
         capacity = route["vehicle_type"]
-        utilization = assigned / capacity
-        utilizations.append(utilization)
-
-        # Calculate route distance metrics
-        route_distances = []
-        for user in route["assigned_users"]:
-            dist = haversine_distance(float(route["latitude"]), float(route["longitude"]),
-                                    float(user["lat"]), float(user["lng"]))
-            route_distances.append(dist)
-
-        avg_route_distance = sum(route_distances) / len(route_distances) if route_distances else 0
-        max_route_distance = max(route_distances) if route_distances else 0
-        total_route_distance += avg_route_distance
+        utilization = assigned / capacity if capacity > 0 else 0
 
         # Efficiency categorization
         if utilization >= 0.8:
             efficiency_icon = "🟢"
             efficiency_label = "EXCELLENT"
-            high_efficiency += 1
         elif utilization >= 0.6:
             efficiency_icon = "🟡"
             efficiency_label = "GOOD"
-            medium_efficiency += 1
         elif utilization >= 0.4:
             efficiency_icon = "🟠"
             efficiency_label = "FAIR"
-            medium_efficiency += 1
         else:
             efficiency_icon = "🔴"
             efficiency_label = "NEEDS OPTIMIZATION"
-            low_efficiency += 1
-
-        # Get driver source info from the assignment result data structure
-        # Since we're looking at routes that were created, we need to check the original data
-        # The route driver_id should match drivers from the available pool
-
-        # First check if this driver exists in unassigned_drivers list (these are the drivers that WEREN'T used)
-        driver_found_in_unused = False
-        for unused_driver in unassigned_drivers:
-            if str(unused_driver.get("driver_id", "")) == str(route["driver_id"]):
-                driver_found_in_unused = True
-                break
-
-        # If driver is NOT in the unused drivers list, it means this driver WAS used
-        # We need to determine source from the original data structure
-        # Based on the debug info showing Priority 1 and 2 drivers, these are driversUnassigned
-
-        if not driver_found_in_unused:
-            # This driver was used, so determine its original source
-            # Based on the assignment debug, we know:
-            # Driver 225427 is Priority 1 (ST:1 or ST:3)
-            # Driver 225435 is Priority 2 (ST:2)
-            if route["driver_id"] == "225427":
-                driver_source = "driversUnassigned (ST:1,3)"
-            else:
-                driver_source = "driversUnassigned (ST:2)"
-            shift_type_display = "ST:1" if route["driver_id"] == "225427" else "ST:2"
-        else:
-            driver_source = "driversAssigned"  # Shouldn't happen in this case
-            shift_type_display = "ST:N/A"
 
         print(f"   Route {i+1:2d}: {efficiency_icon} {efficiency_label:15} | "
               f"{assigned}/{capacity} users ({utilization*100:5.1f}%) | "
-              f"Avg Dist: {avg_route_distance:4.1f}km | Max: {max_route_distance:4.1f}km")
-        print(f"           Driver {route['driver_id']} from {driver_source} | {shift_type_display} | Vehicle: {route.get('vehicle_id', 'N/A')}")
-
-    avg_utilization = sum(utilizations) / len(utilizations) if utilizations else 0
-    avg_distance_per_route = total_route_distance / len(routes) if routes else 0
-
-    # Driver Priority Breakdown
-    print(f"\n🎯 DRIVER ASSIGNMENT PRIORITY BREAKDOWN")
-    print("─" * 50)
-
-    priority_stats = {"P1": 0, "P2": 0, "P3_P4": 0, "unknown": 0}
-    detailed_driver_info = []
-
-    # Get the assigned driver IDs
-    assigned_driver_ids = [route["driver_id"] for route in routes]
-
-    # Since we know from the debug info that:
-    # - Priority 1: 1 driver (driversUnassigned ST:1,3)
-    # - Priority 2: 44 drivers (driversUnassigned ST:2)
-    # - And we used 2 drivers total
-    # The logic should be: drivers used are FROM driversUnassigned, not found in unassigned_drivers
-
-    for route in routes:
-        driver_id = route["driver_id"]
-
-        # Based on the assignment debug, we know:
-        # Driver 225427 is Priority 1 (ST:1 or ST:3)
-        # Driver 225435 is Priority 2 (ST:2)
-        if driver_id == "225427":
-            priority_stats["P1"] += 1
-            detailed_driver_info.append({
-                "driver_id": driver_id,
-                "source": "driversUnassigned",
-                "shift_type_id": 1,  # or 3, but definitely priority 1
-                "priority": "Priority 1 (driversUnassigned ST:1,3)",
-                "capacity": route["vehicle_type"],
-                "users_assigned": len(route["assigned_users"]),
-                "utilization": len(route["assigned_users"]) / route["vehicle_type"] * 100
-            })
-        else:
-            # Other drivers are Priority 2
-            priority_stats["P2"] += 1
-            detailed_driver_info.append({
-                "driver_id": driver_id,
-                "source": "driversUnassigned",
-                "shift_type_id": 2,
-                "priority": "Priority 2 (driversUnassigned ST:2)",
-                "capacity": route["vehicle_type"],
-                "users_assigned": len(route["assigned_users"]),
-                "utilization": len(route["assigned_users"]) / route["vehicle_type"] * 100
-            })
-
-    print(f"   🥇 Priority 1 Drivers Used (driversUnassigned ST:1,3): {priority_stats['P1']}")
-    print(f"   🥈 Priority 2 Drivers Used (driversUnassigned ST:2): {priority_stats['P2']}")
-    print(f"   🥉 Priority 3/4 Drivers Used (driversAssigned): {priority_stats['P3_P4']}")
-
-    print(f"\n📋 INDIVIDUAL DRIVER ASSIGNMENTS")
-    print("─" * 80)
-    for i, driver_info in enumerate(detailed_driver_info, 1):
-        utilization_icon = "🟢" if driver_info["utilization"] >= 80 else "🟡" if driver_info["utilization"] >= 50 else "🔴"
-        print(f"   {i:2d}. Driver {driver_info['driver_id']} | {driver_info['source']:17} | "
-              f"ST:{driver_info['shift_type_id']} | Cap:{driver_info['capacity']} | "
-              f"Users:{driver_info['users_assigned']} | {utilization_icon} {driver_info['utilization']:5.1f}%")
-
-    # Performance Summary with Advanced Metrics
-    print(f"\n📊 ADVANCED EFFICIENCY METRICS")
-    print("─" * 50)
-    print(f"   🎯 Average Route Utilization: {avg_utilization*100:.1f}%")
-    print(f"   🟢 High Efficiency Routes (≥80%): {high_efficiency} ({high_efficiency/len(routes)*100:.1f}%)")
-    print(f"   🟡 Medium Efficiency Routes (40-79%): {medium_efficiency} ({medium_efficiency/len(routes)*100:.1f}%)")
-    print(f"   🔴 Low Efficiency Routes (<40%): {low_efficiency} ({low_efficiency/len(routes)*100:.1f}%)")
-    print(f"   📏 Average Distance per Route: {avg_distance_per_route:.1f} km")
-    print(f"   ⭐ System Efficiency Score: {calculate_system_efficiency_score(utilizations, avg_distance_per_route)}/10")
-
-    # Resource Optimization Insights
-    print(f"\n💡 OPTIMIZATION INSIGHTS & PRIORITY SYSTEM ANALYSIS")
-    print("─" * 50)
-
-    # Priority system insights
-    total_assigned_drivers = len(routes)
-    p1_percentage = (priority_stats["P1"] / total_assigned_drivers * 100) if total_assigned_drivers > 0 else 0
-    p2_percentage = (priority_stats["P2"] / total_assigned_drivers * 100) if total_assigned_drivers > 0 else 0
-    p3_p4_percentage = (priority_stats["P3_P4"] / total_assigned_drivers * 100) if total_assigned_drivers > 0 else 0
-
-    print(f"   🎯 Priority System Performance:")
-    print(f"      • {p1_percentage:.1f}% drivers from highest priority (driversUnassigned ST:1,3)")
-    print(f"      • {p2_percentage:.1f}% drivers from medium priority (driversUnassigned ST:2)")
-    print(f"      • {p3_p4_percentage:.1f}% drivers from lower priority (driversAssigned)")
-
-    total_unassigned_percentage = p1_percentage + p2_percentage
-    if total_unassigned_percentage >= 80:
-        print("   ✅ EXCELLENT: System effectively prioritized driversUnassigned")
-    elif total_unassigned_percentage >= 50:
-        print("   ✅ GOOD: System used primarily driversUnassigned drivers")
-    elif p3_p4_percentage > 50:
-        print("   ⚠️  NOTICE: High usage of driversAssigned - may need more driversUnassigned")
-    else:
-        print("   ✅ System is working as expected")
-
-    # General optimization insights
-    if avg_utilization < 0.6:
-        print("   ⚠️  RECOMMENDATION: Consider reducing fleet size or expanding service area")
-    if avg_distance_per_route > 8:
-        print("   ⚠️  RECOMMENDATION: Review geographical clustering - routes may be too spread out")
-    if low_efficiency > len(routes) * 0.3:
-        print("   ⚠️  RECOMMENDATION: Reassign users to optimize capacity utilization")
-    if high_efficiency >= len(routes) * 0.7:
-        print("   ✅ EXCELLENT: Route assignments are highly optimized!")
-
-    # Unassigned drivers insights
-    if len(unassigned_drivers) > 0:
-        unassigned_p1 = sum(1 for d in unassigned_drivers if d.get('shift_type_id') in [1, 3])
-        unassigned_p2 = len(unassigned_drivers) - unassigned_p1
-        print(f"   📊 Available Drivers: {unassigned_p1} Priority 1, {unassigned_p2} Priority 2+ unused")
-
-    # Cost & Environmental Impact Estimates
-    fuel_cost_per_km = 0.08  # Example: $0.08 per km
-    co2_per_km = 0.12  # Example: 0.12 kg CO2 per km
-    total_distance_estimate = total_route_distance * 2  # Round trip estimate
-
-    print(f"\n🌍 ENVIRONMENTAL & COST IMPACT ESTIMATES")
-    print("─" * 50)
-    print(f"   ⛽ Estimated Daily Fuel Cost: ${total_distance_estimate * fuel_cost_per_km:.2f}")
-    print(f"   🌱 Estimated CO2 Emissions: {total_distance_estimate * co2_per_km:.1f} kg/day")
-    print(f"   🚗 Distance Efficiency: {total_assigned/total_distance_estimate:.1f} users per km")
-
-    # Geographical insights
-    print(f"\n🗺️  GEOGRAPHICAL DISTRIBUTION ANALYSIS")
-    print("─" * 50)
-    clustering_method = result.get("clustering_analysis", {}).get("method", "Intelligent Auto-Assignment")
-    print(f"   🧠 Clustering Algorithm: {clustering_method}")
-    print(f"   📍 Service Area Coverage: {len(routes)} distinct zones")
+              f"Driver: {route['driver_id']} | Vehicle: {route.get('vehicle_id', 'N/A')}")
 
     if unassigned_users:
         print(f"\n⚠️  UNASSIGNED USERS REQUIRING ATTENTION")
         print("─" * 50)
         for i, user in enumerate(unassigned_users[:5]):  # Show first 5
-            office_dist = user.get('office_distance', 'N/A')
-            print(f"   {i+1}. User {user['user_id']}: Location ({user.get('lat', 'N/A')}, {user.get('lng', 'N/A')}) | "
-                  f"Office Distance: {office_dist} km")
+            print(f"   {i+1}. User {user['user_id']}: Location ({user.get('lat', 'N/A')}, {user.get('lng', 'N/A')})")
         if len(unassigned_users) > 5:
             print(f"   ... and {len(unassigned_users) - 5} more users need manual assignment")
 
@@ -314,105 +147,78 @@ def display_detailed_analytics(result, algorithm_name):
     print("📊 Real-time analytics, route optimization, and performance monitoring available")
     print("🎯" + "="*78 + "🎯\n")
 
-def calculate_system_efficiency_score(utilizations, avg_distance):
-    """Calculate overall system efficiency score (0-10)"""
-    if not utilizations:
-        return 0
+def wait_for_server():
+    """Wait for FastAPI server to be ready"""
+    max_attempts = 30
+    for attempt in range(max_attempts):
+        try:
+            response = requests.get("http://localhost:5000/health", timeout=2)
+            if response.status_code == 200:
+                print("✅ FastAPI server is ready!")
+                print("🌐 Server URL: http://localhost:5000")
+                print("📊 Health check: PASSED")
+                return True
+        except requests.exceptions.RequestException:
+            pass
 
-    # Utilization score (0-5 points)
-    avg_util = sum(utilizations) / len(utilizations)
-    util_score = min(avg_util * 5, 5)
+        if attempt == 0:
+            print("⏳ Waiting for FastAPI server to start...")
+        if attempt % 5 == 0 and attempt > 0:
+            print(f"⏳ Still waiting... ({attempt + 1}/{max_attempts}) - Server starting...")
+        time.sleep(2)
 
-    # Distance efficiency score (0-3 points)
-    distance_score = max(0, 3 - (avg_distance / 10) * 3)
-
-    # Consistency score (0-2 points)
-    util_variance = sum((u - avg_util) ** 2 for u in utilizations) / len(utilizations)
-    consistency_score = max(0, 2 - util_variance * 4)
-
-    return round(util_score + distance_score + consistency_score, 1)
-
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """Calculate the great circle distance between two points on the earth"""
-    from math import radians, cos, sin, asin, sqrt
-
-    # Convert decimal degrees to radians
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-
-    # Haversine formula
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
-    r = 6371  # Radius of earth in kilometers
-
-    return c * r
-
-def load_assignment_result():
-    """Load assignment result from file or run new assignment"""
-    # Delete ALL cached files to force fresh assignment with latest code
-    cache_files = [
-        "drivers_and_routes.json",
-        "drivers_and_routes_capacity.json",
-        "drivers_and_routes_balance.json",
-        "drivers_and_routes_road_aware.json"
-    ]
-
-    for cache_file in cache_files:
-        if os.path.exists(cache_file):
-            os.remove(cache_file)
-            print(f"Deleted cached file: {cache_file}")
-
-    print("All cached routes deleted to use latest code changes...")
-
-    # Run fresh assignment with correct source ID
-    return run_assignment(SOURCE_ID, PARAMETER, STRING_PARAM, RIDESETTING)
+    print("❌ Server failed to start within timeout period")
+    print("💡 Try manually running: uvicorn main:app --host 0.0.0.0 --port 5000")
+    return False
 
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Driver Assignment Dashboard')
-    parser.add_argument('--mode', type=int, choices=[1, 2, 3, 4],
-                       help='Assignment mode: 1=Route Efficiency, 2=Capacity Optimization, 3=Balanced, 4=Road-Aware')
+    parser.add_argument('--source-id', type=str, default=SOURCE_ID,
+                       help=f'Source ID for API (default: {SOURCE_ID})')
+    parser.add_argument('--parameter', type=int, default=PARAMETER,
+                       help=f'Parameter value (default: {PARAMETER})')
+    parser.add_argument('--string-param', type=str, default=STRING_PARAM,
+                       help=f'String parameter (default: {STRING_PARAM})')
+    parser.add_argument('--choice', type=str, default=CHOICE,
+                       help=f'Choice parameter (default: {CHOICE})')
     args = parser.parse_args()
 
     # Clear logs at the start
-    from logger_config import clear_logs
     clear_logs()
 
     print("🚀 Starting Driver Assignment Dashboard...")
-    print(f"📍 Source ID: {SOURCE_ID}")
+    print(f"📍 Source ID: {args.source_id}")
+    print(f"📊 Parameter: {args.parameter}")
+    print(f"📝 String Parameter: {args.string_param}")
+    print(f"🎯 Choice: {args.choice}")
 
     try:
-        # Use automatic algorithm detection (no user choice needed)
-        if args.mode:
-            mode_names = {1: "CAPACITY OPTIMIZATION", 2: "BALANCED OPTIMIZATION", 3: "ROAD-AWARE ROUTING", 4: "ROUTE EFFICIENCY"}
-            print(f"⚠️ Command line mode {args.mode} ignored - using automatic detection from API")
+        print("\n🔧 Starting FastAPI Server...")
 
-        detect_algorithm_from_api()
-        print("-" * 50)
+        # Start server in background
+        server_thread = threading.Thread(target=start_fastapi, daemon=True)
+        server_thread.start()
 
-        # Use the main assignment function which will automatically route to the correct algorithm
-        from assignment import run_assignment
-        assignment_func = run_assignment
+        # Wait for server to be ready
+        if not wait_for_server():
+            print("❌ Failed to start server")
+            exit(1)
 
-        # Delete all cached files before running assignment
-        cache_files = [
-            "drivers_and_routes.json",
-            "drivers_and_routes_capacity.json",
-            "drivers_and_routes_balance.json",
-            "drivers_and_routes_road_aware.json"
-        ]
-
-        for cache_file in cache_files:
-            if os.path.exists(cache_file):
-                os.remove(cache_file)
-
-        print(f"⏳ Running assignment with automatic algorithm detection...")
+        print("\n🤖 Running Assignment with Automatic Algorithm Detection...")
         print("=" * 60)
-        print("📊 REAL-TIME ASSIGNMENT PROGRESS")
-        print("=" * 60)
-        # Add ridesetting parameter - you can modify this default value as needed
-        result = assignment_func(SOURCE_ID, PARAMETER, STRING_PARAM, RIDESETTING)
+
+        # Call the assignment API
+        result = call_assignment_api(args.source_id, args.parameter, args.string_param, args.choice)
+
+        if not result:
+            print("❌ Assignment API call failed")
+            print("💡 The server may still be processing. Check http://localhost:5000/routes for results")
+            print("💡 Or try running 'python test_analysis.py' for direct testing")
+            exit(1)
+
+        print(f"📋 Result status: {result.get('status', 'unknown')}")
+        print(f"🔍 Result keys: {list(result.keys())}")
 
         if result["status"] == "true":
             # Get the algorithm name from the result
@@ -420,23 +226,10 @@ if __name__ == "__main__":
             algorithm_name = algorithm_name.replace("_", " ").upper()
 
             print(f"✅ {algorithm_name} assignment completed successfully!")
-
-            # Save results to default file for visualization compatibility
-            with open("drivers_and_routes.json", "w") as f:
-                json.dump(result["data"], f, indent=2)
-            print(f"💾 Results saved to drivers_and_routes.json")
+            print(f"📊 Routes Created: {len(result.get('data', []))}")
 
             # Display detailed analytics
             display_detailed_analytics(result, algorithm_name)
-
-            # Additional quality analysis
-            quality_analysis = analyze_assignment_quality(result)
-            if isinstance(quality_analysis, dict):
-                print(f"\n🎯 QUALITY METRICS:")
-                print(f"   Assignment Rate: {quality_analysis.get('assignment_rate', 0)}%")
-                print(f"   Routes Below 80% Utilization: {quality_analysis.get('routes_below_80_percent', 0)}")
-                if quality_analysis.get('distance_issues'):
-                    print(f"   Distance Issues: {len(quality_analysis['distance_issues'])}")
 
         else:
             print("❌ Assignment failed:")
@@ -444,21 +237,16 @@ if __name__ == "__main__":
             print(f"   Please check your configuration and API credentials")
             exit(1)
 
-        print("\n🚀 Launching Dashboard...")
-        print("   - Starting FastAPI server on port 5000")
-        print("   - Opening browser automatically")
-
-        # Start server in background
-        server_thread = threading.Thread(target=start_fastapi, daemon=True)
-        server_thread.start()
+        print("\n🌐 Launching Dashboard...")
 
         # Launch browser
         browser_thread = threading.Thread(target=launch_browser, daemon=True)
         browser_thread.start()
 
-        print("\n✅ Dashboard is starting up...")
-        print("📱 Manual URL: http://localhost:5000/visualize")
+        print("\n✅ Dashboard is running!")
+        print("📱 Dashboard URL: http://localhost:5000/visualize")
         print("📊 API Endpoint: http://localhost:5000/routes")
+        print("🔍 Health Check: http://localhost:5000/health")
         print("\n⌨️  Press Ctrl+C to stop the server")
 
         try:
@@ -470,9 +258,9 @@ if __name__ == "__main__":
             print("👋 Goodbye!")
 
     except KeyboardInterrupt:
-        print("\n🛑 Assignment interrupted by user")
+        print("\n🛑 Dashboard startup interrupted by user")
         exit(0)
     except Exception as e:
-        print(f"❌ Error running assignment: {e}")
+        print(f"❌ Error starting dashboard: {e}")
         print(f"📋 Error type: {type(e).__name__}")
         exit(1)
