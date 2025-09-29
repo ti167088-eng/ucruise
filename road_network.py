@@ -859,6 +859,7 @@ class RoadNetwork:
                     return True
         return False
 
+
     def _check_coherence_impact_relaxed(self, user_lat: float, user_lon: float, existing_users: List[Tuple[float, float]], 
                                       office_lat: float, office_lon: float, coverage_mode: bool) -> bool:
         """Check if adding candidate improves or maintains route coherence (relaxed)"""
@@ -1138,3 +1139,33 @@ class RoadNetwork:
             'projection_center': (self.projection.center_lat, self.projection.center_lon) if self.projection else None
         })
         return stats
+
+    def shortest_path_nodes(self, start_node, end_node):
+        """Get shortest path nodes between two points"""
+        if not self.graph or start_node not in self.graph or end_node not in self.graph:
+            return []
+
+        try:
+            import networkx as nx
+            path = nx.shortest_path(self.graph, start_node, end_node, weight='weight')
+            return path
+        except Exception as e:
+            logger.warning(f"Failed to find path from {start_node} to {end_node}: {e}")
+            return []
+
+    def simplify_path_nodes(self, path, max_nodes=10):
+        """Simplify path to key intersections"""
+        if len(path) <= max_nodes:
+            return path
+
+        step = max(1, len(path) // max_nodes)
+        simplified = []
+
+        for i in range(0, len(path), step):
+            simplified.append(path[i])
+
+        # Always include the last node
+        if path[-1] not in simplified:
+            simplified.append(path[-1])
+
+        return simplified
