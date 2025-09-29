@@ -7,12 +7,13 @@ import argparse
 import os
 import json
 import requests
+import urllib.parse
 from logger_config import clear_logs
 
 SOURCE_ID = "UC_logisticllp"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
-STRING_PARAM = "Evening%20shift" # Example string parameter
-CHOICE = "default" # Example choice parameter
+STRING_PARAM = "Evening shift" # Example string parameter (no URL encoding)
+CHOICE = " " # Example choice parameter (use "1" to match main.py behavior)
 
 def start_fastapi():
     """Start the FastAPI server"""
@@ -30,13 +31,20 @@ def launch_browser():
 
 def call_assignment_api(source_id, parameter, string_param, choice):
     """Call the FastAPI assignment endpoint"""
-    url = f"http://localhost:5000/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}"
+    # URL encode the string parameter to handle spaces
+    import urllib.parse
+    encoded_string_param = urllib.parse.quote(string_param)
+
+    url = f"http://localhost:5000/assign-drivers/{source_id}/{parameter}/{encoded_string_param}/{choice}"
 
     try:
         print(f"📡 Calling assignment API: {url}")
         print("⏳ Processing assignment (this may take 30-60 seconds)...")
         print("🔄 Server is running assignment algorithm...")
-        
+
+        # Clear any existing cached routes before making the call
+        clear_cached_routes()
+
         response = requests.post(url, timeout=180)  # Increased timeout
         response.raise_for_status()
 
@@ -57,6 +65,23 @@ def call_assignment_api(source_id, parameter, string_param, choice):
     except json.JSONDecodeError as e:
         print(f"❌ Invalid JSON response: {e}")
         return None
+
+def clear_cached_routes():
+    """Clear any cached route files to ensure fresh data"""
+    route_files = [
+        "drivers_and_routes.json",
+        "drivers_and_routes_capacity.json",
+        "drivers_and_routes_balance.json",
+        "drivers_and_routes_road_aware.json"
+    ]
+
+    for filename in route_files:
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+                print(f"🗑️ Cleared cached file: {filename}")
+            except Exception as e:
+                print(f"⚠️ Could not clear {filename}: {e}")
 
 def display_detailed_analytics(result, algorithm_name):
     """Display comprehensive analytics in terminal with enhanced formatting"""
@@ -207,6 +232,7 @@ if __name__ == "__main__":
 
         print("\n🤖 Running Assignment with Automatic Algorithm Detection...")
         print("=" * 60)
+        print(f"🔄 Using parameters: source_id={args.source_id}, parameter={args.parameter}, string_param='{args.string_param}', choice={args.choice}")
 
         # Call the assignment API
         result = call_assignment_api(args.source_id, args.parameter, args.string_param, args.choice)

@@ -18,7 +18,7 @@ class ProgressTracker:
         self.current_stage_index = 0
         self.stage_details = {}
         self.assignment_started = False # Added to track if assignment has started
-        
+
     def start_assignment(self, source_id, mode):
         self.start_time = datetime.now()
         self.assignment_started = True # Set to True when assignment starts
@@ -26,38 +26,38 @@ class ProgressTracker:
         print(f"📋 Source ID: {source_id}")
         print(f"⏰ Started at: {self.start_time.strftime('%H:%M:%S')}")
         print("="*60)
-    
+
     def start_stage(self, stage_name, details=""):
         if not self.assignment_started: # Check if assignment has started
             return
-            
+
         self.current_stage = stage_name
         if stage_name in self.stages:
             self.current_stage_index = self.stages.index(stage_name) + 1
-        
+
         # Progress bar
         progress = (self.current_stage_index / len(self.stages)) * 100
         bar_length = 30
         filled_length = int(bar_length * self.current_stage_index // len(self.stages))
         bar = '█' * filled_length + '░' * (bar_length - filled_length)
-        
+
         print(f"\n📊 Stage {self.current_stage_index}/{len(self.stages)}: {stage_name}")
         print(f"[{bar}] {progress:.1f}%")
         if details:
             print(f"   {details}")
-        
+
         self.stage_details[stage_name] = {
             'start_time': datetime.now(),
             'details': details
         }
-    
+
     def update_stage_progress(self, message):
         if not self.assignment_started: # Check if assignment has started
             return
 
         elapsed = datetime.now() - self.stage_details.get(self.current_stage, {}).get('start_time', datetime.now())
         print(f"   ⏳ {message} (Elapsed: {elapsed.total_seconds():.1f}s)")
-    
+
     def complete_stage(self, summary):
         if not self.assignment_started: # Check if assignment has started
             return
@@ -65,7 +65,17 @@ class ProgressTracker:
         if self.current_stage in self.stage_details:
             elapsed = datetime.now() - self.stage_details[self.current_stage]['start_time']
             print(f"   ✅ {summary} (Completed in {elapsed.total_seconds():.1f}s)")
-    
+
+    def fail_stage(self, reason: str):
+        """Mark current stage as failed"""
+        if self.current_stage:
+            # This part assumes self.stages is a list of dictionaries, which it is not.
+            # The original code had a list of strings for stages.
+            # For now, we'll just print the error and rely on fail_assignment for overall failure.
+            print(f"❌ Stage '{self.current_stage}' failed: {reason}")
+        else:
+            print(f"❌ Assignment failed: {reason}")
+
     def show_final_summary(self, result):
         """Show final summary of assignment"""
         if not self.assignment_started:
