@@ -45,7 +45,7 @@ def call_assignment_api(source_id, parameter, string_param, choice):
         # Clear any existing cached routes before making the call
         clear_cached_routes()
 
-        response = requests.post(url, timeout=180)  # Increased timeout
+        response = requests.post(url, timeout=1800)  # Increased timeout
         response.raise_for_status()
 
         result = response.json()
