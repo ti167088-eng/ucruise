@@ -15,7 +15,6 @@ import warnings
 import multiprocessing as mp
 from concurrent.futures import ThreadPoolExecutor
 from logger_config import get_logger, start_session
-import urllib.parse
 
 # Start new session with cleared logs
 logger = start_session()
@@ -317,27 +316,16 @@ def load_env_and_fetch_data(source_id: str,
     if not BASE_API_URL or not API_AUTH_TOKEN:
         raise ValueError("Both API_URL and API_AUTH_TOKEN must be set in .env")
 
-    # Properly encode URL parameters to handle special characters
-    encoded_string_param = urllib.parse.quote(string_param, safe='') if string_param else ''
-    encoded_choice = urllib.parse.quote(choice, safe='') if choice else ''
-
     # Send all parameters along with source_id in the API URL
-    API_URL = f"{BASE_API_URL.rstrip('/')}/{source_id}/{parameter}/{encoded_string_param}/{encoded_choice}"
+    API_URL = f"{BASE_API_URL.rstrip('/')}/{source_id}/{parameter}/{string_param}/{choice}"
     headers = {
         "Authorization": f"Bearer {API_AUTH_TOKEN}",
         "Content-Type": "application/json"
     }
 
     logger.info(f"📡 Making API call to: {API_URL}")
-    try:
-        resp = requests.get(API_URL, headers=headers, timeout=30)
-        resp.raise_for_status()
-    except requests.exceptions.Timeout:
-        raise ValueError(f"API request timed out after 30 seconds for URL: {API_URL}")
-    except requests.exceptions.ConnectionError:
-        raise ValueError(f"Connection error when calling API: {API_URL}")
-    except requests.exceptions.RequestException as e:
-        raise ValueError(f"API request failed: {str(e)} for URL: {API_URL}")
+    resp = requests.get(API_URL, headers=headers)
+    resp.raise_for_status()
 
     # Check if response body is empty
     if len(resp.text.strip()) == 0:
