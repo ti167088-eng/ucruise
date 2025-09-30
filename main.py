@@ -26,12 +26,12 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.post("/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}")
+@app.post("/assign-drivers/{source_id}/{parameter}/{string_param}/{ridesetting}")
 def assign_drivers(source_id: str, parameter: int, string_param: str,
-                   choice: str):
+                   ridesetting: str):
     try:
         print(
-            f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}, choice: {choice}"
+            f"🚗 Starting assignment for source_id: {source_id}, parameter: {parameter}, string_param: {string_param}, ridesetting: {ridesetting}"
         )
 
         # Clear any existing route files to ensure fresh assignment
@@ -48,14 +48,14 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
         # Import here to avoid circular imports
         from assignment import load_env_and_fetch_data
 
-        # Handle empty choice parameter
-        if not choice or choice.strip() == "":
-            choice = " "  # Use space instead of empty string
-            
+        # Handle empty ridesetting parameter
+        if not ridesetting or ridesetting.strip() == "":
+            ridesetting = " "  # Use space instead of empty string
+
         # First, get the data to determine which algorithm to use
         try:
             data = load_env_and_fetch_data(source_id, parameter, string_param,
-                                           choice)
+                                           ridesetting)
 
             # Get algorithm priority from ride_settings
             ride_settings = data.get("ride_settings", {})
@@ -75,21 +75,21 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
                 print("🎪 Using CAPACITY OPTIMIZATION (Priority 1)")
                 from assign_capacity import run_assignment_capacity
                 result = run_assignment_capacity(source_id, parameter,
-                                                 string_param, choice)
+                                                 string_param, ridesetting)
                 result["optimization_mode"] = "capacity_optimization"
 
             elif algorithm_priority == 2:
                 print("⚖️ Using BALANCED OPTIMIZATION (Priority 2)")
                 from assign_balance import run_assignment_balance
                 result = run_assignment_balance(source_id, parameter,
-                                                string_param, choice)
+                                                string_param, ridesetting)
                 result["optimization_mode"] = "balanced_optimization"
 
             elif algorithm_priority == 3:
                 print("🗺️ Using ROAD-AWARE ROUTING (Priority 3)")
                 from assign_route import run_road_aware_assignment
                 result = run_road_aware_assignment(source_id, parameter,
-                                                   string_param, choice)
+                                                   string_param, ridesetting)
                 result["optimization_mode"] = "road_aware_route_optimization"
 
             else:
@@ -98,13 +98,13 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
                 )
                 from assignment import run_assignment
                 result = run_assignment(source_id, parameter, string_param,
-                                        choice)
+                                        ridesetting)
                 result["optimization_mode"] = "route_efficiency_default"
 
         except Exception as api_error:
             print(f"⚠️ API error, using default algorithm: {api_error}")
             from assignment import run_assignment
-            result = run_assignment(source_id, parameter, string_param, choice)
+            result = run_assignment(source_id, parameter, string_param, ridesetting)
             result["optimization_mode"] = "route_efficiency_default"
 
         # Ensure result has proper structure
@@ -118,7 +118,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
         # Add parameters to result
         result["parameter"] = parameter
         result["string_param"] = string_param
-        result["choice"] = choice
+        result["ridesetting"] = ridesetting
 
         # Ensure data is always an array
         if "data" not in result:
@@ -155,7 +155,7 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
             "data": [],
             "parameter": parameter,
             "string_param": string_param,
-            "choice": choice,
+            "ridesetting": ridesetting,
             "optimization_mode": "error"
         }
 
@@ -223,7 +223,7 @@ def root():
         "message":
         "Driver Assignment API with Multiple Optimization Modes",
         "endpoints": [
-            "/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}",
+            "/assign-drivers/{source_id}/{parameter}/{string_param}/{ridesetting}",
             "/routes", "/visualize", "/health"
         ],
         "optimization_modes": {
