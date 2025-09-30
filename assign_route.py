@@ -2685,6 +2685,10 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
 
             enhanced_unassigned_drivers.append(enhanced_driver)
 
+        # FINAL STEP: Consolidate nearby users (within 1km) into same routes
+        logger.info("🎯 Final step: Consolidating nearby users within 1km radius")
+        enhanced_routes = consolidate_nearby_users_final(enhanced_routes, office_lat, office_lon)
+
         # Final result assembly
         result = {
             "status": "true",
@@ -4007,3 +4011,71 @@ def assign_leftover_users_to_drivers(unassigned_users, available_drivers, office
             print(f"   🚗 Created leftover route: Driver {driver['driver_id']} with {len(route['assigned_users'])}/{vehicle_capacity} users ({utilization:.1f}%)")
 
     return leftover_routes
+
+
+def consolidate_nearby_users_final(routes, office_lat, office_lon):
+    """
+    Final consolidation: Move nearby users (within 1km) to the same route if capacity allows
+    """
+    logger = get_logger()
+    logger.info("🎯 Consolidating nearby users within 1km radius...")
+
+    consolidated_routes = []
+    moves_made = 0
+
+    # Process each route
+    for i, route in enumerate(routes):
+        if not route['assigned_users']:
+            consolidated_routes.append(route)
+            continue
+
+        current_route = route.copy()
+
+        # Look for users in other routes that are within 1km of any user in current route
+        for j, other_route in enumerate(routes):
+            if i >= j or not other_route['assigned_users']:
+                continue
+
+            # Check if other route has available capacity
+            if len(other_route['assigned_users']) >= other_route['vehicle_type']:
+                continue
+
+            users_to_move = []
+
+            # Check each user in current route against each user in other route
+            for current_user in current_route['assigned_users'][:]:
+                for other_user in other_route['assigned_users']:
+                    distance = haversine_distance(
+                        current_user['lat'], current_user['lng'],
+                        other_user['lat'], other_user['lng']
+                    )
+
+                    # If users are within 1km, move current_user to other_route
+                    if distance <= 1.0:  # 1km radius
+                        # Check if other route has capacity
+                        if len(other_route['assigned_users']) + len(users_to_move) < other_route['vehicle_type']:
+                            users_to_move.append(current_user)
+                            logger.info(f"   📍 Moving user {current_user['user_id']} from route {current_route['driver_id']} to route {other_route['driver_id']} (distance: {distance:.2f}km)")
+                            moves_made += 1
+                            break  # Found a match, move on to next user
+
+            # Actually move the users
+            for user_to_move in users_to_move:
+                if user_to_move in current_route['assigned_users']:
+                    current_route['assigned_users'].remove(user_to_move)
+                    other_route['assigned_users'].append(user_to_move)
+
+        consolidated_routes.append(current_route)
+
+    # Re-optimize sequences for all routes after moves
+    for route in consolidated_routes:
+        if route['assigned_users']:
+            route = optimize_route_sequence_improved(route, office_lat, office_lon)
+            update_route_metrics_improved(route, office_lat, office_lon)
+
+    # Filter out routes with no users
+    final_routes = [route for route in consolidated_routes if route['assigned_users']]
+
+    logger.info(f"🎯 Consolidation complete: {moves_made} users moved, {len(routes)} → {len(final_routes)} routes")
+
+    return final_routes
