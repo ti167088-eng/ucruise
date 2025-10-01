@@ -112,9 +112,9 @@ def load_and_validate_config():
 
     config = {}
 
-    # Locality clustering parameters (Stage 1)
-    config['LOCALITY_EPS_KM'] = max(0.5, float(mode_config.get("locality_eps_km", cfg.get("locality_eps_km", 2.0))))
-    config['LOCALITY_MIN_SAMPLES'] = max(1, int(mode_config.get("locality_min_samples", cfg.get("locality_min_samples", 2))))
+    # Locality clustering parameters (Stage 1) - tighter for 1km grouping
+    config['LOCALITY_EPS_KM'] = max(0.5, float(mode_config.get("locality_eps_km", cfg.get("locality_eps_km", 1.0))))  # Reduced from 2.0 to 1.0
+    config['LOCALITY_MIN_SAMPLES'] = max(1, int(mode_config.get("locality_min_samples", cfg.get("locality_min_samples", 1))))  # Reduced from 2 to 1
 
     # Directional clustering parameters (Stage 2)
     config['ANGULAR_SECTORS'] = max(6, int(mode_config.get("angular_sectors", cfg.get("angular_sectors", 8))))
@@ -209,7 +209,7 @@ def derive_user_features(user_df, office_lat, office_lon):
 
     # Core distance and bearing features
     user_df['office_distance'] = user_df.apply(
-        lambda row: haversine_distance(row['latitude'], row['longitude'], office_lat, office_lon), 
+        lambda row: haversine_distance(row['latitude'], row['longitude'], office_lat, office_lon),
         axis=1
     )
 
@@ -243,8 +243,8 @@ def derive_user_features(user_df, office_lat, office_lon):
     return user_df
 
 def create_locality_clusters(user_df):
-    """Stage 1: Cluster users by geographic locality using DBSCAN"""
-    logger.info("🏘️ Stage 1: Creating locality clusters...")
+    """Stage 1: Cluster users by geographic locality using DBSCAN with 1km grouping"""
+    logger.info("🏘️ Stage 1: Creating locality clusters with 1km grouping...")
 
     if len(user_df) < 2:
         user_df['locality_cluster'] = 0
@@ -260,109 +260,121 @@ def create_locality_clusters(user_df):
         coords_km.append([lat_km, lon_km])
     coords_km = np.array(coords_km)
 
-    # Apply DBSCAN clustering
-    dbscan = DBSCAN(eps=LOCALITY_EPS_KM, min_samples=LOCALITY_MIN_SAMPLES)
+    # Use stricter 1km radius for locality clustering
+    tight_eps = 1.0  # 1km radius to ensure nearby users are grouped
+    dbscan = DBSCAN(eps=tight_eps, min_samples=1)  # min_samples=1 to avoid noise points
     clusters = dbscan.fit_predict(coords_km)
 
-    # Ensure close users are grouped together
-    clusters = ensure_close_users_grouped(coords_km, clusters, max_distance_km=LOCALITY_EPS_KM / 2) # Use half of eps for closer grouping
+    # Post-process to ensure ALL users within 1km are in same cluster
+    clusters = ensure_1km_grouping(coords_km, clusters, user_df)
 
     user_df['locality_cluster'] = clusters
 
-    # Handle noise points (cluster = -1) by assigning them to nearest cluster or creating singleton clusters
-    noise_mask = clusters == -1
-    if noise_mask.any():
-        noise_indices = np.where(noise_mask)[0]
-        valid_clusters = clusters[~noise_mask]
-
-        if len(valid_clusters) > 0:
-            # Build KDTree for fast nearest neighbor search
-            valid_coords = coords_km[~noise_mask]
-            tree = KDTree(valid_coords)
-
-            next_cluster_id = max(valid_clusters) + 1
-
-            for noise_idx in noise_indices:
-                noise_coord = coords_km[noise_idx].reshape(1, -1)
-                distances, indices = tree.query(noise_coord, k=1)
-
-                if distances[0][0] <= LOCALITY_EPS_KM * 1.5:  # Allow slightly larger distance for noise
-                    # Assign to nearest cluster
-                    nearest_cluster = valid_clusters[indices[0][0]]
-                    user_df.iloc[noise_idx, user_df.columns.get_loc('locality_cluster')] = nearest_cluster
-                else:
-                    # Create new singleton cluster
-                    user_df.iloc[noise_idx, user_df.columns.get_loc('locality_cluster')] = next_cluster_id
-                    next_cluster_id += 1
-        else:
-            # All points are noise, assign sequential cluster IDs
-            user_df.loc[noise_mask, 'locality_cluster'] = range(len(noise_indices))
-
     n_clusters = len(set(user_df['locality_cluster']))
-    logger.info(f"🏘️ Created {n_clusters} locality clusters")
+    logger.info(f"🏘️ Created {n_clusters} locality clusters with 1km grouping")
 
-    # Log cluster sizes
+    # Log cluster sizes and validate 1km constraint
     cluster_sizes = user_df['locality_cluster'].value_counts().sort_index()
     for cluster_id, size in cluster_sizes.items():
         logger.info(f"   Locality {cluster_id}: {size} users")
 
+        # Validate that all users in cluster are within reasonable distance
+        cluster_coords = coords_km[clusters == cluster_id]
+        if len(cluster_coords) > 1:
+            max_distance = 0
+            for i in range(len(cluster_coords)):
+                for j in range(i + 1, len(cluster_coords)):
+                    dist = np.linalg.norm(cluster_coords[i] - cluster_coords[j])
+                    max_distance = max(max_distance, dist)
+            logger.info(f"     Max intra-cluster distance: {max_distance:.2f}km")
+
     return user_df
 
-def ensure_close_users_grouped(coords_km, clusters, max_distance_km=1.0):
-    """Ensure users within 1km of each other are in the same cluster"""
-    logger.info(f"🔍 Ensuring users within {max_distance_km}km are grouped together...")
+def ensure_1km_grouping(coords_km, clusters, user_df):
+    """Ensure ALL users within 1km of each other are in the same cluster"""
+    logger.info("🔍 Ensuring ALL users within 1km are grouped together...")
 
     # Build distance matrix for all points
     from scipy.spatial.distance import cdist
     distances = cdist(coords_km, coords_km, metric='euclidean')
 
-    # Create groups of users that should be in same cluster
-    close_groups = []
-    processed = set()
+    # Use Union-Find to group users within 1km
+    parent = list(range(len(coords_km)))
+
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
+
+    # Union all users within 1km of each other
+    for i in range(len(coords_km)):
+        for j in range(i + 1, len(coords_km)):
+            if distances[i][j] <= 1.0:  # 1km radius
+                union(i, j)
+
+    # Create cluster mapping
+    cluster_map = {}
+    cluster_id = 0
+    modified_clusters = np.zeros(len(coords_km), dtype=int)
 
     for i in range(len(coords_km)):
-        if i in processed:
-            continue
+        root = find(i)
+        if root not in cluster_map:
+            cluster_map[root] = cluster_id
+            cluster_id += 1
+        modified_clusters[i] = cluster_map[root]
 
-        # Find all users within max_distance_km of user i
-        close_users = []
-        for j in range(len(coords_km)):
-            if distances[i][j] <= max_distance_km:
-                close_users.append(j)
-                processed.add(j)
+    # Log grouping results
+    groups_created = 0
+    for cluster_id in set(modified_clusters):
+        cluster_indices = np.where(modified_clusters == cluster_id)[0]
+        if len(cluster_indices) > 1:
+            groups_created += 1
+            user_ids = [user_df.iloc[idx]['user_id'] for idx in cluster_indices]
+            logger.info(f"   🤝 Grouped {len(cluster_indices)} users in cluster {cluster_id}: {user_ids}")
 
-        if len(close_users) > 1:
-            close_groups.append(close_users)
-
-    # Merge close users into same clusters
-    modified_clusters = clusters.copy()
-    next_cluster_id = max(clusters) + 1 if len(clusters) > 0 and max(clusters) >= 0 else 0
-
-    for group in close_groups:
-        # Assign all users in this group to the same cluster
-        for user_idx in group:
-            modified_clusters[user_idx] = next_cluster_id
-        next_cluster_id += 1
-
-        logger.info(f"   🤝 Grouped {len(group)} users within {max_distance_km}km into cluster {next_cluster_id-1}")
-
+    logger.info(f"   ✅ Created {groups_created} groups with users within 1km")
     return modified_clusters
 
 # ================== STAGE 2: DIRECTIONAL SPLITTING ==================
 
 def split_locality_by_direction(user_group, locality_id):
-    """Stage 2: Split locality cluster by travel direction"""
+    """Stage 2: Split locality cluster by travel direction (less aggressive for nearby users)"""
     logger.info(f"📐 Stage 2: Directional splitting for locality {locality_id}")
 
     if len(user_group) <= 1:
         user_group['direction_cluster'] = 0
         return user_group
 
-    # A. Angular sectoring approach
-    direction_clusters = apply_angular_sectoring(user_group, locality_id)
+    # Check if all users are very close (within 1.5km) - if so, keep them together
+    coords = user_group[['latitude', 'longitude']].values
+    max_distance = 0
+    for i in range(len(coords)):
+        for j in range(i + 1, len(coords)):
+            from assignment import haversine_distance
+            dist = haversine_distance(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
+            max_distance = max(max_distance, dist)
 
-    # B. Path projection + turning detection (for refinement)
-    direction_clusters = refine_with_turning_detection(direction_clusters, locality_id)
+    # If all users are within 1.5km, don't split by direction
+    if max_distance <= 1.5:
+        user_group['direction_cluster'] = 0
+        logger.info(f"   🤝 Locality {locality_id}: Keeping {len(user_group)} nearby users together (max distance: {max_distance:.2f}km)")
+        return user_group
+
+    # Only split if users are spread out
+    logger.info(f"   📐 Locality {locality_id}: Users spread over {max_distance:.2f}km, applying directional splitting")
+
+    # A. Angular sectoring approach (less aggressive)
+    direction_clusters = apply_angular_sectoring_conservative(user_group, locality_id)
+
+    # B. Path projection + turning detection (for refinement) - only if really needed
+    if len(set(direction_clusters['direction_cluster'])) > 1:
+        direction_clusters = refine_with_turning_detection(direction_clusters, locality_id)
 
     return direction_clusters
 
@@ -386,6 +398,46 @@ def apply_angular_sectoring(user_group, locality_id):
     user_group['direction_cluster'] = sector_ids
 
     logger.info(f"   🎯 Locality {locality_id}: Split into {len(set(sector_ids))} angular sectors")
+    return user_group
+
+def apply_angular_sectoring_conservative(user_group, locality_id):
+    """Conservative angular sectoring - only split if bearing differences are significant"""
+    user_group = user_group.copy()
+
+    # Calculate bearings to office for all users
+    bearings = []
+    for _, user in user_group.iterrows():
+        bearing = calculate_bearing(user['latitude'], user['longitude'], OFFICE_LAT, OFFICE_LON)
+        bearings.append(bearing)
+
+    # Check if all bearings are within 60 degrees - if so, keep together
+    bearing_spread = max(bearings) - min(bearings)
+    if bearing_spread > 180:  # Handle wrap-around case
+        bearing_spread = 360 - bearing_spread
+
+    if bearing_spread <= 60:  # Within 60 degrees - keep together
+        user_group['direction_cluster'] = 0
+        logger.info(f"   🤝 Locality {locality_id}: All users within {bearing_spread:.1f}° bearing spread, keeping together")
+        return user_group
+
+    # Only split if bearing spread is significant
+    logger.info(f"   📐 Locality {locality_id}: Bearing spread {bearing_spread:.1f}°, applying sectoring")
+
+    # Use fewer, larger sectors for conservative splitting
+    conservative_sectors = min(4, ANGULAR_SECTORS)  # Max 4 sectors
+    center_lat = user_group['latitude'].median()
+    center_lon = user_group['longitude'].median()
+    cluster_center_bearing = calculate_bearing(center_lat, center_lon, OFFICE_LAT, OFFICE_LON)
+
+    relative_bearings = user_group['bearing_to_office'] - cluster_center_bearing
+    relative_bearings = relative_bearings.apply(normalize_bearing_difference)
+
+    sector_size = 360 / conservative_sectors
+    sector_ids = ((relative_bearings + 180) / sector_size).astype(int) % conservative_sectors
+
+    user_group['direction_cluster'] = sector_ids
+
+    logger.info(f"   🎯 Locality {locality_id}: Split into {len(set(sector_ids))} conservative sectors")
     return user_group
 
 def refine_with_turning_detection(user_group, locality_id):
@@ -436,7 +488,7 @@ def detect_turning_points(sorted_group):
 
     for i in range(1, len(positions) - 1):
         # Calculate turning angle at point i
-        prev_bearing = calculate_bearing(positions[i-1][0], positions[i-1][1], 
+        prev_bearing = calculate_bearing(positions[i-1][0], positions[i-1][1],
                                        positions[i][0], positions[i][1])
         next_bearing = calculate_bearing(positions[i][0], positions[i][1],
                                        positions[i+1][0], positions[i+1][1])
@@ -452,7 +504,7 @@ def detect_turning_points(sorted_group):
                                               positions[-1][0], positions[-1][1])
 
         total_route_distance = sum(
-            haversine_distance(positions[i][0], positions[i][1], 
+            haversine_distance(positions[i][0], positions[i][1],
                              positions[i+1][0], positions[i+1][1])
             for i in range(len(positions) - 1)
         )
@@ -465,22 +517,119 @@ def detect_turning_points(sorted_group):
 
     return sorted(set(turning_points))
 
+# ================== STAGE 2.5: CAPACITY MATCHING ENGINE ==================
+
+def compute_demand_per_locality(user_df):
+    """Compute demand summary per locality cluster"""
+    locality_demands = {}
+
+    for locality_id in user_df['locality_cluster'].unique():
+        locality_users = user_df[user_df['locality_cluster'] == locality_id]
+
+        if len(locality_users) == 0:
+            continue
+
+        # Calculate bounding box for density estimation
+        coords = locality_users[['latitude', 'longitude']].values
+        coords_km = np.array([coords_to_km(coord[0], coord[1], OFFICE_LAT, OFFICE_LON) for coord in coords])
+
+        if len(coords_km) > 1:
+            lat_range = np.max(coords_km[:, 0]) - np.min(coords_km[:, 0])
+            lon_range = np.max(coords_km[:, 1]) - np.min(coords_km[:, 1])
+            area_km2 = max(0.1, lat_range * lon_range)  # Minimum 0.1 km²
+            density = len(locality_users) / area_km2
+        else:
+            density = 10.0  # High density for single user
+
+        avg_office_distance = locality_users['office_distance'].mean()
+
+        locality_demands[locality_id] = {
+            'n_users': len(locality_users),
+            'density': density,
+            'avg_office_distance': avg_office_distance,
+            'users': locality_users
+        }
+
+        logger.info(f"   🏘️ Locality {locality_id}: {len(locality_users)} users, density: {density:.1f} users/km²")
+
+    return locality_demands
+
+def capacity_aware_matching(locality_demands, available_capacities):
+    """Match localities to vehicle capacities using best-fit decreasing algorithm"""
+    logger.info("🧮 Stage 2.5: Capacity-aware matching...")
+
+    # Sort localities by size descending (best-fit decreasing)
+    sorted_localities = sorted(locality_demands.items(), 
+                              key=lambda x: x[1]['n_users'], reverse=True)
+
+    # Sort available capacities descending
+    sorted_capacities = sorted(available_capacities, reverse=True)
+    capacity_counts = {}
+    for cap in sorted_capacities:
+        capacity_counts[cap] = capacity_counts.get(cap, 0) + 1
+
+    locality_capacity_mapping = {}
+
+    WASTE_PENALTY_THRESHOLD = 2  # Allow ≤2 empty seats
+
+    for locality_id, demand in sorted_localities:
+        n_users = demand['n_users']
+        density = demand['density']
+
+        # Find best-fit capacity
+        best_capacity = None
+        min_waste = float('inf')
+
+        for capacity in sorted(capacity_counts.keys(), reverse=True):
+            if capacity_counts[capacity] > 0 and capacity >= n_users:
+                waste = capacity - n_users
+
+                # Prefer larger vehicles for dense clusters (density > 5 users/km²)
+                if density > 5.0 and capacity >= 7:
+                    waste -= 1  # Bonus for larger vehicles in dense areas
+
+                if waste <= WASTE_PENALTY_THRESHOLD and waste < min_waste:
+                    min_waste = waste
+                    best_capacity = capacity
+
+        # If no capacity found with acceptable waste, use smallest that fits
+        if best_capacity is None:
+            for capacity in sorted(capacity_counts.keys()):
+                if capacity_counts[capacity] > 0 and capacity >= n_users:
+                    best_capacity = capacity
+                    break
+
+        if best_capacity is not None:
+            locality_capacity_mapping[locality_id] = best_capacity
+            capacity_counts[best_capacity] -= 1
+            logger.info(f"   📐 Locality {locality_id}: {n_users} users → {best_capacity}-seater (waste: {best_capacity - n_users})")
+        else:
+            # Need to split locality
+            logger.info(f"   ✂️ Locality {locality_id}: {n_users} users needs splitting")
+            locality_capacity_mapping[locality_id] = max(available_capacities) if available_capacities else 7
+
+    return locality_capacity_mapping
+
 # ================== STAGE 3: CAPACITY-AWARE SUBCLUSTERING ==================
 
-def create_capacity_aware_subclusters(direction_group, available_capacities):
-    """Stage 3: Create capacity-aware subclusters within direction groups"""
+def create_capacity_aware_subclusters(direction_group, available_capacities, target_capacity=None):
+    """Stage 3: Create capacity-aware subclusters sized to match vehicle capacities"""
     if len(direction_group) <= 1:
         direction_group['capacity_cluster'] = 0
         return direction_group
 
-    # Determine target cluster sizes based on available vehicle capacities
-    max_capacity = max(available_capacities) if available_capacities else MAX_USERS_PER_CLUSTER
-    target_size = min(int(max_capacity * CAPACITY_SLACK_FACTOR), MAX_USERS_PER_CLUSTER)
+    # Use target capacity from capacity matching if provided
+    if target_capacity is not None:
+        target_size = target_capacity
+    else:
+        # Fallback to original logic
+        max_capacity = max(available_capacities) if available_capacities else MAX_USERS_PER_CLUSTER
+        target_size = min(int(max_capacity * CAPACITY_SLACK_FACTOR), MAX_USERS_PER_CLUSTER)
 
     # Sort by projection for contiguous grouping
     sorted_group = direction_group.sort_values('projection_along_main_axis').copy()
 
-    # Use sweep algorithm to create contiguous capacity-aware clusters
+    # Use capacity-aware binning instead of fixed target size
     clusters = []
     current_cluster = []
     cluster_id = 0
@@ -488,9 +637,9 @@ def create_capacity_aware_subclusters(direction_group, available_capacities):
     for idx, (_, user) in enumerate(sorted_group.iterrows()):
         current_cluster.append(user)
 
-        # Check if we should close current cluster
+        # Check if we should close current cluster based on target capacity
         should_close = (
-            len(current_cluster) >= target_size or  # Reached target size
+            len(current_cluster) >= target_size or  # Reached target capacity
             idx == len(sorted_group) - 1  # Last user
         )
 
@@ -512,7 +661,7 @@ def create_capacity_aware_subclusters(direction_group, available_capacities):
 # ================== STAGE 4: DRIVER ASSIGNMENT ==================
 
 def assign_best_driver_to_cluster(cluster_users, available_drivers, used_driver_ids, office_lat, office_lon):
-    """Stage 4: Assign best driver to capacity cluster using balanced cost function"""
+    """Stage 4: Assign best driver to capacity cluster using capacity-aware cost function"""
     cluster_size = len(cluster_users)
 
     if cluster_size == 0:
@@ -522,23 +671,32 @@ def assign_best_driver_to_cluster(cluster_users, available_drivers, used_driver_
     best_cost = float('inf')
     best_sequence = None
 
-    for _, driver in available_drivers.iterrows():
-        if driver['driver_id'] in used_driver_ids or driver['capacity'] < cluster_size:
+    # Heavy penalty for wasted seats to encourage capacity matching
+    HEAVY_WASTE_PENALTY = GAMMA_UTILIZATION * 2.0
+
+    for driver in available_drivers.itertuples(index=False):
+        if driver.driver_id in used_driver_ids or driver.capacity < cluster_size:
             continue
 
         # Calculate balanced cost components
         route_distance, sequence, turning_penalty = calculate_route_metrics(
             driver, cluster_users, office_lat, office_lon)
 
-        utilization = cluster_size / driver['capacity']
-        utilization_penalty = (1 - utilization) * GAMMA_UTILIZATION
+        utilization = cluster_size / driver.capacity
+        wasted_seats = driver.capacity - cluster_size
 
-        priority_penalty = driver['priority'] * DELTA_PRIORITY
+        # Heavy penalty for wasted seats to prefer capacity-matched vehicles
+        if wasted_seats > 2:  # More than 2 empty seats gets heavy penalty
+            utilization_penalty = wasted_seats * HEAVY_WASTE_PENALTY
+        else:
+            utilization_penalty = (1 - utilization) * GAMMA_UTILIZATION
 
-        # Balanced cost function
-        total_cost = (ALPHA_DISTANCE * route_distance + 
-                     BETA_TURNING * turning_penalty + 
-                     utilization_penalty + 
+        priority_penalty = driver.priority * DELTA_PRIORITY
+
+        # Capacity-aware cost function with heavy waste penalty
+        total_cost = (ALPHA_DISTANCE * route_distance +
+                     BETA_TURNING * turning_penalty +
+                     utilization_penalty +
                      priority_penalty)
 
         if total_cost < best_cost:
@@ -547,13 +705,15 @@ def assign_best_driver_to_cluster(cluster_users, available_drivers, used_driver_
             best_sequence = sequence
 
     if best_driver is not None:
-        used_driver_ids.add(best_driver['driver_id'])
+        used_driver_ids.add(best_driver.driver_id)
 
         route = create_route_from_assignment(best_driver, best_sequence, office_lat, office_lon)
 
-        utilization_pct = (cluster_size / best_driver['capacity']) * 100
-        logger.info(f"   🚗 Assigned driver {best_driver['driver_id']}: "
-                   f"{cluster_size}/{best_driver['capacity']} seats ({utilization_pct:.1f}%)")
+        utilization_pct = (cluster_size / best_driver.capacity) * 100
+        wasted_seats = best_driver.capacity - cluster_size
+        logger.info(f"   🚗 Assigned driver {best_driver.driver_id}: "
+                   f"{cluster_size}/{best_driver.capacity} seats ({utilization_pct:.1f}%) "
+                   f"[{wasted_seats} empty seats]")
 
         return route
 
@@ -564,7 +724,7 @@ def calculate_route_metrics(driver, cluster_users, office_lat, office_lon):
     if len(cluster_users) == 0:
         return float('inf'), [], 0
 
-    driver_pos = (driver['latitude'], driver['longitude'])
+    driver_pos = (driver.latitude, driver.longitude)
     office_pos = (office_lat, office_lon)
 
     # Get optimal sequence using projection-based ordering with 2-opt
@@ -684,7 +844,7 @@ def calculate_total_distance(sequence, driver_pos, office_pos):
     if not sequence:
         return 0
 
-    total = haversine_distance(driver_pos[0], driver_pos[1], 
+    total = haversine_distance(driver_pos[0], driver_pos[1],
                               sequence[0]['latitude'], sequence[0]['longitude'])
 
     for i in range(len(sequence) - 1):
@@ -722,11 +882,11 @@ def calculate_total_turning(sequence, driver_pos, office_pos):
 def create_route_from_assignment(driver, sequence, office_lat, office_lon):
     """Create route object from driver and user sequence"""
     route = {
-        'driver_id': str(driver['driver_id']),
-        'vehicle_id': str(driver.get('vehicle_id', '')),
-        'vehicle_type': int(driver['capacity']),
-        'latitude': float(driver['latitude']),
-        'longitude': float(driver['longitude']),
+        'driver_id': str(driver.driver_id),
+        'vehicle_id': str(driver.vehicle_id if hasattr(driver, 'vehicle_id') else ''),
+        'vehicle_type': int(driver.capacity),
+        'latitude': float(driver.latitude),
+        'longitude': float(driver.longitude),
         'assigned_users': []
     }
 
@@ -757,52 +917,73 @@ def create_route_from_assignment(driver, sequence, office_lat, office_lon):
 # ================== STAGE 6: SEAT FILLING ==================
 
 def path_aware_seat_filling(routes, unassigned_users_df, office_lat, office_lon):
-    """Stage 6: Fill remaining seats with path-aware constraints"""
-    logger.info("🪑 Stage 6: Path-aware seat filling...")
+    """Stage 6: Fill remaining seats with strict path-aware constraints"""
+    logger.info("🪑 Stage 6: Path-aware seat filling with strict on-route checks...")
 
     if unassigned_users_df.empty:
         return routes, set()
 
     filled_user_ids = set()
 
+    # Tighter thresholds for path-aware assignment
+    TIGHT_MAX_DETOUR_RATIO = 1.15  # More strict than general MAX_DETOUR_RATIO
+    TIGHT_COHERENCE_TOLERANCE = 0.02  # More strict coherence tolerance
+
     for route in routes:
         if len(route['assigned_users']) >= route['vehicle_type']:
             continue
 
         available_seats = route['vehicle_type'] - len(route['assigned_users'])
-        route_center = calculate_route_center(route)
+
+        # Get current route path for on-route checking
+        driver_pos = (route['latitude'], route['longitude'])
+        current_user_positions = [(user['lat'], user['lng']) for user in route['assigned_users']]
+        office_pos = (office_lat, office_lon)
 
         # Get current route coherence
         current_coherence = calculate_route_coherence(route, office_lat, office_lon)
 
-        # Find candidate users near the route
+        # Find candidate users that are actually ON the route path
         candidate_users = []
 
         for _, user in unassigned_users_df.iterrows():
             if user['user_id'] in filled_user_ids:
                 continue
 
-            distance_to_route = haversine_distance(route_center[0], route_center[1],
-                                                 user['latitude'], user['longitude'])
+            user_pos = (user['latitude'], user['longitude'])
 
-            if distance_to_route <= MAX_FILL_DISTANCE_KM:
-                # Calculate insertion cost and coherence impact
-                insertion_cost, new_coherence = calculate_insertion_impact(
-                    route, user, office_lat, office_lon, current_coherence)
+            # First check: Is user actually on or near the route path?
+            is_on_route = road_network.is_user_on_route_path(
+                driver_pos, current_user_positions, user_pos, office_pos,
+                max_detour_ratio=TIGHT_MAX_DETOUR_RATIO, route_type="balanced"
+            )
 
-                # Check constraints
-                coherence_ok = (new_coherence >= current_coherence - COHERENCE_TOLERANCE)
-                detour_ok = (insertion_cost <= MAX_DETOUR_RATIO)
+            if not is_on_route:
+                continue  # Skip users not on route path
 
-                if coherence_ok and detour_ok:
-                    score = (0.6 * insertion_cost + 
-                            0.3 * max(0, current_coherence - new_coherence) +
-                            0.1 * distance_to_route)
-                    candidate_users.append((score, user))
+            # Second check: Calculate precise insertion impact
+            insertion_cost, new_coherence = calculate_insertion_impact(
+                route, user, office_lat, office_lon, current_coherence)
 
-        # Fill seats with best candidates
+            # Strict constraints for path-aware assignment
+            coherence_ok = (new_coherence >= current_coherence - TIGHT_COHERENCE_TOLERANCE)
+            detour_ok = (insertion_cost <= TIGHT_MAX_DETOUR_RATIO)
+
+            if coherence_ok and detour_ok:
+                # Calculate distance to route path (not just center)
+                path_distance = calculate_distance_to_route_path(route, user_pos, office_pos)
+
+                # Prioritize users closer to the actual path
+                score = (0.5 * insertion_cost +
+                        0.3 * max(0, current_coherence - new_coherence) +
+                        0.2 * (path_distance / MAX_FILL_DISTANCE_KM))
+                candidate_users.append((score, user))
+
+                logger.info(f"   🛣️ User {user['user_id']} is on route {route['driver_id']} path "
+                           f"(detour: {insertion_cost:.2f}, path_dist: {path_distance:.2f}km)")
+
+        # Fill seats with best on-route candidates
         candidate_users.sort(key=lambda x: x[0])  # Lower score is better
-
         users_to_add = candidate_users[:available_seats]
 
         for score, user in users_to_add:
@@ -826,10 +1007,80 @@ def path_aware_seat_filling(routes, unassigned_users_df, office_lat, office_lon)
             route = reoptimize_route_sequence(route, office_lat, office_lon)
 
             utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
-            logger.info(f"   🪑 Added {len(users_to_add)} users to route {route['driver_id']} "
+            logger.info(f"   🪑 Added {len(users_to_add)} ON-ROUTE users to route {route['driver_id']} "
                        f"({utilization:.1f}% utilization)")
 
     return routes, filled_user_ids
+
+def calculate_distance_to_route_path(route, user_pos, office_pos):
+    """Calculate distance from user to the actual route path"""
+    if not route['assigned_users']:
+        # Distance to driver
+        return haversine_distance(route['latitude'], route['longitude'], 
+                                 user_pos[0], user_pos[1])
+
+    # Find minimum distance to any segment of the route
+    min_distance = float('inf')
+
+    # Check distance to driver-to-first-user segment
+    if route['assigned_users']:
+        first_user = route['assigned_users'][0]
+        segment_dist = point_to_line_distance(
+            user_pos, 
+            (route['latitude'], route['longitude']),
+            (first_user['lat'], first_user['lng'])
+        )
+        min_distance = min(min_distance, segment_dist)
+
+    # Check distance to inter-user segments
+    for i in range(len(route['assigned_users']) - 1):
+        user1 = route['assigned_users'][i]
+        user2 = route['assigned_users'][i + 1]
+        segment_dist = point_to_line_distance(
+            user_pos,
+            (user1['lat'], user1['lng']),
+            (user2['lat'], user2['lng'])
+        )
+        min_distance = min(min_distance, segment_dist)
+
+    # Check distance to last-user-to-office segment
+    if route['assigned_users']:
+        last_user = route['assigned_users'][-1]
+        segment_dist = point_to_line_distance(
+            user_pos,
+            (last_user['lat'], last_user['lng']),
+            office_pos
+        )
+        min_distance = min(min_distance, segment_dist)
+
+    return min_distance
+
+def point_to_line_distance(point, line_start, line_end):
+    """Calculate distance from a point to a line segment"""
+    # Convert to numpy arrays for easier calculation
+    p = np.array(point)
+    a = np.array(line_start)
+    b = np.array(line_end)
+
+    # Vector from a to b
+    ab = b - a
+    # Vector from a to p
+    ap = p - a
+
+    # Project ap onto ab
+    ab_squared = np.dot(ab, ab)
+    if ab_squared == 0:
+        # Line segment is a point
+        return haversine_distance(point[0], point[1], line_start[0], line_start[1])
+
+    t = np.dot(ap, ab) / ab_squared
+    t = max(0, min(1, t))  # Clamp to [0, 1]
+
+    # Find the closest point on the line segment
+    closest_point = a + t * ab
+
+    # Return distance from point to closest point on line
+    return haversine_distance(point[0], point[1], closest_point[0], closest_point[1])
 
 def calculate_route_center(route):
     """Calculate the center point of a route"""
@@ -939,7 +1190,7 @@ def reoptimize_route_sequence(route, office_lat, office_lon):
 # ================== STAGE 7: GLOBAL OPTIMIZATION ==================
 
 def local_swaps_and_merges(routes, office_lat, office_lon):
-    """Stage 7: Perform local swaps and merges for global optimization"""
+    """Stage 7: Local swaps and global optimization"""
     logger.info("🔄 Stage 7: Local swaps and global optimization...")
 
     # Try local swaps first
@@ -1153,7 +1404,7 @@ def split_tortuous_routes(routes, office_lat, office_lon):
         tortuosity = calculate_route_tortuosity(route, office_lat, office_lon)
         turning_score = calculate_route_turning_score(route, office_lat, office_lon)
 
-        if (tortuosity > TORTUOSITY_THRESHOLD or 
+        if (tortuosity > TORTUOSITY_THRESHOLD or
             turning_score > TURNING_THRESHOLD_DEGREES * 1.5):
 
             # Split the route
@@ -1220,7 +1471,7 @@ def split_route_by_direction(route, office_lat, office_lon):
     # Find split points where bearing changes significantly
     split_points = []
     for i in range(len(users_with_bearings) - 1):
-        bearing_diff = abs(bearing_difference(users_with_bearings[i][0], 
+        bearing_diff = abs(bearing_difference(users_with_bearings[i][0],
                                             users_with_bearings[i+1][0]))
         if bearing_diff > TURNING_THRESHOLD_DEGREES:
             split_points.append(i + 1)
@@ -1338,7 +1589,7 @@ def aggressive_route_filling(routes, unassigned_users_df, office_lat, office_lon
     return routes, filled_ids
 
 def inject_spare_drivers(unassigned_users_df, available_drivers_df, office_lat, office_lon):
-    """Inject spare drivers to create routes for remaining users"""
+    """Inject spare drivers to create routes for remaining users with capacity-aware grouping"""
     if available_drivers_df.empty or unassigned_users_df.empty:
         return []
 
@@ -1346,45 +1597,55 @@ def inject_spare_drivers(unassigned_users_df, available_drivers_df, office_lat, 
     used_driver_ids = set()
     assigned_user_ids = set()
 
-    # Sort drivers by priority (lowest first for spare drivers)
-    sorted_drivers = available_drivers_df.sort_values('priority')
+    # Group remaining users by proximity for capacity matching
+    remaining_users = unassigned_users_df[~unassigned_users_df['user_id'].isin(assigned_user_ids)]
+    user_groups = group_residual_users_by_capacity(remaining_users, available_drivers_df)
 
-    for _, driver in sorted_drivers.iterrows():
-        if driver['driver_id'] in used_driver_ids or assigned_user_ids.issuperset(set(unassigned_users_df['user_id'])):
+    # Sort drivers by capacity descending, then by priority
+    sorted_drivers = available_drivers_df.sort_values(['capacity', 'priority'], ascending=[False, True])
+
+    for capacity, group_users in user_groups.items():
+        if not group_users or assigned_user_ids.issuperset(set(group_users['user_id'])):
             continue
 
-        remaining_users = unassigned_users_df[~unassigned_users_df['user_id'].isin(assigned_user_ids)]
-
-        if remaining_users.empty:
+        # Find best driver with matching capacity
+        best_driver = None
+        for _, driver in sorted_drivers.iterrows():
+            if (driver.driver_id in used_driver_ids or 
+                driver.capacity != capacity):
+                continue
+            best_driver = driver
             break
 
-        # Find users near this driver
-        driver_pos = (driver['latitude'], driver['longitude'])
-        nearby_users = []
+        if best_driver is None:
+            # Fallback to any available driver with sufficient capacity
+            for _, driver in sorted_drivers.iterrows():
+                if (driver.driver_id in used_driver_ids or 
+                    driver.capacity < len(group_users)):
+                    continue
+                best_driver = driver
+                break
 
-        for _, user in remaining_users.iterrows():
-            distance = haversine_distance(driver_pos[0], driver_pos[1],
-                                        user['latitude'], user['longitude'])
+        if best_driver is not None:
+            available_group_users = group_users[~group_users['user_id'].isin(assigned_user_ids)]
 
-            if distance <= MAX_FILL_DISTANCE_KM * 2:  # Very relaxed for injection
-                nearby_users.append((distance, user))
+            if available_group_users.empty:
+                continue
 
-        if nearby_users:
-            # Take up to capacity users, sorted by distance
-            nearby_users.sort(key=lambda x: x[0])
-            users_for_route = [user for _, user in nearby_users[:driver['capacity']]]
-
-            # Create new route
+            # Create new route with capacity-matched users
             route = {
-                'driver_id': str(driver['driver_id']),
-                'vehicle_id': str(driver.get('vehicle_id', '')),
-                'vehicle_type': int(driver['capacity']),
-                'latitude': float(driver['latitude']),
-                'longitude': float(driver['longitude']),
+                'driver_id': str(best_driver.driver_id),
+                'vehicle_id': str(best_driver.vehicle_id if hasattr(best_driver, 'vehicle_id') else ''),
+                'vehicle_type': int(best_driver.capacity),
+                'latitude': float(best_driver.latitude),
+                'longitude': float(best_driver.longitude),
                 'assigned_users': []
             }
 
-            for user in users_for_route:
+            # Take up to capacity users from the group
+            users_to_assign = available_group_users.head(best_driver.capacity)
+
+            for _, user in users_to_assign.iterrows():
                 user_data = {
                     'user_id': str(user['user_id']),
                     'lat': float(user['latitude']),
@@ -1402,13 +1663,278 @@ def inject_spare_drivers(unassigned_users_df, available_drivers_df, office_lat, 
 
             route = reoptimize_route_sequence(route, office_lat, office_lon)
             new_routes.append(route)
-            used_driver_ids.add(driver['driver_id'])
+            used_driver_ids.add(best_driver.driver_id)
 
-            utilization = len(route['assigned_users']) / driver['capacity'] * 100
-            logger.info(f"   🚗 Injected driver {driver['driver_id']}: "
-                       f"{len(route['assigned_users'])}/{driver['capacity']} seats ({utilization:.1f}%)")
+            utilization = len(route['assigned_users']) / best_driver.capacity * 100
+            logger.info(f"   🚗 Injected driver {best_driver.driver_id} (capacity-matched): "
+                       f"{len(route['assigned_users'])}/{best_driver.capacity} seats ({utilization:.1f}%)")
 
     return new_routes
+
+def group_residual_users_by_capacity(unassigned_users_df, available_drivers_df):
+    """Group residual users into groups that match available vehicle capacities"""
+    if unassigned_users_df.empty:
+        return {}
+
+    # Get available capacities
+    available_capacities = sorted(available_drivers_df['capacity'].unique(), reverse=True)
+
+    # Convert user coordinates to km for clustering
+    coords_km = []
+    for _, user in unassigned_users_df.iterrows():
+        lat_km, lon_km = coords_to_km(user['latitude'], user['longitude'], OFFICE_LAT, OFFICE_LON)
+        coords_km.append([lat_km, lon_km])
+    coords_km = np.array(coords_km)
+
+    user_groups = {}
+    remaining_users = unassigned_users_df.copy()
+
+    # Group users by proximity, sized to match vehicle capacities
+    for capacity in available_capacities:
+        if remaining_users.empty:
+            break
+
+        # Find clusters of users that can fit in this capacity
+        if len(remaining_users) <= capacity:
+            # All remaining users fit in one vehicle of this capacity
+            user_groups[capacity] = remaining_users
+            remaining_users = remaining_users.iloc[0:0]  # Empty dataframe
+        else:
+            # Use clustering to group users
+            from sklearn.cluster import KMeans
+            n_clusters = min(len(remaining_users) // capacity + 1, len(remaining_users))
+
+            if n_clusters > 1:
+                remaining_coords = []
+                for _, user in remaining_users.iterrows():
+                    lat_km, lon_km = coords_to_km(user['latitude'], user['longitude'], OFFICE_LAT, OFFICE_LON)
+                    remaining_coords.append([lat_km, lon_km])
+                remaining_coords = np.array(remaining_coords)
+
+                kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+                cluster_labels = kmeans.fit_predict(remaining_coords)
+
+                # Take the largest cluster that fits in this capacity
+                for cluster_id in range(n_clusters):
+                    cluster_users = remaining_users[cluster_labels == cluster_id]
+                    if len(cluster_users) <= capacity and len(cluster_users) > 0:
+                        user_groups[capacity] = cluster_users
+                        remaining_users = remaining_users[cluster_labels != cluster_id]
+                        break
+
+    logger.info(f"   📦 Grouped residual users: {[(cap, len(users)) for cap, users in user_groups.items()]}")
+    return user_groups
+
+# STAGE 9: Final consolidation to ensure nearby users (within 1km) are in same route
+def consolidate_nearby_users_final(routes, office_lat, office_lon):
+    """Consolidate routes to ensure users within 1km are in the same route while preserving driver info and capacity constraints."""
+    logger.info("🛃 Stage 9: Final consolidation of nearby users...")
+
+    if len(routes) < 2:
+        return routes
+
+    # First pass: Proximity-based user reassignment
+    routes = proximity_based_user_reassignment(routes, office_lat, office_lon)
+
+    # Second pass: Traditional route merging for remaining cases
+    routes = traditional_route_merging(routes, office_lat, office_lon)
+
+    logger.info(f"✅ Final consolidation: {len(routes)} routes created.")
+    return routes
+
+def proximity_based_user_reassignment(routes, office_lat, office_lon):
+    """Reassign users to nearby routes to minimize geographic spread"""
+    logger.info("   🎯 Proximity-based user reassignment...")
+
+    reassignments_made = 0
+    max_reassignment_distance = 0.5  # 500m - very tight proximity
+
+    for route in routes:
+        if not route['assigned_users']:
+            continue
+
+        # Find users in OTHER routes that are very close to users in THIS route
+        users_to_reassign = []
+
+        for other_route in routes:
+            if (other_route['driver_id'] == route['driver_id'] or 
+                not other_route['assigned_users'] or
+                len(other_route['assigned_users']) <= 1):  # Don't steal last user
+                continue
+
+            for other_user in other_route['assigned_users']:
+                # Check if this user is very close to any user in current route
+                min_distance_to_route = float('inf')
+
+                for route_user in route['assigned_users']:
+                    dist = haversine_distance(
+                        other_user['lat'], other_user['lng'],
+                        route_user['lat'], route_user['lng']
+                    )
+                    min_distance_to_route = min(min_distance_to_route, dist)
+
+                # If user is very close to this route and we have capacity
+                if (min_distance_to_route <= max_reassignment_distance and 
+                    len(route['assigned_users']) < route['vehicle_type']):
+
+                    # Calculate current route coherence
+                    current_coherence = calculate_route_spread(other_route['assigned_users'])
+                    potential_coherence = calculate_route_spread(
+                        [u for u in other_route['assigned_users'] if u['user_id'] != other_user['user_id']]
+                    )
+
+                    # Only reassign if it improves the other route's coherence or doesn't hurt much
+                    if potential_coherence >= current_coherence - 0.5:  # Allow small degradation
+                        users_to_reassign.append({
+                            'user': other_user,
+                            'from_route': other_route,
+                            'distance': min_distance_to_route
+                        })
+
+        # Sort by proximity and reassign closest users first
+        users_to_reassign.sort(key=lambda x: x['distance'])
+
+        for reassignment in users_to_reassign:
+            if len(route['assigned_users']) >= route['vehicle_type']:
+                break  # Route is full
+
+            user = reassignment['user']
+            from_route = reassignment['from_route']
+
+            # Remove user from original route
+            from_route['assigned_users'] = [
+                u for u in from_route['assigned_users'] 
+                if u['user_id'] != user['user_id']
+            ]
+
+            # Add user to new route
+            route['assigned_users'].append(user)
+            reassignments_made += 1
+
+            logger.info(f"   🔄 Reassigned user {user['user_id']} from route {from_route['driver_id']} "
+                       f"to route {route['driver_id']} (distance: {reassignment['distance']:.2f}km)")
+
+    if reassignments_made > 0:
+        logger.info(f"   ✅ Made {reassignments_made} proximity-based reassignments")
+
+        # Re-optimize sequences for affected routes
+        for route in routes:
+            if route['assigned_users']:
+                route = reoptimize_route_sequence(route, office_lat, office_lon)
+
+    return routes
+
+def traditional_route_merging(routes, office_lat, office_lon):
+    """Traditional route merging approach"""
+    # Use Union-Find to group users that should be in the same route
+    parent = list(range(len(routes)))
+
+    for i in range(len(routes)):
+        for j in range(i + 1, len(routes)):
+            route1 = routes[i]
+            route2 = routes[j]
+
+            # Check if any user in route1 is within 1km of any user in route2
+            users1 = route1['assigned_users']
+            users2 = route2['assigned_users']
+
+            should_merge = False
+            for u1 in users1:
+                for u2 in users2:
+                    dist = haversine_distance(u1['lat'], u1['lng'], u2['lat'], u2['lng'])
+                    if dist <= 1.0:  # 1km radius
+                        should_merge = True
+                        break
+                if should_merge:
+                    break
+
+            if should_merge:
+                # Check if merging would violate capacity constraints
+                total_users = len(users1) + len(users2)
+                max_capacity = max(route1['vehicle_type'], route2['vehicle_type'])
+
+                if total_users <= max_capacity:
+                    # Safe to merge - union the routes
+                    p1, p2 = find(parent, i), find(parent, j)
+                    if p1 != p2:
+                        parent[p1] = p2
+                else:
+                    logger.info(f"   🚫 Skipping merge of routes {route1['driver_id']} and {route2['driver_id']} - would exceed capacity ({total_users} > {max_capacity})")
+
+    # Rebuild routes based on consolidated groups while preserving original driver info
+    consolidated_routes_map = {}
+    for i, route in enumerate(routes):
+        root = find(parent, i)
+        if root not in consolidated_routes_map:
+            consolidated_routes_map[root] = {'routes': [], 'original_indices': []}
+
+        consolidated_routes_map[root]['routes'].append(route)
+        consolidated_routes_map[root]['original_indices'].append(i)
+
+    final_routes = []
+    for root, data in consolidated_routes_map.items():
+        original_routes = data['routes']
+
+        if len(original_routes) == 1:
+            # No consolidation needed - keep original route
+            final_routes.append(original_routes[0])
+        else:
+            # Merge multiple routes - choose the best driver and preserve their info
+            all_users = []
+            best_route = None
+            max_capacity = 0
+
+            # Find the route with highest capacity to use as base
+            for orig_route in original_routes:
+                all_users.extend(orig_route['assigned_users'])
+                if orig_route['vehicle_type'] > max_capacity:
+                    max_capacity = orig_route['vehicle_type']
+                    best_route = orig_route
+
+            # Ensure best_route is not None
+            if best_route is None:
+                logger.error("Error: Could not find a best_route for consolidation. Skipping merge.")
+                final_routes.extend(original_routes) # Add original routes back if something went wrong
+                continue
+
+            # Use the best route as the base and merge users
+            merged_route = best_route.copy()
+            merged_route['assigned_users'] = all_users
+
+            # Ensure we don't exceed capacity
+            if len(all_users) > max_capacity:
+                logger.warning(f"   ⚠️ Merged route would exceed capacity ({len(all_users)} > {max_capacity}), keeping routes separate")
+                # Add all original routes separately
+                final_routes.extend(original_routes)
+            else:
+                # Re-optimize sequence for the merged route
+                merged_route = reoptimize_route_sequence(merged_route, office_lat, office_lon)
+                final_routes.append(merged_route)
+
+                merged_user_ids = [u1['user_id'] for u1 in all_users]
+                original_driver_ids = [r['driver_id'] for r in original_routes]
+                logger.info(f"   🤝 Merged routes {', '.join(original_driver_ids)} into {best_route['driver_id']} with {len(all_users)} users")
+
+    return final_routes
+
+def calculate_route_spread(users):
+    """Calculate how spread out users are in a route (lower is better)"""
+    if len(users) <= 1:
+        return 0.0
+
+    total_distance = 0.0
+    count = 0
+
+    for i in range(len(users)):
+        for j in range(i + 1, len(users)):
+            dist = haversine_distance(
+                users[i]['lat'], users[i]['lng'],
+                users[j]['lat'], users[j]['lng']
+            )
+            total_distance += dist
+            count += 1
+
+    return total_distance / count if count > 0 else 0.0
 
 # ================== MAIN ASSIGNMENT FUNCTION ==================
 
@@ -1427,6 +1953,7 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
     6. Fill remaining seats with path-aware constraints
     7. Global optimization with swaps and merges
     8. Fallback and driver injection for remaining users
+    9. Final consolidation of nearby users into same route
     """
     start_time = time.time()
 
@@ -1495,17 +2022,22 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
         user_df = derive_user_features(user_df, office_lat, office_lon)
         user_df = create_locality_clusters(user_df)
 
-        # STAGE 2 & 3: Process each locality cluster
+        # STAGE 2.5: Compute demand and capacity matching
+        locality_demands = compute_demand_per_locality(user_df)
+        available_capacities = driver_df['capacity'].tolist()
+        locality_capacity_mapping = capacity_aware_matching(locality_demands, available_capacities)
+
+        # STAGE 2 & 3: Process each locality cluster with capacity-aware matching
         routes = []
         assigned_user_ids = set()
         used_driver_ids = set()
 
-        # Get available vehicle capacities for capacity-aware clustering
-        available_capacities = driver_df['capacity'].tolist()
-
         for locality_id in user_df['locality_cluster'].unique():
             locality_users = user_df[user_df['locality_cluster'] == locality_id].copy()
-            logger.info(f"🏘️ Processing locality {locality_id} with {len(locality_users)} users")
+            target_capacity = locality_capacity_mapping.get(locality_id, None)
+
+            logger.info(f"🏘️ Processing locality {locality_id} with {len(locality_users)} users, "
+                       f"target capacity: {target_capacity}")
 
             # STAGE 2: Split by direction within locality
             locality_users = split_locality_by_direction(locality_users, locality_id)
@@ -1517,8 +2049,9 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
                 if len(direction_group) == 0:
                     continue
 
-                # Create capacity-aware subclusters
-                direction_group = create_capacity_aware_subclusters(direction_group, available_capacities)
+                # Create capacity-aware subclusters with target capacity
+                direction_group = create_capacity_aware_subclusters(
+                    direction_group, available_capacities, target_capacity)
 
                 # Assign drivers to each capacity cluster
                 for capacity_id in direction_group['capacity_cluster'].unique():
@@ -1527,8 +2060,18 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
                     if len(cluster_users) == 0:
                         continue
 
-                    # Get available drivers
-                    available_drivers = driver_df[~driver_df['driver_id'].isin(used_driver_ids)]
+                    # Get available drivers, prioritize those matching target capacity
+                    all_available_drivers = driver_df[~driver_df['driver_id'].isin(used_driver_ids)]
+
+                    if target_capacity and not all_available_drivers.empty:
+                        # Prioritize drivers with matching capacity
+                        matching_drivers = all_available_drivers[all_available_drivers['capacity'] == target_capacity]
+                        if not matching_drivers.empty:
+                            available_drivers = matching_drivers
+                        else:
+                            available_drivers = all_available_drivers
+                    else:
+                        available_drivers = all_available_drivers
 
                     if available_drivers.empty:
                         logger.warning(f"No more drivers available for cluster in locality {locality_id}")
@@ -1559,6 +2102,14 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
 
         routes, unassigned_users = handle_unassigned_users(
             remaining_unassigned, available_drivers_df, routes, office_lat, office_lon)
+
+        # STAGE 9: Final consolidation to ensure nearby users (within 1km) are in same route
+        routes = consolidate_nearby_users_final(routes, office_lat, office_lon)
+
+        # Validate capacity constraints after consolidation
+        violations = validate_capacity_constraints(routes)
+        if violations:
+            logger.error("🚨 Capacity violations detected after consolidation!")
 
         # Filter out empty routes and build unassigned drivers list
         filtered_routes = [r for r in routes if r['assigned_users']]
@@ -1684,7 +2235,7 @@ def run_assignment_balance_internal(source_id: str, parameter: int = 1, string_p
             enhanced_unassigned_drivers.append(enhanced_driver)
 
         clustering_results = {
-            "method": "locality_first_balanced", 
+            "method": "locality_first_balanced",
             "clusters": len(user_df['locality_cluster'].unique()) if not user_df.empty else 0
         }
 
