@@ -66,6 +66,43 @@ def call_assignment_api(source_id, parameter, string_param, choice):
         print(f"❌ Invalid JSON response: {e}")
         return None
 
+def call_compare_all_modes_api(source_id, parameter, string_param, choice):
+    """Call the FastAPI compare all optimization modes endpoint"""
+    # URL encode the string parameter to handle spaces
+    import urllib.parse
+    encoded_string_param = urllib.parse.quote(string_param)
+
+    url = f"http://localhost:5000/compare-all-modes/{source_id}/{parameter}/{encoded_string_param}/{choice}"
+
+    try:
+        print(f"🔄 Calling parallel optimization comparison API: {url}")
+        print("⏳ Running all optimization modes in parallel (this may take 2-3 minutes)...")
+        print("🚀 Server is processing: Route Efficiency, Capacity Optimization, Balanced Optimization, and Road-Aware Routing...")
+
+        # Clear any existing cached routes before making the call
+        clear_cached_routes()
+
+        response = requests.post(url, timeout=3600)  # Extended timeout for parallel processing
+        response.raise_for_status()
+
+        result = response.json()
+        print("✅ Parallel optimization comparison completed successfully!")
+        return result
+
+    except requests.exceptions.ConnectionError:
+        print("❌ Could not connect to FastAPI server. Make sure it's running on port 5000.")
+        return None
+    except requests.exceptions.Timeout:
+        print("❌ API request timed out. Parallel optimization is taking longer than expected.")
+        print("💡 This is normal for complex datasets. The server may still be processing.")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"❌ API request failed: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON response: {e}")
+        return None
+
 def clear_cached_routes():
     """Clear any cached route files to ensure fresh data"""
     route_files = [
@@ -196,6 +233,88 @@ def wait_for_server():
     print("💡 Try manually running: uvicorn main:app --host 0.0.0.0 --port 5000")
     return False
 
+def save_comparison_results(comparison_result):
+    """Save comparison results to individual files for visualization"""
+    try:
+        detailed_results = comparison_result.get("detailed_results", {})
+
+        # Save each optimization mode result
+        for mode, result_data in detailed_results.items():
+            if result_data and result_data.get("data"):
+                filename = f"drivers_and_routes_{mode}.json"
+                with open(filename, "w") as f:
+                    json.dump(result_data["data"], f, indent=2)
+                print(f"💾 Saved {mode} results to {filename}")
+
+        # Save the full comparison summary
+        with open("comparison_summary.json", "w") as f:
+            json.dump(comparison_result, f, indent=2)
+        print("💾 Saved comparison summary to comparison_summary.json")
+
+        # Set the default view to the best performing mode
+        recommendations = comparison_result.get("comparison_summary", {}).get("recommendations", {})
+        if recommendations.get("best_utilization"):
+            best_mode = recommendations["best_utilization"]["mode"]
+            best_result = detailed_results.get(best_mode)
+            if best_result and best_result.get("data"):
+                with open("drivers_and_routes.json", "w") as f:
+                    json.dump(best_result["data"], f, indent=2)
+                print(f"🏆 Set {best_mode} as default view (best utilization)")
+
+    except Exception as e:
+        print(f"⚠️ Failed to save comparison results: {e}")
+
+def display_comparison_summary(comparison_result):
+    """Display a comprehensive comparison summary"""
+    print("\n" + "🏆" + "="*78 + "🏆")
+    print("📊 OPTIMIZATION MODES COMPARISON SUMMARY")
+    print("🏆" + "="*78 + "🏆")
+
+    summary = comparison_result.get("comparison_summary", {})
+    execution_summary = summary.get("execution_summary", {})
+    mode_comparison = summary.get("mode_comparison", {})
+    recommendations = summary.get("recommendations", {})
+
+    # Execution Summary
+    print(f"\n⏱️ EXECUTION SUMMARY")
+    print("-" * 50)
+    print(f"   Total Execution Time: {execution_summary.get('total_execution_time', 0):.2f} seconds")
+    print(f"   Successful Modes: {execution_summary.get('successful_modes', 0)}")
+    print(f"   Failed Modes: {execution_summary.get('failed_modes', 0)}")
+
+    # Mode Performance Comparison
+    print(f"\n📈 MODE PERFORMANCE COMPARISON")
+    print("-" * 50)
+
+    for mode, metrics in mode_comparison.items():
+        if "total_routes" in metrics:
+            print(f"\n   🔹 {mode.replace('_', ' ').title()}:")
+            print(f"      Routes: {metrics['total_routes']}")
+            print(f"      Users Assigned: {metrics['users_assigned']}")
+            print(f"      Utilization: {metrics['overall_utilization_percent']}%")
+            print(f"      Unassigned Users: {metrics['users_unassigned']}")
+            print(f"      Clustering: {metrics.get('clustering_method', 'unknown')}")
+        else:
+            print(f"\n   ❌ {mode.replace('_', ' ').title()}: {metrics.get('error', 'Failed')}")
+
+    # Recommendations
+    if recommendations:
+        print(f"\n🎯 RECOMMENDATIONS")
+        print("-" * 50)
+        if "best_utilization" in recommendations:
+            best_util = recommendations["best_utilization"]
+            print(f"   🏆 Best Utilization: {best_util['mode'].replace('_', ' ').title()} ({best_util['utilization']}%)")
+
+        if "best_user_assignment" in recommendations:
+            best_assign = recommendations["best_user_assignment"]
+            print(f"   👥 Best User Assignment: {best_assign['mode'].replace('_', ' ').title()} ({best_assign['users_assigned']} users)")
+
+    print("\n" + "🏆" + "="*78 + "🏆")
+    print("🌐 INTERACTIVE COMPARISON: Open http://localhost:5000/visualize")
+    print("📊 Use the optimization mode selector to compare all results side-by-side")
+    print("🏆" + "="*78 + "🏆\n")
+
+
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Driver Assignment Dashboard')
@@ -207,6 +326,8 @@ if __name__ == "__main__":
                        help=f'String parameter (default: {STRING_PARAM})')
     parser.add_argument('--choice', type=str, default=CHOICE,
                        help=f'Choice parameter (default: {CHOICE})')
+    parser.add_argument('--compare-all', action='store_true',
+                       help='Run all optimization modes in parallel for comparison')
     args = parser.parse_args()
 
     # Clear logs at the start
@@ -230,12 +351,42 @@ if __name__ == "__main__":
             print("❌ Failed to start server")
             exit(1)
 
-        print("\n🤖 Running Assignment with Automatic Algorithm Detection...")
-        print("=" * 60)
-        print(f"🔄 Using parameters: source_id={args.source_id}, parameter={args.parameter}, string_param='{args.string_param}', choice={args.choice}")
+        result = None
+        comparison_success = False
 
-        # Call the assignment API
-        result = call_assignment_api(args.source_id, args.parameter, args.string_param, args.choice)
+        if args.compare_all:
+            print("\n🚀 Running PARALLEL OPTIMIZATION COMPARISON...")
+            print("=" * 80)
+            print(f"🔄 Using parameters: source_id={args.source_id}, parameter={args.parameter}, string_param='{args.string_param}', choice={args.choice}")
+            print("📊 This will run ALL optimization modes simultaneously:")
+            print("   • Route Efficiency (Default)")
+            print("   • Capacity Optimization")
+            print("   • Balanced Optimization")
+            print("   • Road-Aware Routing")
+
+            # Call the parallel comparison API
+            result = call_compare_all_modes_api(args.source_id, args.parameter, args.string_param, args.choice)
+
+            if result and result.get("status") == "true":
+                # Save comparison results for visualization
+                save_comparison_results(result)
+
+                # Display comparison summary
+                display_comparison_summary(result)
+
+                # Set success flag for comparison mode
+                comparison_success = True
+            else:
+                print("❌ Parallel comparison failed")
+                exit(1)
+        else:
+            print("\n🤖 Running Assignment with Automatic Algorithm Detection...")
+            print("=" * 60)
+            print(f"🔄 Using parameters: source_id={args.source_id}, parameter={args.parameter}, string_param='{args.string_param}', choice={args.choice}")
+
+            # Call the assignment API
+            result = call_assignment_api(args.source_id, args.parameter, args.string_param, args.choice)
+            comparison_success = False
 
         if not result:
             print("❌ Assignment API call failed")
@@ -247,15 +398,19 @@ if __name__ == "__main__":
         print(f"🔍 Result keys: {list(result.keys())}")
 
         if result["status"] == "true":
-            # Get the algorithm name from the result
-            algorithm_name = result.get("optimization_mode", "AUTO-DETECTED ALGORITHM")
-            algorithm_name = algorithm_name.replace("_", " ").upper()
+            if args.compare_all:
+                # For comparison mode, we already handled the display above
+                print("✅ Parallel optimization comparison completed successfully!")
+            else:
+                # For regular assignment mode
+                algorithm_name = result.get("optimization_mode", "AUTO-DETECTED ALGORITHM")
+                algorithm_name = algorithm_name.replace("_", " ").upper()
 
-            print(f"✅ {algorithm_name} assignment completed successfully!")
-            print(f"📊 Routes Created: {len(result.get('data', []))}")
+                print(f"✅ {algorithm_name} assignment completed successfully!")
+                print(f"📊 Routes Created: {len(result.get('data', []))}")
 
-            # Display detailed analytics
-            display_detailed_analytics(result, algorithm_name)
+                # Display detailed analytics
+                display_detailed_analytics(result, algorithm_name)
 
         else:
             print("❌ Assignment failed:")
@@ -269,19 +424,17 @@ if __name__ == "__main__":
         browser_thread = threading.Thread(target=launch_browser, daemon=True)
         browser_thread.start()
 
-        print("\n✅ Dashboard is running!")
+        print("✅ Dashboard is running!")
         print("📱 Dashboard URL: http://localhost:5000/visualize")
         print("📊 API Endpoint: http://localhost:5000/routes")
         print("🔍 Health Check: http://localhost:5000/health")
+        if args.compare_all:
+            print("🔄 Comparison Mode: Multiple optimization results available")
+            print("📊 Use the optimization mode selector in the dashboard to compare results")
         print("\n⌨️  Press Ctrl+C to stop the server")
+        print("\n💡 TIP: Run with --compare-all to test all optimization modes in parallel")
+        print("   Example: python run_and_view.py --compare-all")
 
-        try:
-            # Keep the main thread alive
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("\n🛑 Shutting down dashboard...")
-            print("👋 Goodbye!")
 
     except KeyboardInterrupt:
         print("\n🛑 Dashboard startup interrupted by user")

@@ -724,6 +724,46 @@
                     </div>
                 </div>
 
+                <!-- Optimization Mode Selector -->
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-cogs"></i>
+                        Optimization Mode
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="optimizationSelect">Select Optimization Mode</label>
+                        <select id="optimizationSelect" class="form-input form-select" onchange="switchOptimizationMode()">
+                            <option value="default">Auto-Selected Mode</option>
+                            <option value="route_efficiency">Route Efficiency</option>
+                            <option value="capacity_optimization">Capacity Optimization</option>
+                            <option value="balanced_optimization">Balanced Optimization</option>
+                            <option value="road_aware_routing">Road-Aware Routing</option>
+                        </select>
+                    </div>
+                    <div id="currentModeInfo" class="analytics-card" style="margin-top: 12px;">
+                        <div class="analytics-header">
+                            <div class="analytics-title">
+                                <i class="fas fa-info-circle"></i>
+                                Current Mode Info
+                            </div>
+                        </div>
+                        <div class="analytics-body">
+                            <div class="metric-row">
+                                <span class="metric-label">Active Mode</span>
+                                <span class="metric-value" id="activeModeText">Loading...</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Execution Time</span>
+                                <span class="metric-value" id="executionTimeText">-</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Algorithm Focus</span>
+                                <span class="metric-value" id="algorithmFocusText">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Display Controls -->
                 <div class="section">
                     <div class="section-title">
@@ -749,73 +789,22 @@
                     <button class="btn btn-primary" onclick="showOptimalPaths()" id="showOptimalBtn">
                         <i class="fas fa-magic"></i> Show Optimal Paths
                     </button>
+                    <button class="btn btn-secondary" onclick="compareAllModes()" id="compareAllBtn">
+                        <i class="fas fa-balance-scale"></i> Compare All Modes
+                    </button>
                 </div>
 
-                <!-- Performance Analytics -->
-                <div class="section">
+                <!-- Mode Comparison Summary -->
+                <div class="section" id="comparisonSection" style="display: none;">
                     <div class="analytics-card">
                         <div class="analytics-header">
                             <div class="analytics-title">
-                                <i class="fas fa-tachometer-alt"></i>
-                                Performance Metrics
+                                <i class="fas fa-chart-bar"></i>
+                                Mode Comparison
                             </div>
                         </div>
-                        <div class="analytics-body">
-                            <div class="metric-row">
-                                <span class="metric-label">Assignment Rate</span>
-                                <span class="metric-value" id="assignmentRate">0%</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Capacity Utilization</span>
-                                <span class="metric-value" id="capacityUtilization">0%</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Avg Distance</span>
-                                <span class="metric-value" id="avgDistance">0 km</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Efficiency Score</span>
-                                <span class="metric-value" id="efficiencyScore">0/10</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Route Quality -->
-                <div class="section">
-                    <div class="analytics-card">
-                        <div class="analytics-header">
-                            <div class="analytics-title">
-                                <i class="fas fa-award"></i>
-                                Route Quality
-                            </div>
-                        </div>
-                        <div class="analytics-body">
-                            <div class="metric-row">
-                                <span class="metric-label">High Efficiency (≥80%)</span>
-                                <span class="metric-value" id="highEfficiencyRoutes">0</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Medium Efficiency (50-79%)</span>
-                                <span class="metric-value" id="mediumEfficiencyRoutes">0</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Low Efficiency (<50%)</span>
-                                <span class="metric-value" id="lowEfficiencyRoutes">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Efficiency Alerts -->
-                <div class="section">
-                    <div class="section-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        System Alerts
-                    </div>
-                    <div id="alertsContainer">
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle"></i> System initialized successfully
+                        <div class="analytics-body" id="comparisonContent">
+                            <!-- Comparison data will be populated dynamically -->
                         </div>
                     </div>
                 </div>
@@ -899,7 +888,7 @@
         // Configuration
         const API_URL = "/routes";
         const OFFICE_LOCATION = { lat: 30.6810489, lng: 76.7260711 };
-        
+
         // Enhanced Color Palette with Better Differentiation
         const ROUTE_COLORS = [
             '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57',
@@ -912,6 +901,9 @@
         let map;
         let directionsService;
         let allRoutes = [];
+        let currentOptimizationMode = 'default';
+        let optimizationResults = {}; // Store results for different modes
+        let comparisonSummary = null;
         let markers = {
             office: null,
             drivers: [],
@@ -921,7 +913,7 @@
         let heatmap = null;
         let routeRenderers = [];
         let optimalPaths = [];
-        
+
         // Display States
         let displayState = {
             users: true,
@@ -1080,14 +1072,19 @@
 
         async function loadRouteData() {
             try {
+                // First try to load comparison summary if available
+                await loadComparisonSummary();
+
                 const response = await fetch(API_URL);
                 const routes = await response.json();
-                
+
                 if (Array.isArray(routes)) {
                     allRoutes = routes;
+                    optimizationResults['default'] = routes;
                     hideLoading();
                     updateUI();
                     renderMap();
+                    updateModeInfo();
                 } else {
                     throw new Error('Invalid route data format');
                 }
@@ -1095,6 +1092,152 @@
                 console.error('Error loading route data:', error);
                 hideLoading();
                 showAlert('error', 'Failed to load route data. Please check if the server is running.');
+            }
+        }
+
+        async function loadComparisonSummary() {
+            try {
+                const response = await fetch('/comparison_summary.json');
+                if (response.ok) {
+                    comparisonSummary = await response.json();
+                    console.log('Loaded comparison summary');
+
+                    // Load individual optimization results
+                    await loadOptimizationResults();
+
+                    // Show comparison section
+                    document.getElementById('comparisonSection').style.display = 'block';
+                    updateComparisonDisplay();
+                    return true;
+                }
+            } catch (error) {
+                console.log('No comparison summary available');
+                return false;
+            }
+        }
+
+        async function loadOptimizationResults() {
+            const modes = ['route_efficiency', 'capacity_optimization', 'balanced_optimization', 'road_aware_routing'];
+
+            for (const mode of modes) {
+                try {
+                    const response = await fetch(`/drivers_and_routes_${mode}.json`);
+                    if (response.ok) {
+                        const routes = await response.json();
+                        optimizationResults[mode] = routes;
+                        console.log(`Loaded ${mode} results: ${routes.length} routes`);
+                    }
+                } catch (error) {
+                    console.log(`Could not load ${mode} results`);
+                }
+            }
+        }
+
+        function switchOptimizationMode() {
+            const select = document.getElementById('optimizationSelect');
+            const selectedMode = select.value;
+
+            if (selectedMode === 'default') {
+                // Load the default routes from main API
+                loadRouteData();
+                showAlert('success', 'Switched to auto-selected optimization mode');
+                return;
+            }
+
+            if (optimizationResults[selectedMode]) {
+                currentOptimizationMode = selectedMode;
+                allRoutes = optimizationResults[selectedMode];
+
+                // Update UI and re-render map
+                updateUI();
+                renderMap();
+                updateModeInfo();
+
+                showAlert('success', `Switched to ${selectedMode.replace('_', ' ').toUpperCase()} mode`);
+            } else {
+                showAlert('warning', `${selectedMode} results not available. Please run comparison first.`);
+                select.value = currentOptimizationMode; // Reset to previous mode
+            }
+        }
+
+        function updateModeInfo() {
+            const activeModeText = document.getElementById('activeModeText');
+            const executionTimeText = document.getElementById('executionTimeText');
+            const algorithmFocusText = document.getElementById('algorithmFocusText');
+
+            // Update active mode
+            activeModeText.textContent = currentOptimizationMode.replace('_', ' ').toUpperCase();
+
+            // Update execution time if available in comparison summary
+            if (comparisonSummary) {
+                const modeData = comparisonSummary.comparison_summary?.mode_comparison?.[currentOptimizationMode];
+                if (modeData && modeData.execution_time) {
+                    executionTimeText.textContent = `${modeData.execution_time.toFixed(2)}s`;
+                } else {
+                    executionTimeText.textContent = comparisonSummary.comparison_summary?.execution_summary?.total_execution_time 
+                        ? `${comparisonSummary.comparison_summary.execution_summary.total_execution_time.toFixed(2)}s` 
+                        : '-';
+                }
+            } else {
+                executionTimeText.textContent = '-';
+            }
+
+            // Update algorithm focus based on mode
+            const focusMap = {
+                'default': 'Auto-Selected',
+                'route_efficiency': 'Minimize Distance & Turns',
+                'capacity_optimization': 'Maximize Seat Utilization',
+                'balanced_optimization': 'Balance Distance & Capacity',
+                'road_aware_routing': 'Real Road Network Optimization'
+            };
+            algorithmFocusText.textContent = focusMap[currentOptimizationMode] || 'Unknown';
+        }
+
+        function updateComparisonDisplay() {
+            if (!comparisonSummary) return;
+
+            const content = document.getElementById('comparisonContent');
+            const modeComparison = comparisonSummary.comparison_summary?.mode_comparison || {};
+
+            let html = '';
+            for (const [mode, metrics] of Object.entries(modeComparison)) {
+                if (metrics.total_routes !== undefined) {
+                    html += `
+                        <div class="metric-row" style="flex-direction: column; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--gray-200);">
+                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px;">
+                                <span class="metric-label" style="font-weight: 600;">${mode.replace('_', ' ').toUpperCase()}</span>
+                                <span class="metric-value">${metrics.overall_utilization_percent}% util</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--gray-500);">
+                                <span>${metrics.total_routes} routes</span>
+                                <span>${metrics.users_assigned} users</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            content.innerHTML = html;
+        }
+
+        async function compareAllModes() {
+            showAlert('info', 'Starting parallel optimization comparison...');
+
+            try {
+                // This would trigger the comparison endpoint
+                const response = await fetch('/compare-all-modes/UC_logisticllp/1/Evening%20shift/ ', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    // Reload the page to get the new comparison results
+                    window.location.reload();
+                } else {
+                    showAlert('error', 'Failed to start comparison. Please try running from command line.');
+                }
+            } catch (error) {
+                showAlert('error', 'Failed to start comparison. Please ensure server is running.');
             }
         }
 

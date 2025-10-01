@@ -217,6 +217,164 @@ def get_visualization():
     return FileResponse("visualize.html")
 
 
+@app.post("/compare-all-modes/{source_id}/{parameter}/{string_param}/{choice}")
+def compare_all_optimization_modes(source_id: str, parameter: int, string_param: str, choice: str):
+    """
+    Run all three optimization modes in parallel and return results for comparison
+    """
+    try:
+        print(f"🔄 Starting parallel optimization comparison for source_id: {source_id}")
+
+        # Import optimization modules
+        from assignment import run_assignment
+        from assign_capacity import run_assignment_capacity
+        from assign_balance import run_assignment_balance
+        from assign_route import run_road_aware_assignment
+        import concurrent.futures
+        import time
+
+        start_time = time.time()
+
+        # Define optimization functions
+        optimization_functions = {
+            "route_efficiency": lambda: run_assignment(source_id, parameter, string_param, choice),
+            "capacity_optimization": lambda: run_assignment_capacity(source_id, parameter, string_param, choice),
+            "balanced_optimization": lambda: run_assignment_balance(source_id, parameter, string_param, choice),
+            "road_aware_routing": lambda: run_road_aware_assignment(source_id, parameter, string_param, choice)
+        }
+
+        # Run all optimizations in parallel
+        results = {}
+        errors = {}
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all optimization tasks
+            future_to_mode = {
+                executor.submit(func): mode 
+                for mode, func in optimization_functions.items()
+            }
+
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_mode):
+                mode = future_to_mode[future]
+                try:
+                    result = future.result(timeout=300)  # 5-minute timeout per mode
+                    results[mode] = result
+                    print(f"✅ {mode} completed successfully")
+                except Exception as e:
+                    error_msg = str(e)
+                    errors[mode] = error_msg
+                    print(f"❌ {mode} failed: {error_msg}")
+                    # Still add a placeholder result
+                    results[mode] = {
+                        "status": "false",
+                        "error": error_msg,
+                        "data": [],
+                        "optimization_mode": mode
+                    }
+
+        total_time = time.time() - start_time
+
+        # Create comparison summary
+        comparison_summary = {
+            "execution_summary": {
+                "total_execution_time": round(total_time, 2),
+                "successful_modes": len([r for r in results.values() if r.get("status") == "true"]),
+                "failed_modes": len(errors),
+                "errors": errors
+            },
+            "mode_comparison": {}
+        }
+
+        # Generate comparison metrics for successful results
+        for mode, result in results.items():
+            if result.get("status") == "true" and result.get("data"):
+                routes = result["data"]
+                total_routes = len(routes)
+                total_users_assigned = sum(len(route.get("assigned_users", [])) for route in routes)
+                total_capacity = sum(route.get("vehicle_type", 0) for route in routes)
+                overall_utilization = (total_users_assigned / total_capacity * 100) if total_capacity > 0 else 0
+
+                unassigned_users = len(result.get("unassignedUsers", []))
+                unassigned_drivers = len(result.get("unassignedDrivers", []))
+
+                comparison_summary["mode_comparison"][mode] = {
+                    "total_routes": total_routes,
+                    "users_assigned": total_users_assigned,
+                    "users_unassigned": unassigned_users,
+                    "drivers_unassigned": unassigned_drivers,
+                    "overall_utilization_percent": round(overall_utilization, 1),
+                    "execution_time": result.get("execution_time", 0),
+                    "clustering_method": result.get("clustering_analysis", {}).get("method", "unknown")
+                }
+            else:
+                comparison_summary["mode_comparison"][mode] = {
+                    "status": "failed",
+                    "error": result.get("error", "Unknown error")
+                }
+
+        # Find best performing mode
+        successful_modes = {
+            mode: metrics for mode, metrics in comparison_summary["mode_comparison"].items()
+            if "total_routes" in metrics
+        }
+
+        if successful_modes:
+            # Best by utilization
+            best_utilization_mode = max(successful_modes.items(), 
+                                      key=lambda x: x[1]["overall_utilization_percent"])
+
+            # Best by users assigned
+            best_assignment_mode = max(successful_modes.items(),
+                                     key=lambda x: x[1]["users_assigned"])
+
+            comparison_summary["recommendations"] = {
+                "best_utilization": {
+                    "mode": best_utilization_mode[0],
+                    "utilization": best_utilization_mode[1]["overall_utilization_percent"]
+                },
+                "best_user_assignment": {
+                    "mode": best_assignment_mode[0],
+                    "users_assigned": best_assignment_mode[1]["users_assigned"]
+                }
+            }
+
+        print(f"🎉 Parallel optimization comparison completed in {total_time:.2f}s")
+
+        return {
+            "status": "true",
+            "message": "All optimization modes completed",
+            "comparison_summary": comparison_summary,
+            "detailed_results": {
+                "route_efficiency": results.get("route_efficiency"),
+                "capacity_optimization": results.get("capacity_optimization"), 
+                "balanced_optimization": results.get("balanced_optimization"),
+                "road_aware_routing": results.get("road_aware_routing")
+            },
+            "parameters": {
+                "source_id": source_id,
+                "parameter": parameter,
+                "string_param": string_param,
+                "choice": choice
+            }
+        }
+
+    except Exception as e:
+        print(f"❌ Parallel optimization comparison failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "false",
+            "error": f"Parallel comparison failed: {str(e)}",
+            "parameters": {
+                "source_id": source_id,
+                "parameter": parameter,
+                "string_param": string_param,
+                "choice": choice
+            }
+        }
+
+
 @app.get("/")
 def root():
     return {
@@ -224,6 +382,7 @@ def root():
         "Driver Assignment API with Multiple Optimization Modes",
         "endpoints": [
             "/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}",
+            "/compare-all-modes/{source_id}/{parameter}/{string_param}/{choice}",
             "/routes", "/visualize", "/health"
         ],
         "optimization_modes": {
@@ -239,5 +398,5 @@ def root():
             "Route Efficiency (assignment.py) - Prioritizes straight routes"
         },
         "usage":
-        "Algorithm is automatically selected from API response _algorithm_priority value"
+        "Use /compare-all-modes/ to run all optimization modes in parallel for comparison"
     }
