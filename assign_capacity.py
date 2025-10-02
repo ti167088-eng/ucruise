@@ -1,3 +1,4 @@
+
 import os
 import math
 import requests
@@ -10,6 +11,7 @@ from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 from scipy.spatial.distance import cdist
+from scipy.spatial import KDTree
 from dotenv import load_dotenv
 import warnings
 import multiprocessing as mp
@@ -40,7 +42,7 @@ def load_and_validate_config():
     mode_configs = cfg.get("mode_configs", {})
     mode_config = mode_configs.get("capacity_optimization", {})
 
-    print(f"🎯 Using optimization mode: CAPACITY OPTIMIZATION")
+    print(f"🎯 Using optimization mode: CAPACITY OPTIMIZATION WITH BLUEPRINT")
     
     # Validate and set configuration with mode-specific overrides
     config = {}
@@ -52,6 +54,21 @@ def load_and_validate_config():
     config['OVERFLOW_PENALTY_KM'] = max(0.0, float(cfg.get("overflow_penalty_km", 5.0)))
     config['DISTANCE_ISSUE_THRESHOLD'] = max(0.1, float(cfg.get("distance_issue_threshold_km", 12.0)))
     config['SWAP_IMPROVEMENT_THRESHOLD'] = max(0.0, float(cfg.get("swap_improvement_threshold_km", 1.0)))
+
+    # Blueprint-specific parameters - PROXIMITY-FIRST approach
+    config['MICRO_CLUSTER_RADIUS_KM'] = 1.2  # Larger radius to capture nearby users first
+    config['DIRECTIONAL_COHERENCE_THRESHOLD'] = 60  # Relaxed bearing spread for proximity priority
+    config['PATH_INSERT_MAX_DETOUR_RATIO'] = 0.10  # 10% max detour for insertions (more lenient)
+    config['PATH_INSERT_MAX_BEARING_DIFF'] = 30  # Relaxed bearing difference for insertions
+    config['FINAL_MERGE_BEARING_THRESHOLD'] = 45  # Relaxed bearing threshold for final merges
+    config['FINAL_MERGE_DISTANCE_THRESHOLD'] = 2.0  # Tighter distance threshold for final merges
+    config['MIN_UTILIZATION_IMPROVEMENT'] = 0.03  # 3% min improvement for merges (more aggressive)
+
+    # Scoring weights for driver selection
+    config['ALPHA_UTILIZATION'] = 1.0
+    config['BETA_WASTE_PENALTY'] = 1.0
+    config['GAMMA_DISTANCE_PENALTY'] = 0.5
+    config['DELTA_BEARING_PENALTY'] = 0.3
 
     # Utilization thresholds (more aggressive for capacity)
     config['MIN_UTIL_THRESHOLD'] = max(0.0, min(1.0, float(cfg.get("min_util_threshold", 0.8))))
@@ -111,11 +128,11 @@ def load_and_validate_config():
     config['LAT_TO_KM'] = 111.0
     config['LON_TO_KM'] = 111.0 * math.cos(math.radians(office_lat))
 
-    print(f"   📊 Max bearing difference: {config['MAX_BEARING_DIFFERENCE']}°")
-    print(f"   📊 Max turning score: {config['MAX_TURNING_ANGLE']}°")
-    print(f"   📊 Max fill distance: {config['MAX_FILL_DISTANCE_KM']}km")
+    print(f"   📊 Proximity-first micro-cluster radius: {config['MICRO_CLUSTER_RADIUS_KM']}km")
+    print(f"   📊 Relaxed directional coherence: {config['DIRECTIONAL_COHERENCE_THRESHOLD']}°")
+    print(f"   📊 Lenient max detour ratio: {config['PATH_INSERT_MAX_DETOUR_RATIO']*100}%")
     print(f"   📊 Capacity weight: {config['capacity_weight']}")
-    print(f"   📊 Direction weight: {config['direction_weight']}")
+    print(f"   🎯 PRIORITY: Nearby users first, direction secondary")
 
     return config
 
@@ -166,480 +183,654 @@ OFFICE_LAT = _config['OFFICE_LAT']
 OFFICE_LON = _config['OFFICE_LON']
 
 
-def assign_drivers_by_priority_capacity_focused(user_df, driver_df, office_lat, office_lon):
-    """
-    Directional capacity-focused assignment: Fill every seat possible while maintaining directional consistency
-    """
-    print("🚗 Step 3: DIRECTIONAL capacity-focused driver assignment...")
+# =============================================================================
+# BLUEPRINT IMPLEMENTATION - NEW FUNCTIONS
+# =============================================================================
 
+def micro_cluster_users(user_df, office_lat, office_lon, r_micro_km=1.2):
+    """
+    A. Micro-clustering: Create tight atomic clusters that should never be split
+    PRIORITY: Nearby users first, regardless of direction
+    """
+    print(f"  🔬 Creating proximity-first micro-clusters with radius {r_micro_km}km...")
+    
+    if user_df.empty:
+        return []
+    
+    # Prepare coordinates for DBSCAN
+    coords = user_df[['latitude', 'longitude']].values
+    
+    # Convert to km using lat/lon scaling
+    lat_to_km = 111.0
+    lon_to_km = 111.0 * math.cos(math.radians(office_lat))
+    
+    coords_km = coords.copy()
+    coords_km[:, 0] = coords[:, 0] * lat_to_km  # lat to km
+    coords_km[:, 1] = coords[:, 1] * lon_to_km  # lon to km
+    
+    # Apply DBSCAN clustering with larger radius for proximity priority
+    dbscan = DBSCAN(eps=r_micro_km, min_samples=1)  # min_samples=1 to avoid noise points
+    cluster_labels = dbscan.fit_predict(coords_km)
+    
+    # Group users by cluster
+    micro_clusters = []
+    for cluster_id in set(cluster_labels):
+        if cluster_id == -1:  # Noise points get individual clusters
+            noise_indices = np.where(cluster_labels == cluster_id)[0]
+            for idx in noise_indices:
+                user_data = user_df.iloc[idx]
+                micro_clusters.append([{
+                    'user_id': user_data['user_id'],
+                    'latitude': user_data['latitude'],
+                    'longitude': user_data['longitude'],
+                    'office_distance': user_data.get('office_distance', 0),
+                    'first_name': user_data.get('first_name', ''),
+                    'email': user_data.get('email', '')
+                }])
+        else:
+            cluster_indices = np.where(cluster_labels == cluster_id)[0]
+            cluster_users = []
+            for idx in cluster_indices:
+                user_data = user_df.iloc[idx]
+                cluster_users.append({
+                    'user_id': user_data['user_id'],
+                    'latitude': user_data['latitude'],
+                    'longitude': user_data['longitude'],
+                    'office_distance': user_data.get('office_distance', 0),
+                    'first_name': user_data.get('first_name', ''),
+                    'email': user_data.get('email', '')
+                })
+            micro_clusters.append(cluster_users)
+    
+    print(f"    📊 Created {len(micro_clusters)} proximity-first micro-clusters")
+    for i, mc in enumerate(micro_clusters):
+        print(f"      Micro-cluster {i}: {len(mc)} users")
+    
+    return micro_clusters
+
+
+def aggregate_micro_clusters_into_groups(micro_clusters, drivers, office_lat, office_lon, config):
+    """
+    B. Cluster aggregation → capacity groups using PROXIMITY-FIRST Best-Fit Decreasing
+    PRIORITY: Fill nearby clusters first, direction is secondary
+    """
+    print(f"  📦 Aggregating micro-clusters with PROXIMITY-FIRST approach...")
+    
+    if not micro_clusters or drivers.empty:
+        return []
+    
+    # Sort micro-clusters by size (largest first) for efficient packing
+    micro_sizes = sorted(micro_clusters, key=len, reverse=True)
+    
+    # Sort vehicles by capacity (largest first)
+    vehicles = drivers.sort_values('capacity', ascending=False)
+    
+    groups = []  # Each group will be assigned to a vehicle
+    
+    for mc in micro_sizes:
+        mc_size = len(mc)
+        mc_center = calculate_micro_cluster_center(mc)
+        mc_bearing = calculate_micro_cluster_bearing(mc, office_lat, office_lon)
+        
+        placed = False
+        best_group = None
+        best_proximity_score = float('inf')
+        
+        # PROXIMITY-FIRST: Try to place in existing groups based on proximity
+        for group in groups:
+            if mc_size <= group['remaining_capacity']:
+                # Calculate proximity score (distance between cluster centers)
+                group_center = calculate_group_center(group)
+                proximity_distance = haversine_distance(
+                    mc_center[0], mc_center[1], 
+                    group_center[0], group_center[1]
+                )
+                
+                # Relaxed directional check (only reject if extremely different)
+                direction_ok = direction_compatible_relaxed(mc, group, 60, office_lat, office_lon)  # 60° threshold instead of 30°
+                
+                if direction_ok and proximity_distance < best_proximity_score:
+                    best_proximity_score = proximity_distance
+                    best_group = group
+        
+        if best_group is not None:
+            # Add to the closest compatible group
+            best_group['micro_clusters'].append(mc)
+            best_group['total_users'].extend(mc)
+            best_group['remaining_capacity'] -= mc_size
+            best_group['bearings'].append(mc_bearing)
+            placed = True
+            print(f"    🎯 Added {mc_size} users to existing group (proximity: {best_proximity_score:.1f}km)")
+        
+        if not placed:
+            # Create new group - find smallest vehicle that can fit this micro-cluster
+            suitable_vehicle = None
+            for _, vehicle in vehicles.iterrows():
+                if vehicle['capacity'] >= mc_size:
+                    suitable_vehicle = vehicle
+                    break
+            
+            if suitable_vehicle is not None:
+                new_group = {
+                    'target_vehicle': suitable_vehicle,
+                    'target_capacity': int(suitable_vehicle['capacity']),
+                    'micro_clusters': [mc],
+                    'total_users': list(mc),
+                    'remaining_capacity': int(suitable_vehicle['capacity']) - mc_size,
+                    'bearings': [mc_bearing]
+                }
+                groups.append(new_group)
+                print(f"    🆕 Created new group for {mc_size} users")
+            else:
+                # No suitable vehicle - this shouldn't happen with proper data
+                print(f"    ⚠️ Warning: No vehicle can fit micro-cluster of size {mc_size}")
+    
+    print(f"    📊 Created {len(groups)} proximity-optimized capacity groups")
+    for i, group in enumerate(groups):
+        utilization = len(group['total_users']) / group['target_capacity'] * 100
+        print(f"      Group {i}: {len(group['total_users'])}/{group['target_capacity']} users ({utilization:.1f}%)")
+    
+    return groups
+
+
+def calculate_micro_cluster_bearing(micro_cluster, office_lat, office_lon):
+    """Calculate average bearing for a micro-cluster"""
+    if not micro_cluster:
+        return 0.0
+    
+    bearings = []
+    for user in micro_cluster:
+        bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
+        bearings.append(bearing)
+    
+    # Calculate average bearing (handling circular nature)
+    x_sum = sum(math.cos(math.radians(b)) for b in bearings)
+    y_sum = sum(math.sin(math.radians(b)) for b in bearings)
+    
+    avg_bearing = math.degrees(math.atan2(y_sum, x_sum))
+    if avg_bearing < 0:
+        avg_bearing += 360
+    
+    return avg_bearing
+
+
+def calculate_micro_cluster_center(micro_cluster):
+    """Calculate geographic center of a micro-cluster"""
+    if not micro_cluster:
+        return (0, 0)
+    
+    avg_lat = sum(user['latitude'] for user in micro_cluster) / len(micro_cluster)
+    avg_lon = sum(user['longitude'] for user in micro_cluster) / len(micro_cluster)
+    return (avg_lat, avg_lon)
+
+
+def calculate_group_center(group):
+    """Calculate geographic center of a group"""
+    if not group['total_users']:
+        return (0, 0)
+    
+    avg_lat = sum(user['latitude'] for user in group['total_users']) / len(group['total_users'])
+    avg_lon = sum(user['longitude'] for user in group['total_users']) / len(group['total_users'])
+    return (avg_lat, avg_lon)
+
+
+def direction_compatible_relaxed(micro_cluster, group, threshold_degrees, office_lat, office_lon):
+    """
+    C. Relaxed directional compatibility check - prioritizes proximity over strict direction
+    """
+    if not group['bearings']:
+        return True  # Empty group is always compatible
+    
+    mc_bearing = calculate_micro_cluster_bearing(micro_cluster, office_lat, office_lon)
+    
+    # Check bearing spread if we add this micro-cluster
+    all_bearings = group['bearings'] + [mc_bearing]
+    
+    # Calculate bearing spread
+    max_diff = 0
+    for i in range(len(all_bearings)):
+        for j in range(i + 1, len(all_bearings)):
+            diff = bearing_difference(all_bearings[i], all_bearings[j])
+            max_diff = max(max_diff, diff)
+    
+    return max_diff <= threshold_degrees
+
+
+def direction_compatible(micro_cluster, group, threshold_degrees, office_lat, office_lon):
+    """
+    C. Directional compatibility check (strict version for fallback)
+    """
+    return direction_compatible_relaxed(micro_cluster, group, threshold_degrees, office_lat, office_lon)
+
+
+def score_driver_for_group(group, driver, office_lat, office_lon, config):
+    """
+    D. Driver selection scoring function
+    """
+    group_size = len(group['total_users'])
+    vehicle_capacity = int(driver['capacity'])
+    
+    if group_size > vehicle_capacity:
+        return -float('inf')  # Cannot fit
+    
+    # Scoring components
+    utilization = group_size / vehicle_capacity
+    utilization_score = 1000 * utilization
+    
+    waste_penalty = 200 * (vehicle_capacity - group_size)
+    
+    # Calculate route distance
+    route_distance = calculate_group_route_distance(group['total_users'], driver, office_lat, office_lon)
+    distance_penalty = route_distance * 1.0
+    
+    # Calculate bearing penalty
+    group_bearing_spread = calculate_group_bearing_spread(group, office_lat, office_lon)
+    bearing_penalty = max(0, group_bearing_spread - 20) * 5
+    
+    # Apply weights
+    alpha = config['ALPHA_UTILIZATION']
+    beta = config['BETA_WASTE_PENALTY']
+    gamma = config['GAMMA_DISTANCE_PENALTY']
+    delta = config['DELTA_BEARING_PENALTY']
+    
+    score = (alpha * utilization_score - 
+             beta * waste_penalty - 
+             gamma * distance_penalty - 
+             delta * bearing_penalty)
+    
+    return score
+
+
+def calculate_group_route_distance(users, driver, office_lat, office_lon):
+    """Calculate total route distance for a group"""
+    if not users:
+        return 0
+    
+    # Simple approximation: driver to center of users + users to office
+    center_lat = sum(u['latitude'] for u in users) / len(users)
+    center_lon = sum(u['longitude'] for u in users) / len(users)
+    
+    driver_to_center = haversine_distance(driver['latitude'], driver['longitude'], center_lat, center_lon)
+    center_to_office = haversine_distance(center_lat, center_lon, office_lat, office_lon)
+    
+    return driver_to_center + center_to_office
+
+
+def calculate_group_bearing_spread(group, office_lat, office_lon):
+    """Calculate bearing spread for a group"""
+    if not group['bearings']:
+        return 0
+    
+    max_diff = 0
+    for i in range(len(group['bearings'])):
+        for j in range(i + 1, len(group['bearings'])):
+            diff = bearing_difference(group['bearings'][i], group['bearings'][j])
+            max_diff = max(max_diff, diff)
+    
+    return max_diff
+
+
+def path_insert_user_into_route(user, route, office_lat, office_lon, max_detour_ratio=0.07):
+    """
+    F. Path-aware insertion with strict detour limits
+    """
+    if route['vehicle_type'] <= len(route['assigned_users']):
+        return False, route  # No capacity
+    
+    # Calculate current route distance
+    current_distance = calculate_route_total_distance(route, office_lat, office_lon)
+    
+    # Calculate user bearing
+    user_bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
+    route_avg_bearing = calculate_average_bearing_improved(route, office_lat, office_lon)
+    
+    bearing_diff = bearing_difference(user_bearing, route_avg_bearing)
+    
+    # Check bearing compatibility first
+    if bearing_diff > _config['PATH_INSERT_MAX_BEARING_DIFF']:
+        return False, route
+    
+    # Try inserting user at different positions
+    best_position = None
+    best_distance = float('inf')
+    
+    current_users = route['assigned_users'].copy()
+    
+    for i in range(len(current_users) + 1):
+        # Create test route with user inserted at position i
+        test_users = current_users[:i] + [user] + current_users[i:]
+        test_route = route.copy()
+        test_route['assigned_users'] = test_users
+        
+        # Calculate new distance
+        new_distance = calculate_route_total_distance(test_route, office_lat, office_lon)
+        
+        if new_distance < best_distance:
+            best_distance = new_distance
+            best_position = i
+    
+    # Check if detour is acceptable
+    if current_distance > 0:
+        detour_ratio = (best_distance - current_distance) / current_distance
+        if detour_ratio <= max_detour_ratio:
+            # Accept insertion
+            new_route = route.copy()
+            new_users = current_users[:best_position] + [user] + current_users[best_position:]
+            new_route['assigned_users'] = new_users
+            new_route = optimize_route_sequence_improved(new_route, office_lat, office_lon)
+            return True, new_route
+    
+    return False, route
+
+
+def calculate_route_total_distance(route, office_lat, office_lon):
+    """Calculate total distance for a route"""
+    if not route['assigned_users']:
+        return 0
+    
+    total_distance = 0
+    
+    # Driver to first pickup
+    first_user = route['assigned_users'][0]
+    total_distance += haversine_distance(
+        route['latitude'], route['longitude'],
+        first_user['lat'], first_user['lng']
+    )
+    
+    # Between pickups
+    for i in range(len(route['assigned_users']) - 1):
+        current_user = route['assigned_users'][i]
+        next_user = route['assigned_users'][i + 1]
+        total_distance += haversine_distance(
+            current_user['lat'], current_user['lng'],
+            next_user['lat'], next_user['lng']
+        )
+    
+    # Last pickup to office
+    last_user = route['assigned_users'][-1]
+    total_distance += haversine_distance(
+        last_user['lat'], last_user['lng'],
+        office_lat, office_lon
+    )
+    
+    return total_distance
+
+
+def split_micro_cluster_by_bearing(micro_cluster, max_capacity):
+    """
+    E. Micro-cluster splitting by bearing (rare operation)
+    """
+    if len(micro_cluster) <= max_capacity:
+        return [micro_cluster]
+    
+    print(f"    ⚠️ Splitting micro-cluster of size {len(micro_cluster)} (max capacity: {max_capacity})")
+    
+    # Calculate bearings for all users in micro-cluster
+    user_bearings = []
+    for user in micro_cluster:
+        bearing = calculate_bearing(OFFICE_LAT, OFFICE_LON, user['latitude'], user['longitude'])
+        user_bearings.append((bearing, user))
+    
+    # Sort by bearing
+    user_bearings.sort(key=lambda x: x[0])
+    
+    # Split into chunks of max_capacity
+    split_clusters = []
+    for i in range(0, len(user_bearings), max_capacity):
+        chunk = [user for _, user in user_bearings[i:i + max_capacity]]
+        split_clusters.append(chunk)
+    
+    return split_clusters
+
+
+# =============================================================================
+# MAIN BLUEPRINT ASSIGNMENT FUNCTION
+# =============================================================================
+
+def assign_drivers_blueprint_approach(user_df, driver_df, office_lat, office_lon):
+    """
+    Main assignment function following the exact blueprint ordering
+    """
+    print("🚗 Step 3: BLUEPRINT capacity assignment with atomic micro-clusters...")
+    
     routes = []
-    assigned_user_ids = set()
     used_driver_ids = set()
-
-    # Sort drivers by capacity (descending), then by priority - prioritize largest vehicles
-    available_drivers = driver_df.sort_values(['capacity', 'priority'], 
-                                              ascending=[False, True])
-
-    # Collect ALL unassigned users into large pools for maximum seat filling
-    all_unassigned_users = user_df[~user_df['user_id'].isin(assigned_user_ids)].copy()
-
-    # Directional clustering - pack users tightly but enforce direction consistency
-    for _, driver in available_drivers.iterrows():
-        if driver['driver_id'] in used_driver_ids or all_unassigned_users.empty:
-            continue
-
-        vehicle_capacity = int(driver['capacity'])
-        driver_pos = (driver['latitude'], driver['longitude'])
+    
+    # STEP 1: Micro-cluster users into tight atomic groups
+    micro_clusters = micro_cluster_users(user_df, office_lat, office_lon, 
+                                       _config['MICRO_CLUSTER_RADIUS_KM'])
+    
+    if not micro_clusters:
+        print("  ⚠️ No micro-clusters created")
+        return routes, set()
+    
+    # STEP 2: Split oversized micro-clusters if needed
+    max_vehicle_capacity = driver_df['capacity'].max() if not driver_df.empty else 10
+    final_micro_clusters = []
+    
+    for mc in micro_clusters:
+        if len(mc) > max_vehicle_capacity:
+            split_clusters = split_micro_cluster_by_bearing(mc, max_vehicle_capacity)
+            final_micro_clusters.extend(split_clusters)
+        else:
+            final_micro_clusters.append(mc)
+    
+    print(f"  📊 After splitting: {len(final_micro_clusters)} micro-clusters")
+    
+    # STEP 3: Aggregate micro-clusters into capacity groups using bin-packing
+    available_drivers = driver_df[~driver_df['driver_id'].isin(used_driver_ids)]
+    capacity_groups = aggregate_micro_clusters_into_groups(
+        final_micro_clusters, available_drivers, office_lat, office_lon, _config)
+    
+    # STEP 4: Match groups to drivers with capacity-aware scoring
+    assigned_user_ids = set()
+    
+    for group in capacity_groups:
+        if available_drivers.empty:
+            break
         
-        # Calculate bearing from office to driver (main direction for this route)
-        main_route_bearing = calculate_bearing(office_lat, office_lon, driver['latitude'], driver['longitude'])
+        best_driver = None
+        best_score = -float('inf')
         
-        # Find users in the same general direction with directional constraints
-        users_for_vehicle = []
-        max_distance_limit = MAX_FILL_DISTANCE_KM * 2  # Allow more distance for capacity
-        max_bearing_deviation = 45  # Allow 45 degrees deviation for capacity mode
+        for _, driver in available_drivers.iterrows():
+            if driver['driver_id'] in used_driver_ids:
+                continue
+            
+            score = score_driver_for_group(group, driver, office_lat, office_lon, _config)
+            
+            if score > best_score:
+                best_score = score
+                best_driver = driver
         
-        # Calculate distances and bearings from driver to all unassigned users
-        candidate_users = []
-        for _, user in all_unassigned_users.iterrows():
-            distance = haversine_distance(driver['latitude'], driver['longitude'], 
-                                        user['latitude'], user['longitude'])
-            
-            # Calculate bearing from driver to user
-            user_bearing = calculate_bearing(driver['latitude'], driver['longitude'], 
-                                           user['latitude'], user['longitude'])
-            
-            # Calculate bearing from office to user (to ensure general same direction)
-            office_to_user_bearing = calculate_bearing(office_lat, office_lon, 
-                                                     user['latitude'], user['longitude'])
-            
-            # Check directional consistency
-            bearing_diff_from_main = bearing_difference(main_route_bearing, office_to_user_bearing)
-            
-            # Accept users that are in the same general direction
-            if (distance <= max_distance_limit and 
-                bearing_diff_from_main <= max_bearing_deviation):
-                candidate_users.append((distance, bearing_diff_from_main, user))
-        
-        # Sort by distance first, then by bearing alignment
-        candidate_users.sort(key=lambda x: (x[0], x[1]))
-        
-        # Take users to fill the vehicle while maintaining direction
-        for distance, bearing_diff, user in candidate_users:
-            if len(users_for_vehicle) >= vehicle_capacity:
-                break
-            
-            # Additional directional check: ensure new user doesn't create zigzag
-            if len(users_for_vehicle) > 0:
-                # Check if adding this user maintains route directional consistency
-                test_users = users_for_vehicle + [user]
-                if not is_directionally_consistent(test_users, driver_pos, (office_lat, office_lon)):
-                    continue
-            
-            users_for_vehicle.append(user)
-
-        # Try to fill remaining seats with nearby users even if slightly off-direction
-        if len(users_for_vehicle) < vehicle_capacity and len(candidate_users) > len(users_for_vehicle):
-            remaining_candidates = [user for _, _, user in candidate_users[len(users_for_vehicle):]]
-            
-            for user in remaining_candidates[:vehicle_capacity - len(users_for_vehicle)]:
-                # More lenient check for remaining seats
-                test_users = users_for_vehicle + [user]
-                if is_directionally_consistent(test_users, driver_pos, (office_lat, office_lon), lenient=True):
-                    users_for_vehicle.append(user)
-
-        if len(users_for_vehicle) >= 2:  # Minimum viable route
-            # Create route with directionally consistent users
-            cluster_df = pd.DataFrame(users_for_vehicle)
-            route = assign_best_driver_to_cluster_capacity_focused(
-                cluster_df, pd.DataFrame([driver]), used_driver_ids, office_lat, office_lon)
+        if best_driver is not None:
+            # Create route
+            route = create_route_from_group(group, best_driver, office_lat, office_lon)
             
             if route:
                 routes.append(route)
-                assigned_user_ids.update(u['user_id'] for u in route['assigned_users'])
+                used_driver_ids.add(best_driver['driver_id'])
                 
-                # Remove assigned users from the pool
-                assigned_ids_set = {u['user_id'] for u in route['assigned_users']}
-                all_unassigned_users = all_unassigned_users[~all_unassigned_users['user_id'].isin(assigned_ids_set)]
+                for user in route['assigned_users']:
+                    assigned_user_ids.add(user['user_id'])
                 
-                print(f"  🧭 Driver {driver['driver_id']}: {len(route['assigned_users'])}/{vehicle_capacity} seats filled ({len(route['assigned_users'])/vehicle_capacity*100:.1f}%) - Directional")
-
-    # Second pass: Try to fill remaining seats with directional constraints
-    remaining_users = all_unassigned_users[~all_unassigned_users['user_id'].isin(assigned_user_ids)]
+                utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
+                print(f"  ✅ Driver {best_driver['driver_id']}: {len(route['assigned_users'])}/{route['vehicle_type']} seats ({utilization:.1f}%) - Atomic grouping")
+        
+        # Update available drivers
+        available_drivers = driver_df[~driver_df['driver_id'].isin(used_driver_ids)]
     
-    for route in routes:
-        if remaining_users.empty:
-            break
-            
-        available_seats = route['vehicle_type'] - len(route['assigned_users'])
-        if available_seats <= 0:
-            continue
-        
-        # Get current route direction
-        route_bearing = calculate_average_bearing_improved(route, office_lat, office_lon)
-        route_center = calculate_route_center_improved(route)
-        
-        # Find remaining users that fit the route direction
-        compatible_users = []
-        for _, user in remaining_users.iterrows():
-            distance = haversine_distance(route_center[0], route_center[1],
-                                        user['latitude'], user['longitude'])
-            
-            # Check if user is in same direction as route
-            user_bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
-            bearing_diff = bearing_difference(route_bearing, user_bearing)
-            
-            if distance <= MAX_FILL_DISTANCE_KM * 1.5 and bearing_diff <= 30:  # Directional constraint
-                # Test if adding this user maintains directional consistency
-                test_users = route['assigned_users'] + [{
-                    'user_id': str(user['user_id']),
-                    'lat': float(user['latitude']),
-                    'lng': float(user['longitude'])
-                }]
-                
-                driver_pos = (route['latitude'], route['longitude'])
-                if is_directionally_consistent_from_dicts(test_users, driver_pos, (office_lat, office_lon)):
-                    compatible_users.append((distance, user))
-        
-        # Sort by distance and add users
-        compatible_users.sort(key=lambda x: x[0])
-        users_to_add = []
-        
-        for distance, user in compatible_users[:available_seats]:
-            users_to_add.append(user)
-        
-        # Add users to route
-        for user in users_to_add:
-            user_data = {
-                'user_id': str(user['user_id']),
-                'lat': float(user['latitude']),
-                'lng': float(user['longitude']),
-                'office_distance': float(user.get('office_distance', 0))
-            }
-            if pd.notna(user.get('first_name')):
-                user_data['first_name'] = str(user['first_name'])
-            if pd.notna(user.get('email')):
-                user_data['email'] = str(user['email'])
-            
-            route['assigned_users'].append(user_data)
-            assigned_user_ids.add(user['user_id'])
-        
-        if users_to_add:
-            # Remove assigned users from remaining pool
-            assigned_ids = {u['user_id'] for u in users_to_add}
-            remaining_users = remaining_users[~remaining_users['user_id'].isin(assigned_ids)]
-            
-            # Re-optimize route sequence
-            route = optimize_route_sequence_improved(route, office_lat, office_lon)
-            
-            print(f"  🎯 Route {route['driver_id']}: Added {len(users_to_add)} directional users, now {len(route['assigned_users'])}/{route['vehicle_type']} seats")
-
-    print(f"  ✅ DIRECTIONAL capacity assignment: {len(routes)} routes with directional seat filling")
+    # STEP 5: Path-aware fill pass for leftover users
+    print("  🛣️ Path-aware fill pass...")
     
-    # Calculate and display utilization stats
-    total_seats = sum(r['vehicle_type'] for r in routes)
-    total_users = sum(len(r['assigned_users']) for r in routes)
-    overall_utilization = (total_users / total_seats * 100) if total_seats > 0 else 0
+    remaining_users = user_df[~user_df['user_id'].isin(assigned_user_ids)]
     
-    print(f"  📊 Overall seat utilization: {total_users}/{total_seats} ({overall_utilization:.1f}%)")
+    for _, user in remaining_users.iterrows():
+        user_dict = {
+            'user_id': str(user['user_id']),
+            'lat': float(user['latitude']),
+            'lng': float(user['longitude']),
+            'latitude': float(user['latitude']),
+            'longitude': float(user['longitude']),
+            'office_distance': float(user.get('office_distance', 0)),
+            'first_name': str(user.get('first_name', '')),
+            'email': str(user.get('email', ''))
+        }
+        
+        inserted = False
+        for route in routes:
+            success, new_route = path_insert_user_into_route(
+                user_dict, route, office_lat, office_lon, 
+                _config['PATH_INSERT_MAX_DETOUR_RATIO'])
+            
+            if success:
+                # Update the route in routes list
+                route.clear()
+                route.update(new_route)
+                assigned_user_ids.add(user['user_id'])
+                inserted = True
+                print(f"    🎯 Inserted user {user['user_id']} into route {route['driver_id']}")
+                break
+        
+        if not inserted:
+            print(f"    ⏭️ Could not insert user {user['user_id']} - detour/bearing constraints")
+    
+    print(f"  ✅ Blueprint assignment complete: {len(routes)} routes")
     
     return routes, assigned_user_ids
 
 
-def assign_best_driver_to_cluster_capacity_focused(cluster_users, available_drivers, used_driver_ids, office_lat, office_lon):
-    """Find and assign the best available driver with MAXIMUM capacity utilization focus"""
-    cluster_size = len(cluster_users)
-
-    best_driver = None
-    best_score = -float('inf')  # Changed to maximize score instead of minimize cost
-    best_sequence = None
-
-    # Ultra-aggressive capacity optimization weights
-    capacity_weight = _config.get('capacity_weight', 5.0) * 2  # Double the capacity weight
-    direction_weight = _config.get('direction_weight', 1.0) * 0.5  # Halve direction importance
-
-    for _, driver in available_drivers.iterrows():
-        if driver['driver_id'] in used_driver_ids:
-            continue
-
-        # Accept any driver that can fit the users (no over-capacity rejection)
-        if driver['capacity'] < cluster_size:
-            continue
-
-        # Calculate utilization score (the main factor)
-        utilization = cluster_size / driver['capacity']
-        utilization_score = utilization * capacity_weight * 10  # Massive utilization bonus
-
-        # Distance penalty (but much smaller)
-        route_cost, sequence, mean_turning_degrees = calculate_route_cost_capacity_focused(
-            driver, cluster_users, office_lat, office_lon
-        )
-        distance_penalty = route_cost * 0.1  # Very small distance impact
-
-        # Priority bonus (prefer higher priority drivers but with small impact)
-        priority_bonus = (5 - driver['priority']) * 0.1  # Small priority preference
-
-        # Minimal zigzag penalty
-        zigzag_penalty = mean_turning_degrees * 0.01  # Almost no zigzag penalty
-
-        # SEAT FILLING BONUS: Extra bonus for near-perfect utilization
-        if utilization >= 0.9:  # 90%+ utilization
-            seat_filling_bonus = 20
-        elif utilization >= 0.8:  # 80%+ utilization 
-            seat_filling_bonus = 10
-        elif utilization >= 0.7:  # 70%+ utilization
-            seat_filling_bonus = 5
-        else:
-            seat_filling_bonus = 0
-
-        # Calculate total score (higher is better for seat filling)
-        total_score = utilization_score + seat_filling_bonus + priority_bonus - distance_penalty - zigzag_penalty
-
-        if total_score > best_score:
-            best_score = total_score
-            best_driver = driver
-            best_sequence = sequence
-
-    if best_driver is not None:
-        used_driver_ids.add(best_driver['driver_id'])
-
-        route = {
-            'driver_id': str(best_driver['driver_id']),
-            'vehicle_id': str(best_driver.get('vehicle_id', '')),
-            'vehicle_type': int(best_driver['capacity']),
-            'latitude': float(best_driver['latitude']),
-            'longitude': float(best_driver['longitude']),
-            'assigned_users': []
+def create_route_from_group(group, driver, office_lat, office_lon):
+    """Create a route from a capacity group and driver"""
+    route = {
+        'driver_id': str(driver['driver_id']),
+        'vehicle_id': str(driver.get('vehicle_id', '')),
+        'vehicle_type': int(driver['capacity']),
+        'latitude': float(driver['latitude']),
+        'longitude': float(driver['longitude']),
+        'assigned_users': []
+    }
+    
+    # Add all users from the group
+    for user in group['total_users']:
+        user_data = {
+            'user_id': str(user['user_id']),
+            'lat': float(user['latitude']),
+            'lng': float(user['longitude']),
+            'office_distance': float(user.get('office_distance', 0))
         }
+        
+        if user.get('first_name'):
+            user_data['first_name'] = str(user['first_name'])
+        if user.get('email'):
+            user_data['email'] = str(user['email'])
+        
+        route['assigned_users'].append(user_data)
+    
+    # Optimize sequence
+    route = optimize_route_sequence_improved(route, office_lat, office_lon)
+    update_route_metrics_improved(route, office_lat, office_lon)
+    
+    return route
 
-        # Add ALL users from cluster (prioritize seat filling over sequence optimization)
-        if hasattr(cluster_users, 'iterrows'):
-            users_to_add = list(cluster_users.iterrows())
+
+def final_merge_blueprint(routes, config, office_lat, office_lon):
+    """
+    G. Final merge with strict blueprint rules
+    """
+    print("🔄 Step 6: Blueprint final merge...")
+    
+    if len(routes) < 2:
+        return routes
+    
+    merged_routes = []
+    used = set()
+    
+    for i, r1 in enumerate(routes):
+        if i in used:
+            continue
+        
+        best_merge = None
+        best_utilization = len(r1['assigned_users']) / r1['vehicle_type']
+        
+        for j, r2 in enumerate(routes):
+            if j <= i or j in used:
+                continue
+            
+            # Check merge conditions
+            total_users = len(r1['assigned_users']) + len(r2['assigned_users'])
+            max_capacity = max(r1['vehicle_type'], r2['vehicle_type'])
+            
+            if total_users > max_capacity:
+                continue
+            
+            # Check bearing difference
+            b1 = calculate_average_bearing_improved(r1, office_lat, office_lon)
+            b2 = calculate_average_bearing_improved(r2, office_lat, office_lon)
+            bearing_diff = bearing_difference(b1, b2)
+            
+            if bearing_diff > config['FINAL_MERGE_BEARING_THRESHOLD']:
+                continue
+            
+            # Check centroid distance
+            c1 = calculate_route_center_improved(r1)
+            c2 = calculate_route_center_improved(r2)
+            centroid_distance = haversine_distance(c1[0], c1[1], c2[0], c2[1])
+            
+            if centroid_distance > config['FINAL_MERGE_DISTANCE_THRESHOLD']:
+                continue
+            
+            # Check utilization improvement
+            merged_utilization = total_users / max_capacity
+            min_improvement = config['MIN_UTILIZATION_IMPROVEMENT']
+            
+            if merged_utilization > max(best_utilization, len(r2['assigned_users']) / r2['vehicle_type']) + min_improvement:
+                best_merge = j
+                best_utilization = merged_utilization
+        
+        if best_merge is not None:
+            # Perform merge
+            r2 = routes[best_merge]
+            better_route = r1 if r1['vehicle_type'] >= r2['vehicle_type'] else r2
+            
+            merged_route = better_route.copy()
+            merged_route['assigned_users'] = r1['assigned_users'] + r2['assigned_users']
+            merged_route = optimize_route_sequence_improved(merged_route, office_lat, office_lon)
+            
+            merged_routes.append(merged_route)
+            used.add(i)
+            used.add(best_merge)
+            
+            utilization_pct = len(merged_route['assigned_users']) / merged_route['vehicle_type'] * 100
+            print(f"  🔗 Blueprint merge: routes {r1['driver_id']} + {r2['driver_id']} = {len(merged_route['assigned_users'])}/{merged_route['vehicle_type']} seats ({utilization_pct:.1f}%)")
         else:
-            users_to_add = [(i, user) for i, user in enumerate(cluster_users)]
-
-        for _, user in users_to_add:
-            user_data = {
-                'user_id': str(user['user_id']),
-                'lat': float(user['latitude']),
-                'lng': float(user['longitude']),
-                'office_distance': float(user.get('office_distance', 0))
-            }
-
-            if pd.notna(user.get('first_name')):
-                user_data['first_name'] = str(user['first_name'])
-            if pd.notna(user.get('email')):
-                user_data['email'] = str(user['email'])
-
-            route['assigned_users'].append(user_data)
-
-        # Quick sequence optimization (but don't remove users for it)
-        route = optimize_route_sequence_improved(route, office_lat, office_lon)
-        update_route_metrics_improved(route, office_lat, office_lon)
-        
-        utilization = len(route['assigned_users']) / route['vehicle_type']
-        print(f"    🚛 Assigned driver {best_driver['driver_id']}: {len(route['assigned_users'])}/{route['vehicle_type']} seats ({utilization*100:.1f}% utilization)")
-        
-        return route
-
-    return None
-
-
-def calculate_route_cost_capacity_focused(driver, cluster_users, office_lat, office_lon):
-    """Calculate route cost with capacity optimization focus (allows more zigzag)"""
-    if len(cluster_users) == 0:
-        return float('inf'), [], 0
-
-    driver_pos = (driver['latitude'], driver['longitude'])
-    office_pos = (office_lat, office_lon)
-
-    # Get optimal pickup sequence with capacity focus (less strict on turning)
-    sequence = calculate_optimal_sequence_capacity_focused(driver_pos, cluster_users, office_pos)
-
-    # Calculate total route distance
-    total_distance = 0
-    bearing_differences = []
-
-    # Driver to first pickup
-    if sequence:
-        first_user = sequence[0]
-        total_distance += haversine_distance(
-            driver_pos[0], driver_pos[1], 
-            first_user['latitude'], first_user['longitude']
-        )
-
-    # Between pickups - calculate bearing differences
-    for i in range(len(sequence) - 1):
-        current_user = sequence[i]
-        next_user = sequence[i + 1]
-
-        distance = haversine_distance(
-            current_user['latitude'], current_user['longitude'],
-            next_user['latitude'], next_user['longitude']
-        )
-        total_distance += distance
-
-        # Calculate bearing difference between segments (less penalty)
-        if i == 0:
-            prev_bearing = calculate_bearing(driver_pos[0], driver_pos[1], 
-                                           current_user['latitude'], current_user['longitude'])
-        else:
-            prev_pos = (sequence[i-1]['latitude'], sequence[i-1]['longitude'])
-            prev_bearing = calculate_bearing(prev_pos[0], prev_pos[1],
-                                           current_user['latitude'], current_user['longitude'])
-
-        next_bearing = calculate_bearing(current_user['latitude'], current_user['longitude'],
-                                       next_user['latitude'], next_user['longitude'])
-
-        bearing_diff = bearing_difference(prev_bearing, next_bearing)
-        bearing_differences.append(bearing_diff)
-
-    # Last pickup to office
-    if sequence:
-        last_user = sequence[-1]
-        total_distance += haversine_distance(
-            last_user['latitude'], last_user['longitude'],
-            office_lat, office_lon
-        )
-
-    # Calculate mean turning angle (but give it less weight)
-    mean_turning_degrees = sum(bearing_differences) / len(bearing_differences) if bearing_differences else 0
-
-    return total_distance, sequence, mean_turning_degrees
-
-
-def calculate_optimal_sequence_capacity_focused(driver_pos, cluster_users, office_pos):
-    """Calculate sequence prioritizing capacity utilization over route efficiency"""
-    if len(cluster_users) <= 1:
-        return cluster_users.to_dict('records') if hasattr(cluster_users, 'to_dict') else list(cluster_users)
-
-    users_list = cluster_users.to_dict('records') if hasattr(cluster_users, 'to_dict') else list(cluster_users)
-
-    # For capacity mode, use simpler distance-based sorting instead of bearing projection
-    def distance_from_driver_score(user):
-        distance = haversine_distance(driver_pos[0], driver_pos[1], 
-                                    user['latitude'], user['longitude'])
-        return (distance, user['user_id'])  # Sort by distance, then by user_id
-
-    users_list.sort(key=distance_from_driver_score)
-
-    # Apply much more lenient 2-opt with focus on distance rather than turning
-    return apply_lenient_2opt_capacity_focused(users_list, driver_pos, office_pos)
-
-
-def is_directionally_consistent(users, driver_pos, office_pos, lenient=False):
-    """Check if a group of users maintains directional consistency"""
-    if len(users) <= 1:
-        return True
+            merged_routes.append(r1)
+            used.add(i)
     
-    office_lat, office_lon = office_pos
+    total_seats = sum(r['vehicle_type'] for r in merged_routes)
+    total_users = sum(len(r['assigned_users']) for r in merged_routes)
+    overall_utilization = (total_users / total_seats * 100) if total_seats > 0 else 0
     
-    # Calculate bearings from office to each user
-    bearings = []
-    for user in users:
-        bearing = calculate_bearing(office_lat, office_lon, user['latitude'], user['longitude'])
-        bearings.append(bearing)
+    print(f"  🎯 Blueprint merge complete: {len(routes)} → {len(merged_routes)} routes")
+    print(f"  📊 Final utilization: {total_users}/{total_seats} ({overall_utilization:.1f}%)")
     
-    # Check bearing spread
-    max_bearing_spread = 60 if lenient else 45  # Allow more spread in lenient mode
-    
-    if len(bearings) >= 2:
-        bearing_diffs = []
-        for i in range(len(bearings)):
-            for j in range(i + 1, len(bearings)):
-                diff = bearing_difference(bearings[i], bearings[j])
-                bearing_diffs.append(diff)
-        
-        max_diff = max(bearing_diffs) if bearing_diffs else 0
-        if max_diff > max_bearing_spread:
-            return False
-    
-    return True
+    return merged_routes
 
 
-def is_directionally_consistent_from_dicts(user_dicts, driver_pos, office_pos, lenient=False):
-    """Check directional consistency for user dictionaries (with lat/lng keys)"""
-    if len(user_dicts) <= 1:
-        return True
-    
-    office_lat, office_lon = office_pos
-    
-    # Calculate bearings from office to each user
-    bearings = []
-    for user in user_dicts:
-        bearing = calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
-        bearings.append(bearing)
-    
-    # Check bearing spread
-    max_bearing_spread = 60 if lenient else 45  # Allow more spread in lenient mode
-    
-    if len(bearings) >= 2:
-        bearing_diffs = []
-        for i in range(len(bearings)):
-            for j in range(i + 1, len(bearings)):
-                diff = bearing_difference(bearings[i], bearings[j])
-                bearing_diffs.append(diff)
-        
-        max_diff = max(bearing_diffs) if bearing_diffs else 0
-        if max_diff > max_bearing_spread:
-            return False
-    
-    return True
+# =============================================================================
+# MAIN ASSIGNMENT FUNCTION FOR BLUEPRINT CAPACITY OPTIMIZATION
+# =============================================================================
 
-
-def apply_lenient_2opt_capacity_focused(sequence, driver_pos, office_pos):
-    """Apply very lenient 2-opt improvements focused on distance rather than turning"""
-    if len(sequence) <= 2:
-        return sequence
-
-    improved = True
-    max_iterations = 2  # Fewer iterations for capacity mode
-    iteration = 0
-    
-    # Very lenient turning angle threshold
-    max_turning_threshold = _config.get('MAX_TURNING_ANGLE', 60) * 2  # Much more lenient
-
-    while improved and iteration < max_iterations:
-        improved = False
-        iteration += 1
-        
-        best_distance = calculate_sequence_distance(sequence, driver_pos, office_pos)
-        
-        for i in range(len(sequence) - 1):
-            for j in range(i + 2, len(sequence)):
-                # Try 2-opt swap
-                new_sequence = sequence[:i+1] + sequence[i+1:j+1][::-1] + sequence[j+1:]
-
-                # Check if new sequence maintains directional consistency
-                if not is_directionally_consistent(new_sequence, driver_pos, office_pos, lenient=True):
-                    continue
-
-                # Calculate new metrics
-                new_distance = calculate_sequence_distance(new_sequence, driver_pos, office_pos)
-                
-                # For capacity mode, only care about distance improvement
-                if new_distance < best_distance * 0.99:  # Even more lenient distance improvement
-                    sequence = new_sequence
-                    best_distance = new_distance
-                    improved = True
-                    break
-            if improved:
-                break
-
-    return sequence
-
-
-# MAIN ASSIGNMENT FUNCTION FOR CAPACITY OPTIMIZATION
 def run_assignment_capacity(source_id: str, parameter: int = 1, string_param: str = "", choice: str = ""):
-    """Main entry point for capacity optimization assignment"""
+    """Main entry point for blueprint capacity optimization assignment"""
     return run_assignment_capacity_internal(source_id, parameter, string_param, choice)
 
 def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_param: str = "", choice: str = ""):
     """
-    Main assignment function optimized for capacity utilization:
-    - Prioritizes filling vehicle seats over route efficiency
-    - Allows zigzag routes and higher turning angles
-    - Maximizes utilization across all vehicles
+    Main assignment function implementing the blueprint approach:
+    - Micro-clustering for atomic groups
+    - Capacity-aware group aggregation
+    - Directional validation throughout
+    - Path-aware insertion with strict limits
     """
     start_time = time.time()
 
@@ -647,14 +838,7 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
     global _config
     _config = load_and_validate_config()
     
-    # Update global variables from new config
-    global MAX_FILL_DISTANCE_KM, MERGE_DISTANCE_KM, MAX_BEARING_DIFFERENCE, UTILIZATION_PENALTY_PER_SEAT
-    MAX_FILL_DISTANCE_KM = _config['MAX_FILL_DISTANCE_KM']
-    MERGE_DISTANCE_KM = _config['MERGE_DISTANCE_KM'] 
-    MAX_BEARING_DIFFERENCE = _config['MAX_BEARING_DIFFERENCE']
-    UTILIZATION_PENALTY_PER_SEAT = _config['UTILIZATION_PENALTY_PER_SEAT']
-
-    print(f"🚀 Starting CAPACITY OPTIMIZATION assignment for source_id: {source_id}")
+    print(f"🚀 Starting BLUEPRINT CAPACITY OPTIMIZATION for source_id: {source_id}")
     print(f"📋 Parameter: {parameter}, String parameter: {string_param}")
 
     try:
@@ -672,10 +856,10 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
                 "unassignedUsers": [],
                 "unassignedDrivers": _get_all_drivers_as_unassigned(data),
                 "clustering_analysis": {
-                    "method": "No Users",
+                    "method": "Blueprint - No Users",
                     "clusters": 0
                 },
-                "optimization_mode": "capacity_optimization",
+                "optimization_mode": "blueprint_capacity_optimization",
                 "parameter": parameter,
             }
 
@@ -699,10 +883,10 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
                 "unassignedUsers": unassigned_users,
                 "unassignedDrivers": [],
                 "clustering_analysis": {
-                    "method": "No Drivers",
+                    "method": "Blueprint - No Drivers",
                     "clusters": 0
                 },
-                "optimization_mode": "capacity_optimization",
+                "optimization_mode": "blueprint_capacity_optimization",
                 "parameter": parameter,
             }
 
@@ -718,29 +902,52 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
         
         print(f"📊 DataFrames prepared - Users: {len(user_df)}, Drivers: {len(driver_df)}")
 
-        # STEP 1: Geographic clustering (less strict for capacity mode)
-        user_df = create_geographic_clusters(user_df, office_lat, office_lon, _config)
-        clustering_results = {"method": "capacity_focused_" + _config['clustering_method'], 
-                            "clusters": user_df['geo_cluster'].nunique()}
-
-        # STEP 2: Capacity-based sub-clustering (more lenient for capacity filling)
-        user_df = create_capacity_subclusters(user_df, office_lat, office_lon, _config)
-
-        # STEP 3: Capacity-focused driver assignment
-        routes, assigned_user_ids = assign_drivers_by_priority_capacity_focused(
+        # BLUEPRINT ASSIGNMENT EXECUTION
+        
+        # STEP 1: Blueprint assignment with micro-clustering
+        routes, assigned_user_ids = assign_drivers_blueprint_approach(
             user_df, driver_df, office_lat, office_lon)
 
-        # STEP 4: Local optimization (less strict on turning)
-        routes = local_optimization(routes, office_lat, office_lon)
+        clustering_results = {
+            "method": "blueprint_micro_clustering",
+            "clusters": len(routes)
+        }
 
-        # STEP 5: Aggressive global optimization for capacity filling
-        routes, unassigned_users = global_optimization(routes, user_df,
-                                                       assigned_user_ids, driver_df, office_lat, office_lon)
+        # STEP 2: Handle remaining unassigned users with residual grouping
+        unassigned_users_df = user_df[~user_df['user_id'].isin(assigned_user_ids)]
+        used_driver_ids = {route['driver_id'] for route in routes}
+        available_drivers_df = driver_df[~driver_df['driver_id'].isin(used_driver_ids)]
 
-        # STEP 6: Aggressive final-pass merge for maximum capacity utilization
-        routes = final_pass_merge_capacity_focused(routes, _config, office_lat, office_lon)
+        if not unassigned_users_df.empty and not available_drivers_df.empty:
+            print("  🔄 Residual grouping for remaining users...")
+            
+            # Create looser clusters for remaining users
+            remaining_routes, additional_assigned = handle_remaining_users_improved(
+                unassigned_users_df, available_drivers_df, routes, office_lat, office_lon)
+            
+            routes.extend(remaining_routes)
+            assigned_user_ids.update(additional_assigned)
 
-        # Filter out routes with no assigned users and move those drivers to unassigned
+        # STEP 3: Blueprint final merge
+        routes = final_merge_blueprint(routes, _config, office_lat, office_lon)
+
+        # Build unassigned users list
+        unassigned_users = []
+        for _, user in user_df.iterrows():
+            if user['user_id'] not in assigned_user_ids:
+                unassigned_user = {
+                    'user_id': str(user['user_id']),
+                    'lat': float(user['latitude']),
+                    'lng': float(user['longitude']),
+                    'office_distance': float(user.get('office_distance', 0))
+                }
+                if pd.notna(user.get('first_name')):
+                    unassigned_user['first_name'] = str(user['first_name'])
+                if pd.notna(user.get('email')):
+                    unassigned_user['email'] = str(user['email'])
+                unassigned_users.append(unassigned_user)
+
+        # Filter out routes with no assigned users
         filtered_routes = []
         empty_route_driver_ids = set()
         
@@ -753,7 +960,7 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
         
         routes = filtered_routes
         
-        # Build unassigned drivers list (including drivers from empty routes)
+        # Build unassigned drivers list
         assigned_driver_ids = {route['driver_id'] for route in routes}
         unassigned_drivers_df = driver_df[~driver_df['driver_id'].isin(assigned_driver_ids)]
         unassigned_drivers = []
@@ -780,7 +987,7 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
         users_unassigned = len(unassigned_users)
         users_accounted_for = users_assigned + users_unassigned
         
-        print(f"✅ Capacity optimization complete in {execution_time:.2f}s")
+        print(f"✅ Blueprint capacity optimization complete in {execution_time:.2f}s")
         print(f"📊 Final routes: {len(routes)}")
         print(f"🎯 Users assigned: {users_assigned}")
         print(f"👥 Users unassigned: {users_unassigned}")
@@ -811,7 +1018,6 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
                     break
 
             if driver_info:
-                # Add driver details directly to route level instead of nested driver_info
                 enhanced_route.update({
                     'first_name': driver_info.get('first_name', ''),
                     'last_name': driver_info.get('last_name', ''),
@@ -832,7 +1038,6 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
             for user in route['assigned_users']:
                 enhanced_user = user.copy()
 
-                # Find user in original data
                 for orig_user in original_users:
                     if str(orig_user.get('id', orig_user.get('sub_user_id', ''))) == user['user_id']:
                         enhanced_user.update({
@@ -856,7 +1061,6 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
         for user in unassigned_users:
             enhanced_user = user.copy()
 
-            # Find user in original data
             for orig_user in original_users:
                 if str(orig_user.get('id', orig_user.get('sub_user_id', ''))) == user['user_id']:
                     enhanced_user.update({
@@ -880,7 +1084,6 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
         for driver in unassigned_drivers:
             enhanced_driver = driver.copy()
 
-            # Find driver in original data
             for orig_driver in all_drivers_data:
                 if str(orig_driver.get('id', orig_driver.get('sub_user_id', ''))) == driver['driver_id']:
                     enhanced_driver.update({
@@ -907,7 +1110,7 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
             "unassignedUsers": enhanced_unassigned_users,
             "unassignedDrivers": enhanced_unassigned_drivers,
             "clustering_analysis": clustering_results,
-            "optimization_mode": "capacity_optimization",
+            "optimization_mode": "blueprint_capacity_optimization",
             "parameter": parameter,
         }
 
@@ -920,174 +1123,3 @@ def run_assignment_capacity_internal(source_id: str, parameter: int = 1, string_
     except Exception as e:
         logger.error(f"Assignment failed: {e}", exc_info=True)
         return {"status": "false", "details": str(e), "data": []}
-
-
-def final_pass_merge_capacity_focused(routes, config, office_lat, office_lon):
-    """
-    DIRECTIONAL capacity-focused final-pass merge: Fill seats while maintaining directional consistency
-    """
-    print("🔄 Step 6: DIRECTIONAL capacity-focused final-pass merge...")
-
-    merged_routes = []
-    used = set()
-    
-    # Balanced thresholds for capacity + direction
-    MERGE_BEARING_THRESHOLD = 35  # Stricter directional requirement
-    MERGE_DISTANCE_KM = config.get("MERGE_DISTANCE_KM", 5.0) * 1.5  # Moderate distance tolerance
-
-    for i, r1 in enumerate(routes):
-        if i in used:
-            continue
-
-        best_merge = None
-        best_total_utilization = len(r1['assigned_users']) / r1['vehicle_type']  # Start with current utilization
-
-        for j, r2 in enumerate(routes):
-            if j <= i or j in used:
-                continue
-
-            # 1. Check direction similarity (strict for directional consistency)
-            b1 = calculate_average_bearing_improved(r1, office_lat, office_lon)
-            b2 = calculate_average_bearing_improved(r2, office_lat, office_lon)
-            bearing_diff = bearing_difference(b1, b2)
-
-            # Reject if not in same general direction
-            if bearing_diff > MERGE_BEARING_THRESHOLD:
-                continue
-
-            # 2. Check centroid distance
-            c1 = calculate_route_center_improved(r1)
-            c2 = calculate_route_center_improved(r2)
-            centroid_distance = haversine_distance(c1[0], c1[1], c2[0], c2[1])
-
-            if centroid_distance > MERGE_DISTANCE_KM:
-                continue
-
-            # 3. Check if we can fit all users in the larger vehicle
-            total_users = len(r1['assigned_users']) + len(r2['assigned_users'])
-            max_capacity = max(r1['vehicle_type'], r2['vehicle_type'])
-
-            if total_users > max_capacity:
-                continue
-
-            # 4. Check directional consistency of merged route
-            all_users = r1['assigned_users'] + r2['assigned_users']
-            driver_pos = (r1['latitude'], r1['longitude']) if r1['vehicle_type'] >= r2['vehicle_type'] else (r2['latitude'], r2['longitude'])
-            
-            if not is_directionally_consistent_from_dicts(all_users, driver_pos, (office_lat, office_lon), lenient=True):
-                continue
-
-            # 5. Calculate total utilization after merge
-            merged_utilization = total_users / max_capacity
-
-            # Prioritize higher utilization while maintaining direction
-            if merged_utilization > best_total_utilization:
-                # Choose the driver with larger capacity or better position
-                if r1['vehicle_type'] >= r2['vehicle_type']:
-                    better_route = r1
-                else:
-                    better_route = r2
-
-                # Create test merged route
-                test_route = better_route.copy()
-                test_route['assigned_users'] = all_users
-                test_route['vehicle_type'] = max_capacity
-
-                # Quick sequence optimization with directional check
-                test_route = optimize_route_sequence_improved(test_route, office_lat, office_lon)
-
-                # Accept merge if directional and has good utilization
-                best_total_utilization = merged_utilization
-                best_merge = (j, test_route)
-
-        if best_merge is not None:
-            j, merged_route = best_merge
-            merged_routes.append(merged_route)
-            used.add(i)
-            used.add(j)
-            
-            utilization_pct = len(merged_route['assigned_users']) / merged_route['vehicle_type'] * 100
-            print(f"  🧭 DIRECTIONAL merge: routes {r1['driver_id']} + {routes[j]['driver_id']} = {len(merged_route['assigned_users'])}/{merged_route['vehicle_type']} seats ({utilization_pct:.1f}%)")
-        else:
-            merged_routes.append(r1)
-            used.add(i)
-
-    # ADDITIONAL AGGRESSIVE PASS: Try to redistribute users to maximize overall utilization
-    print("  🎯 Additional seat-filling pass...")
-    
-    # Sort routes by utilization (ascending) to fill up underutilized routes first
-    merged_routes_with_util = []
-    for route in merged_routes:
-        utilization = len(route['assigned_users']) / route['vehicle_type']
-        merged_routes_with_util.append((utilization, route))
-    
-    merged_routes_with_util.sort(key=lambda x: x[0])  # Sort by utilization ascending
-    
-    # Try to move users from high-utilization routes to low-utilization routes for better overall filling
-    for i, (util_low, route_low) in enumerate(merged_routes_with_util):
-        if util_low >= 0.9:  # Already well utilized
-            continue
-            
-        available_seats = route_low['vehicle_type'] - len(route_low['assigned_users'])
-        if available_seats <= 0:
-            continue
-        
-        # Look for users in higher-utilization routes that could be moved
-        for j, (util_high, route_high) in enumerate(merged_routes_with_util[i+1:], start=i+1):
-            if len(route_high['assigned_users']) <= 1:  # Don't empty routes completely
-                continue
-                
-            # Find users in the high-util route that are closer to the low-util route
-            users_to_consider = []
-            route_low_center = calculate_route_center_improved(route_low)
-            
-            for user in route_high['assigned_users']:
-                distance_to_low = haversine_distance(route_low_center[0], route_low_center[1],
-                                                   user['lat'], user['lng'])
-                if distance_to_low <= MERGE_DISTANCE_KM:  # Close enough to move
-                    users_to_consider.append((distance_to_low, user))
-            
-            # Move closest users to fill the low-utilization route
-            users_to_consider.sort(key=lambda x: x[0])
-            users_moved = 0
-            
-            for distance, user in users_to_consider[:available_seats]:
-                # Move the user
-                route_high['assigned_users'].remove(user)
-                route_low['assigned_users'].append(user)
-                users_moved += 1
-                available_seats -= 1
-                
-                if available_seats <= 0:
-                    break
-            
-            if users_moved > 0:
-                # Re-optimize both routes
-                route_low = optimize_route_sequence_improved(route_low, office_lat, office_lon)
-                route_high = optimize_route_sequence_improved(route_high, office_lat, office_lon)
-                
-                # Update utilizations
-                new_util_low = len(route_low['assigned_users']) / route_low['vehicle_type']
-                new_util_high = len(route_high['assigned_users']) / route_high['vehicle_type']
-                
-                merged_routes_with_util[i] = (new_util_low, route_low)
-                merged_routes_with_util[j] = (new_util_high, route_high)
-                
-                print(f"    🔄 Redistributed {users_moved} users: Route {route_high['driver_id']} → Route {route_low['driver_id']}")
-                print(f"       New utilizations: {new_util_low*100:.1f}%, {new_util_high*100:.1f}%")
-                
-                if available_seats <= 0:
-                    break
-
-    # Extract final routes
-    final_routes = [route for _, route in merged_routes_with_util]
-    
-    # Final statistics
-    total_seats = sum(r['vehicle_type'] for r in final_routes)
-    total_users = sum(len(r['assigned_users']) for r in final_routes)
-    overall_utilization = (total_users / total_seats * 100) if total_seats > 0 else 0
-    
-    print(f"  🎯 DIRECTIONAL capacity merge complete: {len(routes)} → {len(final_routes)} routes")
-    print(f"  🧭 Final directional seat utilization: {total_users}/{total_seats} ({overall_utilization:.1f}%)")
-    
-    return final_routes

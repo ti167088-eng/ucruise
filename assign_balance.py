@@ -559,7 +559,7 @@ def capacity_aware_matching(locality_demands, available_capacities):
     logger.info("🧮 Stage 2.5: Capacity-aware matching...")
 
     # Sort localities by size descending (best-fit decreasing)
-    sorted_localities = sorted(locality_demands.items(), 
+    sorted_localities = sorted(locality_demands.items(),
                               key=lambda x: x[1]['n_users'], reverse=True)
 
     # Sort available capacities descending
@@ -1016,7 +1016,7 @@ def calculate_distance_to_route_path(route, user_pos, office_pos):
     """Calculate distance from user to the actual route path"""
     if not route['assigned_users']:
         # Distance to driver
-        return haversine_distance(route['latitude'], route['longitude'], 
+        return haversine_distance(route['latitude'], route['longitude'],
                                  user_pos[0], user_pos[1])
 
     # Find minimum distance to any segment of the route
@@ -1026,7 +1026,7 @@ def calculate_distance_to_route_path(route, user_pos, office_pos):
     if route['assigned_users']:
         first_user = route['assigned_users'][0]
         segment_dist = point_to_line_distance(
-            user_pos, 
+            user_pos,
             (route['latitude'], route['longitude']),
             (first_user['lat'], first_user['lng'])
         )
@@ -1611,7 +1611,7 @@ def inject_spare_drivers(unassigned_users_df, available_drivers_df, office_lat, 
         # Find best driver with matching capacity
         best_driver = None
         for _, driver in sorted_drivers.iterrows():
-            if (driver.driver_id in used_driver_ids or 
+            if (driver.driver_id in used_driver_ids or
                 driver.capacity != capacity):
                 continue
             best_driver = driver
@@ -1620,7 +1620,7 @@ def inject_spare_drivers(unassigned_users_df, available_drivers_df, office_lat, 
         if best_driver is None:
             # Fallback to any available driver with sufficient capacity
             for _, driver in sorted_drivers.iterrows():
-                if (driver.driver_id in used_driver_ids or 
+                if (driver.driver_id in used_driver_ids or
                     driver.capacity < len(group_users)):
                     continue
                 best_driver = driver
@@ -1726,215 +1726,159 @@ def group_residual_users_by_capacity(unassigned_users_df, available_drivers_df):
     return user_groups
 
 # STAGE 9: Final consolidation to ensure nearby users (within 1km) are in same route
-def consolidate_nearby_users_final(routes, office_lat, office_lon):
-    """Consolidate routes to ensure users within 1km are in the same route while preserving driver info and capacity constraints."""
-    logger.info("🛃 Stage 9: Final consolidation of nearby users...")
+def validate_capacity_constraints(routes):
+    """Validate that all routes respect capacity constraints"""
+    violations = []
 
+    for route in routes:
+        assigned_count = len(route['assigned_users'])
+        capacity = route['vehicle_type']
+
+        if assigned_count > capacity:
+            violation = {
+                'driver_id': route['driver_id'],
+                'assigned': assigned_count,
+                'capacity': capacity,
+                'overflow': assigned_count - capacity
+            }
+            violations.append(violation)
+            logger.error(f"🚨 Capacity violation: Driver {route['driver_id']} has {assigned_count} users but capacity is {capacity}")
+
+    return violations
+
+def traditional_route_merging(routes, office_lat, office_lon):
+    """Traditional route merging with enhanced nearby user detection"""
     if len(routes) < 2:
         return routes
 
-    # First pass: Proximity-based user reassignment
-    routes = proximity_based_user_reassignment(routes, office_lat, office_lon)
+    merged_routes = []
+    used = set()
 
-    # Second pass: Traditional route merging for remaining cases
-    routes = traditional_route_merging(routes, office_lat, office_lon)
-
-    logger.info(f"✅ Final consolidation: {len(routes)} routes created.")
-    return routes
-
-def proximity_based_user_reassignment(routes, office_lat, office_lon):
-    """Reassign users to nearby routes to minimize geographic spread"""
-    logger.info("   🎯 Proximity-based user reassignment...")
-
-    reassignments_made = 0
-    max_reassignment_distance = 0.5  # 500m - very tight proximity
-
-    for route in routes:
-        if not route['assigned_users']:
+    for i, r1 in enumerate(routes):
+        if i in used:
             continue
 
-        # Find users in OTHER routes that are very close to users in THIS route
-        users_to_reassign = []
+        best_merge = None
+        best_score = float('inf')
 
-        for other_route in routes:
-            if (other_route['driver_id'] == route['driver_id'] or 
-                not other_route['assigned_users'] or
-                len(other_route['assigned_users']) <= 1):  # Don't steal last user
+        for j, r2 in enumerate(routes):
+            if j <= i or j in used:
                 continue
 
-            for other_user in other_route['assigned_users']:
-                # Check if this user is very close to any user in current route
-                min_distance_to_route = float('inf')
+            # Check if routes can be merged
+            if can_merge_routes(r1, r2, office_lat, office_lon):
+                # Calculate merge score
+                merge_score = calculate_merge_score(r1, r2, office_lat, office_lon)
+                
+                if merge_score < best_score:
+                    best_score = merge_score
+                    best_merge = j
 
-                for route_user in route['assigned_users']:
-                    dist = haversine_distance(
-                        other_user['lat'], other_user['lng'],
-                        route_user['lat'], route_user['lng']
-                    )
-                    min_distance_to_route = min(min_distance_to_route, dist)
+        if best_merge is not None:
+            # Perform merge
+            merged_route = merge_routes(r1, routes[best_merge], office_lat, office_lon)
+            merged_routes.append(merged_route)
+            used.add(i)
+            used.add(best_merge)
 
-                # If user is very close to this route and we have capacity
-                if (min_distance_to_route <= max_reassignment_distance and 
-                    len(route['assigned_users']) < route['vehicle_type']):
+            total_users = len(merged_route['assigned_users'])
+            utilization = (total_users / merged_route['vehicle_type']) * 100
+            logger.info(f"   🔗 Traditional merge: {r1['driver_id']} + {routes[best_merge]['driver_id']} "
+                       f"= {total_users}/{merged_route['vehicle_type']} seats ({utilization:.1f}%)")
+        else:
+            merged_routes.append(r1)
+            used.add(i)
 
-                    # Calculate current route coherence
-                    current_coherence = calculate_route_spread(other_route['assigned_users'])
-                    potential_coherence = calculate_route_spread(
-                        [u for u in other_route['assigned_users'] if u['user_id'] != other_user['user_id']]
-                    )
+    return merged_routes
 
-                    # Only reassign if it improves the other route's coherence or doesn't hurt much
-                    if potential_coherence >= current_coherence - 0.5:  # Allow small degradation
-                        users_to_reassign.append({
-                            'user': other_user,
-                            'from_route': other_route,
-                            'distance': min_distance_to_route
-                        })
+def consolidate_nearby_users_final(routes, office_lat, office_lon):
+    """Consolidate routes to ensure users within 1.5km are in the same route while preserving driver info and capacity constraints."""
+    logger.info("🛃 Stage 9: Enhanced final consolidation of nearby users...")
 
-        # Sort by proximity and reassign closest users first
-        users_to_reassign.sort(key=lambda x: x['distance'])
+    # Phase 1: Aggressive proximity-based user reassignment within existing routes
+    reassignments_made = 0
 
-        for reassignment in users_to_reassign:
-            if len(route['assigned_users']) >= route['vehicle_type']:
-                break  # Route is full
+    for i, route1 in enumerate(routes):
+        if len(route1['assigned_users']) >= route1['vehicle_type']:
+            continue  # Route is full
 
-            user = reassignment['user']
-            from_route = reassignment['from_route']
+        for j, route2 in enumerate(routes):
+            if i == j or len(route2['assigned_users']) == 0:
+                continue
 
-            # Remove user from original route
-            from_route['assigned_users'] = [
-                u for u in from_route['assigned_users'] 
-                if u['user_id'] != user['user_id']
-            ]
+            # Check each user in route2 to see if they're closer to route1
+            users_to_move = []
+            for user in route2['assigned_users']:
+                user_pos = (user['lat'], user['lng'])
 
-            # Add user to new route
-            route['assigned_users'].append(user)
-            reassignments_made += 1
+                # Calculate distance to route1 center
+                route1_center = calculate_route_center(route1)
+                dist_to_route1 = haversine_distance(user_pos[0], user_pos[1], route1_center[0], route1_center[1])
 
-            logger.info(f"   🔄 Reassigned user {user['user_id']} from route {from_route['driver_id']} "
-                       f"to route {route['driver_id']} (distance: {reassignment['distance']:.2f}km)")
+                # Calculate distance to route2 center  
+                route2_center = calculate_route_center(route2)
+                dist_to_route2 = haversine_distance(user_pos[0], user_pos[1], route2_center[0], route2_center[1])
+
+                # More aggressive reassignment: within 1.5km and any improvement
+                if dist_to_route1 < dist_to_route2 and dist_to_route1 <= 1.5:
+                    users_to_move.append(user)
+
+            # Move users if route1 has capacity
+            for user in users_to_move:
+                if len(route1['assigned_users']) >= route1['vehicle_type']:
+                    break
+
+                route2['assigned_users'].remove(user)
+                route1['assigned_users'].append(user)
+                reassignments_made += 1
+                logger.info(f"   🔄 Reassigned user {user['user_id']} from route {route2['driver_id']} to route {route1['driver_id']} (distance: {dist_to_route1:.2f}km)")
 
     if reassignments_made > 0:
         logger.info(f"   ✅ Made {reassignments_made} proximity-based reassignments")
 
-        # Re-optimize sequences for affected routes
-        for route in routes:
-            if route['assigned_users']:
-                route = reoptimize_route_sequence(route, office_lat, office_lon)
+    # Phase 2: Enhanced route merging for single-user routes
+    single_user_routes = [r for r in routes if len(r['assigned_users']) == 1]
+    multi_user_routes = [r for r in routes if len(r['assigned_users']) > 1]
 
+    logger.info(f"   📊 Found {len(single_user_routes)} single-user routes to consolidate")
+
+    # Try to merge single users into nearby multi-user routes first
+    routes_to_remove = set()
+    for single_route in single_user_routes:
+        if single_route['driver_id'] in routes_to_remove:
+            continue
+
+        single_user = single_route['assigned_users'][0]
+        single_pos = (single_user['lat'], single_user['lng'])
+
+        best_merge_route = None
+        best_distance = float('inf')
+
+        for multi_route in multi_user_routes:
+            if len(multi_route['assigned_users']) >= multi_route['vehicle_type']:
+                continue  # Route is full
+
+            route_center = calculate_route_center(multi_route)
+            distance = haversine_distance(single_pos[0], single_pos[1], route_center[0], route_center[1])
+
+            # More generous distance threshold for consolidation
+            if distance <= 2.0 and distance < best_distance:  # Increased to 2km
+                best_distance = distance
+                best_merge_route = multi_route
+
+        if best_merge_route:
+            best_merge_route['assigned_users'].append(single_user)
+            routes_to_remove.add(single_route['driver_id'])
+            logger.info(f"   ✅ Merged single user {single_user['user_id']} into route {best_merge_route['driver_id']} (distance: {best_distance:.2f}km)")
+
+    # Remove merged single-user routes
+    routes = [r for r in routes if r['driver_id'] not in routes_to_remove]
+
+    # Phase 3: Traditional route merging with enhanced nearby user detection
+    routes = traditional_route_merging(routes, office_lat, office_lon)
+
+    logger.info(f"✅ Enhanced final consolidation: {len(routes)} routes created.")
     return routes
-
-def traditional_route_merging(routes, office_lat, office_lon):
-    """Traditional route merging approach"""
-    # Use Union-Find to group users that should be in the same route
-    parent = list(range(len(routes)))
-
-    for i in range(len(routes)):
-        for j in range(i + 1, len(routes)):
-            route1 = routes[i]
-            route2 = routes[j]
-
-            # Check if any user in route1 is within 1km of any user in route2
-            users1 = route1['assigned_users']
-            users2 = route2['assigned_users']
-
-            should_merge = False
-            for u1 in users1:
-                for u2 in users2:
-                    dist = haversine_distance(u1['lat'], u1['lng'], u2['lat'], u2['lng'])
-                    if dist <= 1.0:  # 1km radius
-                        should_merge = True
-                        break
-                if should_merge:
-                    break
-
-            if should_merge:
-                # Check if merging would violate capacity constraints
-                total_users = len(users1) + len(users2)
-                max_capacity = max(route1['vehicle_type'], route2['vehicle_type'])
-
-                if total_users <= max_capacity:
-                    # Safe to merge - union the routes
-                    p1, p2 = find(parent, i), find(parent, j)
-                    if p1 != p2:
-                        parent[p1] = p2
-                else:
-                    logger.info(f"   🚫 Skipping merge of routes {route1['driver_id']} and {route2['driver_id']} - would exceed capacity ({total_users} > {max_capacity})")
-
-    # Rebuild routes based on consolidated groups while preserving original driver info
-    consolidated_routes_map = {}
-    for i, route in enumerate(routes):
-        root = find(parent, i)
-        if root not in consolidated_routes_map:
-            consolidated_routes_map[root] = {'routes': [], 'original_indices': []}
-
-        consolidated_routes_map[root]['routes'].append(route)
-        consolidated_routes_map[root]['original_indices'].append(i)
-
-    final_routes = []
-    for root, data in consolidated_routes_map.items():
-        original_routes = data['routes']
-
-        if len(original_routes) == 1:
-            # No consolidation needed - keep original route
-            final_routes.append(original_routes[0])
-        else:
-            # Merge multiple routes - choose the best driver and preserve their info
-            all_users = []
-            best_route = None
-            max_capacity = 0
-
-            # Find the route with highest capacity to use as base
-            for orig_route in original_routes:
-                all_users.extend(orig_route['assigned_users'])
-                if orig_route['vehicle_type'] > max_capacity:
-                    max_capacity = orig_route['vehicle_type']
-                    best_route = orig_route
-
-            # Ensure best_route is not None
-            if best_route is None:
-                logger.error("Error: Could not find a best_route for consolidation. Skipping merge.")
-                final_routes.extend(original_routes) # Add original routes back if something went wrong
-                continue
-
-            # Use the best route as the base and merge users
-            merged_route = best_route.copy()
-            merged_route['assigned_users'] = all_users
-
-            # Ensure we don't exceed capacity
-            if len(all_users) > max_capacity:
-                logger.warning(f"   ⚠️ Merged route would exceed capacity ({len(all_users)} > {max_capacity}), keeping routes separate")
-                # Add all original routes separately
-                final_routes.extend(original_routes)
-            else:
-                # Re-optimize sequence for the merged route
-                merged_route = reoptimize_route_sequence(merged_route, office_lat, office_lon)
-                final_routes.append(merged_route)
-
-                merged_user_ids = [u1['user_id'] for u1 in all_users]
-                original_driver_ids = [r['driver_id'] for r in original_routes]
-                logger.info(f"   🤝 Merged routes {', '.join(original_driver_ids)} into {best_route['driver_id']} with {len(all_users)} users")
-
-    return final_routes
-
-def calculate_route_spread(users):
-    """Calculate how spread out users are in a route (lower is better)"""
-    if len(users) <= 1:
-        return 0.0
-
-    total_distance = 0.0
-    count = 0
-
-    for i in range(len(users)):
-        for j in range(i + 1, len(users)):
-            dist = haversine_distance(
-                users[i]['lat'], users[i]['lng'],
-                users[j]['lat'], users[j]['lng']
-            )
-            total_distance += dist
-            count += 1
-
-    return total_distance / count if count > 0 else 0.0
 
 # ================== MAIN ASSIGNMENT FUNCTION ==================
 
