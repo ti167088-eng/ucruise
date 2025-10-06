@@ -6,6 +6,10 @@ from fastapi.staticfiles import StaticFiles
 import os
 import json
 
+# Start loading road network in background immediately on startup
+from road_network_manager import road_network_manager
+print("🗺️ Road network loading started in background...")
+
 app = FastAPI()
 
 app.add_middleware(

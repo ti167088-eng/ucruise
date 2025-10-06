@@ -24,6 +24,52 @@ warnings.filterwarnings('ignore')
 logger = get_logger()
 progress = ProgressTracker()
 
+# ============================================================================
+# PERFORMANCE OPTIMIZATION: Caching layer for distance/bearing computations
+# ============================================================================
+
+def round_coord(coord):
+    """Round coordinate to 6 decimal places for consistent caching (~11cm precision)"""
+    return round(float(coord), 6)
+
+@lru_cache(maxsize=200000)
+def cached_haversine(lat1, lon1, lat2, lon2):
+    """Cached haversine distance computation"""
+    lat1, lon1, lat2, lon2 = round_coord(lat1), round_coord(lon1), round_coord(lat2), round_coord(lon2)
+
+    # Haversine formula
+    R = 6371.0  # Earth radius in km
+    lat1_rad, lat2_rad = math.radians(lat1), math.radians(lat2)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    c = 2 * math.asin(math.sqrt(a))
+    return R * c
+
+@lru_cache(maxsize=200000)
+def cached_bearing(lat1, lon1, lat2, lon2):
+    """Cached bearing calculation"""
+    lat1, lon1, lat2, lon2 = round_coord(lat1), round_coord(lon1), round_coord(lat2), round_coord(lon2)
+
+    lat1_rad, lat2_rad = math.radians(lat1), math.radians(lat2)
+    dlon = math.radians(lon2 - lon1)
+
+    x = math.sin(dlon) * math.cos(lat2_rad)
+    y = math.cos(lat1_rad) * math.sin(lat2_rad) - math.sin(lat1_rad) * math.cos(lat2_rad) * math.cos(dlon)
+
+    bearing = math.degrees(math.atan2(x, y))
+    return (bearing + 360) % 360
+
+@lru_cache(maxsize=100000)
+def cached_bearing_difference(b1, b2):
+    """Cached bearing difference calculation"""
+    diff = abs(b1 - b2)
+    if diff > 180:
+        diff = 360 - diff
+    return diff
+
+
 # Import road_network module for route coherence scoring
 try:
     import road_network as road_network_module
@@ -39,10 +85,10 @@ try:
                 if not user_positions:
                     return 1.0
                 avg_dist_from_driver = sum(
-                    haversine_distance(driver_pos[0], driver_pos[1], u[0], u[1])
+                    cached_haversine(driver_pos[0], driver_pos[1], u[0], u[1])
                     for u in user_positions) / len(user_positions)
                 avg_dist_from_office = sum(
-                    haversine_distance(office_pos[0], office_pos[1], u[0], u[1])
+                    cached_haversine(office_pos[0], office_pos[1], u[0], u[1])
                     for u in user_positions) / len(user_positions)
 
                 score = max(0, 1.0 - (avg_dist_from_driver / 50.0) - (avg_dist_from_office / 100.0))
@@ -53,7 +99,7 @@ try:
                 return True
 
             def get_road_distance(self, lat1, lon1, lat2, lon2):
-                return haversine_distance(lat1, lon1, lat2, lon2)
+                return cached_haversine(lat1, lon1, lat2, lon2)
 
             def find_nearest_road_node(self, lat, lon):
                 return None, None
@@ -70,10 +116,10 @@ except ImportError:
             if not user_positions:
                 return 1.0
             avg_dist_from_driver = sum(
-                haversine_distance(driver_pos[0], driver_pos[1], u[0], u[1])
+                cached_haversine(driver_pos[0], driver_pos[1], u[0], u[1])
                 for u in user_positions) / len(user_positions)
             avg_dist_from_office = sum(
-                haversine_distance(office_pos[0], office_pos[1], u[0], u[1])
+                cached_haversine(office_pos[0], office_pos[1], u[0], u[1])
                 for u in user_positions) / len(user_positions)
 
             score = max(0, 1.0 - (avg_dist_from_driver / 50.0) - (avg_dist_from_office / 100.0))
@@ -84,7 +130,7 @@ except ImportError:
             return True
 
         def get_road_distance(self, lat1, lon1, lat2, lon2):
-            return haversine_distance(lat1, lon1, lat2, lon2)
+            return cached_haversine(lat1, lon1, lat2, lon2)
 
         def find_nearest_road_node(self, lat, lon):
             return None, None
@@ -169,9 +215,7 @@ def load_and_validate_config():
 # Import core functions from assignment.py
 from assignment import (
     validate_input_data, load_env_and_fetch_data, extract_office_coordinates,
-    prepare_user_driver_dataframes, haversine_distance, calculate_bearing,
-    bearing_difference, normalize_bearing_difference, coords_to_km,
-    _get_all_drivers_as_unassigned, _convert_users_to_unassigned_format,
+    prepare_user_driver_dataframes, _get_all_drivers_as_unassigned, _convert_users_to_unassigned_format,
     get_progress_tracker
 )
 
@@ -209,12 +253,12 @@ def derive_user_features(user_df, office_lat, office_lon):
 
     # Core distance and bearing features
     user_df['office_distance'] = user_df.apply(
-        lambda row: haversine_distance(row['latitude'], row['longitude'], office_lat, office_lon),
+        lambda row: cached_haversine(row['latitude'], row['longitude'], office_lat, office_lon),
         axis=1
     )
 
     user_df['bearing_to_office'] = user_df.apply(
-        lambda row: calculate_bearing(row['latitude'], row['longitude'], office_lat, office_lon),
+        lambda row: cached_bearing(row['latitude'], row['longitude'], office_lat, office_lon),
         axis=1
     )
 
@@ -284,7 +328,7 @@ def create_locality_clusters(user_df):
             max_distance = 0
             for i in range(len(cluster_coords)):
                 for j in range(i + 1, len(cluster_coords)):
-                    dist = np.linalg.norm(cluster_coords[i] - cluster_coords[j])
+                    dist = cached_haversine(cluster_coords[i][0], cluster_coords[i][1], cluster_coords[j][0], cluster_coords[j][1]) # Using cached_haversine for consistency
                     max_distance = max(max_distance, dist)
             logger.info(f"     Max intra-cluster distance: {max_distance:.2f}km")
 
@@ -356,8 +400,7 @@ def split_locality_by_direction(user_group, locality_id):
     max_distance = 0
     for i in range(len(coords)):
         for j in range(i + 1, len(coords)):
-            from assignment import haversine_distance
-            dist = haversine_distance(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
+            dist = cached_haversine(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
             max_distance = max(max_distance, dist)
 
     # If all users are within 1.5km, don't split by direction
@@ -385,7 +428,7 @@ def apply_angular_sectoring(user_group, locality_id):
     # Calculate cluster center bearing
     center_lat = user_group['latitude'].median()
     center_lon = user_group['longitude'].median()
-    cluster_center_bearing = calculate_bearing(center_lat, center_lon, OFFICE_LAT, OFFICE_LON)
+    cluster_center_bearing = cached_bearing(center_lat, center_lon, OFFICE_LAT, OFFICE_LON)
 
     # Calculate relative bearings
     relative_bearings = user_group['bearing_to_office'] - cluster_center_bearing
@@ -407,7 +450,7 @@ def apply_angular_sectoring_conservative(user_group, locality_id):
     # Calculate bearings to office for all users
     bearings = []
     for _, user in user_group.iterrows():
-        bearing = calculate_bearing(user['latitude'], user['longitude'], OFFICE_LAT, OFFICE_LON)
+        bearing = cached_bearing(user['latitude'], user['longitude'], OFFICE_LAT, OFFICE_LON)
         bearings.append(bearing)
 
     # Check if all bearings are within 60 degrees - if so, keep together
@@ -427,7 +470,7 @@ def apply_angular_sectoring_conservative(user_group, locality_id):
     conservative_sectors = min(4, ANGULAR_SECTORS)  # Max 4 sectors
     center_lat = user_group['latitude'].median()
     center_lon = user_group['longitude'].median()
-    cluster_center_bearing = calculate_bearing(center_lat, center_lon, OFFICE_LAT, OFFICE_LON)
+    cluster_center_bearing = cached_bearing(center_lat, center_lon, OFFICE_LAT, OFFICE_LON)
 
     relative_bearings = user_group['bearing_to_office'] - cluster_center_bearing
     relative_bearings = relative_bearings.apply(normalize_bearing_difference)
@@ -488,24 +531,24 @@ def detect_turning_points(sorted_group):
 
     for i in range(1, len(positions) - 1):
         # Calculate turning angle at point i
-        prev_bearing = calculate_bearing(positions[i-1][0], positions[i-1][1],
-                                       positions[i][0], positions[i][1])
-        next_bearing = calculate_bearing(positions[i][0], positions[i][1],
-                                       positions[i+1][0], positions[i+1][1])
+        prev_bearing = cached_bearing(positions[i-1][0], positions[i-1][1],
+                                     positions[i][0], positions[i][1])
+        next_bearing = cached_bearing(positions[i][0], positions[i][1],
+                                     positions[i+1][0], positions[i+1][1])
 
-        turning_angle = abs(bearing_difference(prev_bearing, next_bearing))
+        turning_angle = cached_bearing_difference(prev_bearing, next_bearing)
 
         if turning_angle > TURNING_THRESHOLD_DEGREES:
             turning_points.append(i)
 
     # Check tortuosity for the whole sequence
     if len(positions) > 3:
-        euclidean_distance = haversine_distance(positions[0][0], positions[0][1],
-                                              positions[-1][0], positions[-1][1])
+        euclidean_distance = cached_haversine(positions[0][0], positions[0][1],
+                                            positions[-1][0], positions[-1][1])
 
         total_route_distance = sum(
-            haversine_distance(positions[i][0], positions[i][1],
-                             positions[i+1][0], positions[i+1][1])
+            cached_haversine(positions[i][0], positions[i][1],
+                           positions[i+1][0], positions[i+1][1])
             for i in range(len(positions) - 1)
         )
 
@@ -741,38 +784,38 @@ def calculate_route_metrics(driver, cluster_users, office_lat, office_lon):
         else:
             first_user = sequence[0][1] if isinstance(sequence[0], tuple) else sequence[0]
 
-        total_distance += haversine_distance(driver_pos[0], driver_pos[1],
-                                           first_user['latitude'], first_user['longitude'])
+        total_distance += cached_haversine(driver_pos[0], driver_pos[1],
+                                         first_user['latitude'], first_user['longitude'])
 
     # Between pickups
     for i in range(len(sequence) - 1):
         current_user = sequence[i][1] if isinstance(sequence[i], tuple) else sequence[i]
         next_user = sequence[i + 1][1] if isinstance(sequence[i + 1], tuple) else sequence[i + 1]
 
-        distance = haversine_distance(current_user['latitude'], current_user['longitude'],
-                                    next_user['latitude'], next_user['longitude'])
+        distance = cached_haversine(current_user['latitude'], current_user['longitude'],
+                                  next_user['latitude'], next_user['longitude'])
         total_distance += distance
 
         # Calculate turning angle
         if i == 0:
-            prev_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
-                                           current_user['latitude'], current_user['longitude'])
+            prev_bearing = cached_bearing(driver_pos[0], driver_pos[1],
+                                        current_user['latitude'], current_user['longitude'])
         else:
             prev_pos_user = sequence[i - 1][1] if isinstance(sequence[i - 1], tuple) else sequence[i - 1]
-            prev_bearing = calculate_bearing(prev_pos_user['latitude'], prev_pos_user['longitude'],
-                                           current_user['latitude'], current_user['longitude'])
+            prev_bearing = cached_bearing(prev_pos_user['latitude'], prev_pos_user['longitude'],
+                                        current_user['latitude'], current_user['longitude'])
 
-        next_bearing = calculate_bearing(current_user['latitude'], current_user['longitude'],
-                                       next_user['latitude'], next_user['longitude'])
+        next_bearing = cached_bearing(current_user['latitude'], current_user['longitude'],
+                                    next_user['latitude'], next_user['longitude'])
 
-        turning_angle = abs(bearing_difference(prev_bearing, next_bearing))
+        turning_angle = cached_bearing_difference(prev_bearing, next_bearing)
         turning_angles.append(turning_angle)
 
     # Last pickup to office
     if sequence:
         last_user = sequence[-1][1] if isinstance(sequence[-1], tuple) else sequence[-1]
-        total_distance += haversine_distance(last_user['latitude'], last_user['longitude'],
-                                           office_lat, office_lon)
+        total_distance += cached_haversine(last_user['latitude'], last_user['longitude'],
+                                         office_lat, office_lon)
 
     # Calculate mean turning penalty
     turning_penalty = sum(turning_angles) / len(turning_angles) if turning_angles else 0
@@ -787,12 +830,12 @@ def get_optimal_sequence(driver_pos, cluster_users, office_pos):
     users_list = cluster_users.to_dict('records') if hasattr(cluster_users, 'to_dict') else list(cluster_users)
 
     # Initial ordering by projection along main axis
-    main_axis_bearing = calculate_bearing(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
+    main_axis_bearing = cached_bearing(driver_pos[0], driver_pos[1], office_pos[0], office_pos[1])
 
     def projection_score(user):
-        user_bearing = calculate_bearing(driver_pos[0], driver_pos[1], user['latitude'], user['longitude'])
-        bearing_alignment = math.cos(math.radians(abs(bearing_difference(user_bearing, main_axis_bearing))))
-        distance = haversine_distance(driver_pos[0], driver_pos[1], user['latitude'], user['longitude'])
+        user_bearing = cached_bearing(driver_pos[0], driver_pos[1], user['latitude'], user['longitude'])
+        bearing_alignment = math.cos(math.radians(cached_bearing_difference(user_bearing, main_axis_bearing)))
+        distance = cached_haversine(driver_pos[0], driver_pos[1], user['latitude'], user['longitude'])
         return distance * bearing_alignment  # Closer points in the right direction get lower scores
 
     users_list.sort(key=projection_score)
@@ -844,15 +887,15 @@ def calculate_total_distance(sequence, driver_pos, office_pos):
     if not sequence:
         return 0
 
-    total = haversine_distance(driver_pos[0], driver_pos[1],
-                              sequence[0]['latitude'], sequence[0]['longitude'])
+    total = cached_haversine(driver_pos[0], driver_pos[1],
+                            sequence[0]['latitude'], sequence[0]['longitude'])
 
     for i in range(len(sequence) - 1):
-        total += haversine_distance(sequence[i]['latitude'], sequence[i]['longitude'],
-                                   sequence[i + 1]['latitude'], sequence[i + 1]['longitude'])
+        total += cached_haversine(sequence[i]['latitude'], sequence[i]['longitude'],
+                                 sequence[i + 1]['latitude'], sequence[i + 1]['longitude'])
 
-    total += haversine_distance(sequence[-1]['latitude'], sequence[-1]['longitude'],
-                               office_pos[0], office_pos[1])
+    total += cached_haversine(sequence[-1]['latitude'], sequence[-1]['longitude'],
+                             office_pos[0], office_pos[1])
 
     return total
 
@@ -865,16 +908,16 @@ def calculate_total_turning(sequence, driver_pos, office_pos):
 
     for i in range(len(sequence) - 1):
         if i == 0:
-            prev_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
-                                           sequence[i]['latitude'], sequence[i]['longitude'])
+            prev_bearing = cached_bearing(driver_pos[0], driver_pos[1],
+                                        sequence[i]['latitude'], sequence[i]['longitude'])
         else:
-            prev_bearing = calculate_bearing(sequence[i-1]['latitude'], sequence[i-1]['longitude'],
-                                           sequence[i]['latitude'], sequence[i]['longitude'])
+            prev_bearing = cached_bearing(sequence[i-1]['latitude'], sequence[i-1]['longitude'],
+                                        sequence[i]['latitude'], sequence[i]['longitude'])
 
-        next_bearing = calculate_bearing(sequence[i]['latitude'], sequence[i]['longitude'],
-                                       sequence[i + 1]['latitude'], sequence[i + 1]['longitude'])
+        next_bearing = cached_bearing(sequence[i]['latitude'], sequence[i]['longitude'],
+                                    sequence[i + 1]['latitude'], sequence[i + 1]['longitude'])
 
-        turning_angle = abs(bearing_difference(prev_bearing, next_bearing))
+        turning_angle = cached_bearing_difference(prev_bearing, next_bearing)
         turning_angles.append(turning_angle)
 
     return sum(turning_angles) / len(turning_angles) if turning_angles else 0
@@ -1016,7 +1059,7 @@ def calculate_distance_to_route_path(route, user_pos, office_pos):
     """Calculate distance from user to the actual route path"""
     if not route['assigned_users']:
         # Distance to driver
-        return haversine_distance(route['latitude'], route['longitude'],
+        return cached_haversine(route['latitude'], route['longitude'],
                                  user_pos[0], user_pos[1])
 
     # Find minimum distance to any segment of the route
@@ -1071,7 +1114,7 @@ def point_to_line_distance(point, line_start, line_end):
     ab_squared = np.dot(ab, ab)
     if ab_squared == 0:
         # Line segment is a point
-        return haversine_distance(point[0], point[1], line_start[0], line_start[1])
+        return cached_haversine(point[0], point[1], line_start[0], line_start[1])
 
     t = np.dot(ap, ab) / ab_squared
     t = max(0, min(1, t))  # Clamp to [0, 1]
@@ -1080,7 +1123,7 @@ def point_to_line_distance(point, line_start, line_end):
     closest_point = a + t * ab
 
     # Return distance from point to closest point on line
-    return haversine_distance(point[0], point[1], closest_point[0], closest_point[1])
+    return cached_haversine(point[0], point[1], closest_point[0], closest_point[1])
 
 def calculate_route_center(route):
     """Calculate the center point of a route"""
@@ -1136,11 +1179,11 @@ def calculate_total_route_distance(route, office_lat, office_lon):
 
     for user in route['assigned_users']:
         user_pos = (user['lat'], user['lng'])
-        total += haversine_distance(current_pos[0], current_pos[1], user_pos[0], user_pos[1])
+        total += cached_haversine(current_pos[0], current_pos[1], user_pos[0], user_pos[1])
         current_pos = user_pos
 
     # To office
-    total += haversine_distance(current_pos[0], current_pos[1], office_lat, office_lon)
+    total += cached_haversine(current_pos[0], current_pos[1], office_lat, office_lon)
 
     return total
 
@@ -1251,8 +1294,8 @@ def find_best_user_swap(route1, route2, office_lat, office_lon):
         return None
 
     # Calculate original costs
-    original_cost1 = calculate_total_route_distance(route1, office_lat, office_lon)
-    original_cost2 = calculate_total_route_distance(route2, office_lat, office_lon)
+    original_cost1 = calculate_total_distance(route1, office_lat, office_lon)
+    original_cost2 = calculate_total_distance(route2, office_lat, office_lon)
     original_total = original_cost1 + original_cost2
 
     best_swap = None
@@ -1272,8 +1315,8 @@ def find_best_user_swap(route1, route2, office_lat, office_lon):
             test_route2['assigned_users'][j] = user1
 
             # Calculate new costs
-            new_cost1 = calculate_total_route_distance(test_route1, office_lat, office_lon)
-            new_cost2 = calculate_total_route_distance(test_route2, office_lat, office_lon)
+            new_cost1 = calculate_total_distance(test_route1, office_lat, office_lon)
+            new_cost2 = calculate_total_distance(test_route2, office_lat, office_lon)
             new_total = new_cost1 + new_cost2
 
             improvement = original_total - new_total
@@ -1336,7 +1379,7 @@ def can_merge_routes(route1, route2, office_lat, office_lon):
     # Check distance between route centers
     center1 = calculate_route_center(route1)
     center2 = calculate_route_center(route2)
-    center_distance = haversine_distance(center1[0], center1[1], center2[0], center2[1])
+    center_distance = cached_haversine(center1[0], center1[1], center2[0], center2[1])
 
     if center_distance > MERGE_DISTANCE_KM:
         return False
@@ -1344,7 +1387,7 @@ def can_merge_routes(route1, route2, office_lat, office_lon):
     # Check bearing compatibility
     bearing1 = calculate_route_bearing(route1, office_lat, office_lon)
     bearing2 = calculate_route_bearing(route2, office_lat, office_lon)
-    bearing_diff = abs(bearing_difference(bearing1, bearing2))
+    bearing_diff = cached_bearing_difference(bearing1, bearing2)
 
     if bearing_diff > MERGE_BEARING_THRESHOLD:
         return False
@@ -1354,17 +1397,17 @@ def can_merge_routes(route1, route2, office_lat, office_lon):
 def calculate_route_bearing(route, office_lat, office_lon):
     """Calculate average bearing for a route"""
     if not route['assigned_users']:
-        return calculate_bearing(route['latitude'], route['longitude'], office_lat, office_lon)
+        return cached_bearing(route['latitude'], route['longitude'], office_lat, office_lon)
 
     center = calculate_route_center(route)
-    return calculate_bearing(center[0], center[1], office_lat, office_lon)
+    return cached_bearing(center[0], center[1], office_lat, office_lon)
 
 def calculate_merge_score(route1, route2, office_lat, office_lon):
     """Calculate score for merging two routes (lower is better)"""
     # Distance component
     center1 = calculate_route_center(route1)
     center2 = calculate_route_center(route2)
-    distance_score = haversine_distance(center1[0], center1[1], center2[0], center2[1])
+    distance_score = cached_haversine(center1[0], center1[1], center2[0], center2[1])
 
     # Utilization component
     total_users = len(route1['assigned_users']) + len(route2['assigned_users'])
@@ -1428,7 +1471,7 @@ def calculate_route_tortuosity(route, office_lat, office_lon):
     # Direct distance from start to end
     start_pos = (route['latitude'], route['longitude'])
     end_pos = (office_lat, office_lon)
-    direct_distance = haversine_distance(start_pos[0], start_pos[1], end_pos[0], end_pos[1])
+    direct_distance = cached_haversine(start_pos[0], start_pos[1], end_pos[0], end_pos[1])
 
     return total_distance / (direct_distance + 0.001)
 
@@ -1444,12 +1487,12 @@ def calculate_route_turning_score(route, office_lat, office_lon):
     turning_angles = []
 
     for i in range(1, len(users) - 1):
-        prev_bearing = calculate_bearing(users[i-1]['latitude'], users[i-1]['longitude'],
-                                       users[i]['latitude'], users[i]['longitude'])
-        next_bearing = calculate_bearing(users[i]['latitude'], users[i]['longitude'],
-                                       users[i+1]['latitude'], users[i+1]['longitude'])
+        prev_bearing = cached_bearing(users[i-1]['latitude'], users[i-1]['longitude'],
+                                     users[i]['latitude'], users[i]['longitude'])
+        next_bearing = cached_bearing(users[i]['latitude'], users[i]['longitude'],
+                                     users[i+1]['latitude'], users[i+1]['longitude'])
 
-        turning_angle = abs(bearing_difference(prev_bearing, next_bearing))
+        turning_angle = cached_bearing_difference(prev_bearing, next_bearing)
         turning_angles.append(turning_angle)
 
     return sum(turning_angles) / len(turning_angles) if turning_angles else 0
@@ -1462,7 +1505,7 @@ def split_route_by_direction(route, office_lat, office_lon):
     # Group users by similar direction
     users_with_bearings = []
     for user in route['assigned_users']:
-        bearing = calculate_bearing(user['lat'], user['lng'], office_lat, office_lon)
+        bearing = cached_bearing(user['lat'], user['lng'], office_lat, office_lon)
         users_with_bearings.append((bearing, user))
 
     # Sort by bearing
@@ -1471,8 +1514,8 @@ def split_route_by_direction(route, office_lat, office_lon):
     # Find split points where bearing changes significantly
     split_points = []
     for i in range(len(users_with_bearings) - 1):
-        bearing_diff = abs(bearing_difference(users_with_bearings[i][0],
-                                            users_with_bearings[i+1][0]))
+        bearing_diff = cached_bearing_difference(users_with_bearings[i][0],
+                                                users_with_bearings[i+1][0])
         if bearing_diff > TURNING_THRESHOLD_DEGREES:
             split_points.append(i + 1)
 
@@ -1557,14 +1600,14 @@ def aggressive_route_filling(routes, unassigned_users_df, office_lat, office_lon
             if user['user_id'] in filled_ids:
                 continue
 
-            distance = haversine_distance(route_center[0], route_center[1],
-                                        user['latitude'], user['longitude'])
+            distance = cached_haversine(route_center[0], route_center[1],
+                                      user['latitude'], user['longitude'])
 
             if distance <= MAX_FILL_DISTANCE_KM * 1.5:  # Relaxed distance
                 candidates.append((distance, user))
 
         # Fill with closest users
-        candidates.sort(key=lambda x: x[0])
+        candidates.sort(key=lambda x: x[0])  # Lower score is better
         users_to_add = candidates[:available_seats]
 
         for distance, user in users_to_add:
@@ -1813,11 +1856,11 @@ def consolidate_nearby_users_final(routes, office_lat, office_lon):
 
                 # Calculate distance to route1 center
                 route1_center = calculate_route_center(route1)
-                dist_to_route1 = haversine_distance(user_pos[0], user_pos[1], route1_center[0], route1_center[1])
+                dist_to_route1 = cached_haversine(user_pos[0], user_pos[1], route1_center[0], route1_center[1])
 
                 # Calculate distance to route2 center  
                 route2_center = calculate_route_center(route2)
-                dist_to_route2 = haversine_distance(user_pos[0], user_pos[1], route2_center[0], route2_center[1])
+                dist_to_route2 = cached_haversine(user_pos[0], user_pos[1], route2_center[0], route2_center[1])
 
                 # More aggressive reassignment: within 1.5km and any improvement
                 if dist_to_route1 < dist_to_route2 and dist_to_route1 <= 1.5:
@@ -1859,7 +1902,7 @@ def consolidate_nearby_users_final(routes, office_lat, office_lon):
                 continue  # Route is full
 
             route_center = calculate_route_center(multi_route)
-            distance = haversine_distance(single_pos[0], single_pos[1], route_center[0], route_center[1])
+            distance = cached_haversine(single_pos[0], single_pos[1], route_center[0], route_center[1])
 
             # More generous distance threshold for consolidation
             if distance <= 2.0 and distance < best_distance:  # Increased to 2km
