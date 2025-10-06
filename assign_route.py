@@ -23,6 +23,51 @@ warnings.filterwarnings('ignore')
 logger = get_logger()
 progress = ProgressTracker()
 
+# ============================================================================
+# PERFORMANCE OPTIMIZATION: Caching layer for distance/bearing computations
+# ============================================================================
+
+def round_coord(coord):
+    """Round coordinate to 6 decimal places for consistent caching (~11cm precision)"""
+    return round(float(coord), 6)
+
+@lru_cache(maxsize=200000)
+def cached_haversine(lat1, lon1, lat2, lon2):
+    """Cached haversine distance computation"""
+    lat1, lon1, lat2, lon2 = round_coord(lat1), round_coord(lon1), round_coord(lat2), round_coord(lon2)
+
+    # Haversine formula
+    R = 6371.0  # Earth radius in km
+    lat1_rad, lat2_rad = math.radians(lat1), math.radians(lat2)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+
+    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+    c = 2 * math.asin(math.sqrt(a))
+    return R * c
+
+@lru_cache(maxsize=200000)
+def cached_bearing(lat1, lon1, lat2, lon2):
+    """Cached bearing calculation"""
+    lat1, lon1, lat2, lon2 = round_coord(lat1), round_coord(lon1), round_coord(lat2), round_coord(lon2)
+
+    lat1_rad, lat2_rad = math.radians(lat1), math.radians(lat2)
+    dlon = math.radians(lon2 - lon1)
+
+    x = math.sin(dlon) * math.cos(lat2_rad)
+    y = math.cos(lat1_rad) * math.sin(lat2_rad) - math.sin(lat1_rad) * math.cos(lat2_rad) * math.cos(dlon)
+
+    bearing = math.degrees(math.atan2(x, y))
+    return (bearing + 360) % 360
+
+@lru_cache(maxsize=100000)
+def cached_bearing_difference(b1, b2):
+    """Cached bearing difference calculation"""
+    diff = abs(b1 - b2)
+    if diff > 180:
+        diff = 360 - diff
+    return diff
+
 # Import road_network module for route coherence scoring
 try:
     import road_network as road_network_module
@@ -45,11 +90,11 @@ try:
                 if not user_positions:
                     return 1.0
                 avg_dist_from_driver = sum(
-                    haversine_distance(driver_pos[0], driver_pos[1], u[0],
+                    cached_haversine(driver_pos[0], driver_pos[1], u[0],
                                        u[1])
                     for u in user_positions) / len(user_positions)
                 avg_dist_from_office = sum(
-                    haversine_distance(office_pos[0], office_pos[1], u[0],
+                    cached_haversine(office_pos[0], office_pos[1], u[0],
                                        u[1])
                     for u in user_positions) / len(user_positions)
 
@@ -72,7 +117,7 @@ try:
 
             def get_road_distance(self, lat1, lon1, lat2, lon2):
                 # Mock implementation: returns haversine distance
-                return haversine_distance(lat1, lon1, lat2, lon2)
+                return cached_haversine(lat1, lon1, lat2, lon2)
 
             def find_nearest_road_node(self, lat, lon):
                 # Mock implementation
@@ -96,11 +141,11 @@ except ImportError:
             if not user_positions:
                 return 1.0
             avg_dist_from_driver = sum(
-                haversine_distance(driver_pos[0], driver_pos[1], u[0],
+                cached_haversine(driver_pos[0], driver_pos[1], u[0],
                                    u[1])
                 for u in user_positions) / len(user_positions)
             avg_dist_from_office = sum(
-                haversine_distance(office_pos[0], office_pos[1], u[0],
+                cached_haversine(office_pos[0], office_pos[1], u[0],
                                    u[1])
                 for u in user_positions) / len(user_positions)
 
@@ -123,7 +168,7 @@ except ImportError:
 
         def get_road_distance(self, lat1, lon1, lat2, lon2):
             # Mock implementation: returns haversine distance
-            return haversine_distance(lat1, lon1, lat2, lon2)
+            return cached_haversine(lat1, lon1, lat2, lon2)
 
         def find_nearest_road_node(self, lat, lon):
             # Mock implementation
@@ -357,18 +402,22 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
     all_unassigned_users = user_df[~user_df['user_id'].isin(assigned_user_ids
                                                             )].copy()
 
+    # Convert to list of dicts for faster iteration
+    all_unassigned_users_records = all_unassigned_users.to_dict('records')
+    available_drivers_records = available_drivers.to_dict('records')
+
     # Hybrid approach: Start with clusters but allow cross-cluster filling for capacity
-    for _, driver in available_drivers.iterrows():
-        if driver['driver_id'] in used_driver_ids or all_unassigned_users.empty:
+    for driver in available_drivers_records:
+        if driver['driver_id'] in used_driver_ids or not all_unassigned_users_records:
             continue
 
         vehicle_capacity = int(driver['capacity'])
         driver_pos = (driver['latitude'], driver['longitude'])
 
         # Calculate main route bearing
-        main_route_bearing = calculate_bearing(office_lat, office_lon,
-                                               driver['latitude'],
-                                               driver['longitude'])
+        main_route_bearing = cached_bearing(office_lat, office_lon,
+                                             driver['latitude'],
+                                             driver['longitude'])
 
         # Find users with route optimized distance/direction constraints
         users_for_vehicle = []
@@ -377,16 +426,20 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
 
         # Collect candidate users with enhanced road-aware scoring
         candidate_users = []
-        for _, user in all_unassigned_users.iterrows():
-            distance = haversine_distance(driver['latitude'],
-                                          driver['longitude'],
-                                          user['latitude'], user['longitude'])
+        for user in all_unassigned_users_records:
+            # Skip if already assigned
+            if user['user_id'] in assigned_user_ids:
+                continue
 
-            office_to_user_bearing = calculate_bearing(office_lat, office_lon,
-                                                       user['latitude'], user['longitude'])
+            distance = cached_haversine(driver['latitude'],
+                                       driver['longitude'],
+                                       user['latitude'], user['longitude'])
 
-            bearing_diff = bearing_difference(main_route_bearing,
-                                              office_to_user_bearing)
+            office_to_user_bearing = cached_bearing(office_lat, office_lon,
+                                                   user['latitude'], user['longitude'])
+
+            bearing_diff = cached_bearing_difference(main_route_bearing,
+                                                    office_to_user_bearing)
 
             # Primary check: distance and bearing
             if distance > max_distance_limit or bearing_diff > max_bearing_deviation:
@@ -499,7 +552,7 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                             'pickup_order':
                             route['assigned_users'].index(user) + 1,
                             'distance_from_driver':
-                            haversine_distance(route['latitude'],
+                            cached_haversine(route['latitude'],
                                                route['longitude'], user['lat'],
                                                user['lng']),
                             'optimization_mode':
@@ -511,8 +564,10 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                     u['user_id']
                     for u in route['assigned_users']
                 }
-                all_unassigned_users = all_unassigned_users[
-                    ~all_unassigned_users['user_id'].isin(assigned_ids_set)]
+                # Update all_unassigned_users_records by removing assigned users
+                all_unassigned_users_records = [
+                    u for u in all_unassigned_users_records if u['user_id'] not in assigned_ids_set
+                ]
 
                 utilization = len(
                     route['assigned_users']) / vehicle_capacity * 100
@@ -521,11 +576,12 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                 )
 
     # Second pass: Fill remaining seats with slightly more lenient constraints
-    remaining_users = all_unassigned_users[~all_unassigned_users['user_id'].
-                                           isin(assigned_user_ids)]
+    remaining_users = [
+        u for u in all_unassigned_users_records if u['user_id'] not in assigned_user_ids
+    ]
 
     for route in routes:
-        if remaining_users.empty:
+        if not remaining_users:
             break
 
         available_seats = route['vehicle_type'] - len(route['assigned_users'])
@@ -538,14 +594,13 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
         route_center = calculate_route_center_improved(route)
 
         compatible_users = []
-        for _, user in remaining_users.iterrows():
-            distance = haversine_distance(route_center[0], route_center[1],
-                                          user['latitude'], user['longitude'])
+        for user in remaining_users:
+            distance = cached_haversine(route_center[0], route_center[1],
+                                       user['latitude'], user['longitude'])
 
-            user_bearing = calculate_bearing(office_lat, office_lon,
-                                             user['latitude'],
-                                             user['longitude'])
-            bearing_diff = bearing_difference(route_bearing, user_bearing)
+            user_bearing = cached_bearing(office_lat, office_lon,
+                                         user['latitude'], user['longitude'])
+            bearing_diff = cached_bearing_difference(route_bearing, user_bearing)
 
             # Route optimized criteria for seat filling with road validation
             if distance <= MAX_FILL_DISTANCE_KM * 1.8 and bearing_diff <= 40:
@@ -599,10 +654,10 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                             # Get distance from route center to office
                             route_center = calculate_route_center_improved(
                                 route)
-                            center_to_office = haversine_distance(
+                            center_to_office = cached_haversine(
                                 route_center[0], route_center[1], office_lat,
                                 office_lon)
-                            user_to_office = haversine_distance(
+                            user_to_office = cached_haversine(
                                 user['latitude'], user['longitude'],
                                 office_lat, office_lon)
 
@@ -632,8 +687,8 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
         for user in users_to_add:
             user_data = {
                 'user_id': str(user['user_id']),
-                'lat': float(user['latitude']),
-                'lng': float(user['longitude']),
+                'lat': float(user['lat']),
+                'lng': float(user['lng']),
                 'office_distance': float(user.get('office_distance', 0))
             }
             if pd.notna(user.get('first_name')):
@@ -645,9 +700,9 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
             assigned_user_ids.add(user['user_id'])
 
         if users_to_add:
+            # Update remaining_users list
             assigned_ids = {u['user_id'] for u in users_to_add}
-            remaining_users = remaining_users[~remaining_users['user_id'].
-                                              isin(assigned_ids)]
+            remaining_users = [u for u in remaining_users if u['user_id'] not in assigned_ids]
 
             route = optimize_route_sequence_improved(route, office_lat, office_lon)
             utilization = len(
@@ -696,6 +751,10 @@ def assign_best_driver_to_cluster_route_optimized(cluster_users,
     capacity_weight = 2.5  # Route weight
     direction_weight = 2.5  # Route weight
 
+    # Convert cluster_users DataFrame to records for easier iteration
+    cluster_users_records = cluster_users.to_dict('records') if hasattr(cluster_users, 'to_dict') else list(cluster_users)
+
+
     for _, driver in available_drivers.iterrows():
         if driver['driver_id'] in used_driver_ids:
             continue
@@ -706,7 +765,7 @@ def assign_best_driver_to_cluster_route_optimized(cluster_users,
 
         # Calculate route metrics
         route_cost, sequence, mean_turning_degrees = calculate_route_cost_route_optimized(
-            driver, cluster_users, office_lat, office_lon)
+            driver, cluster_users_records, office_lat, office_lon)
 
         # Route optimized scoring approach
         utilization = cluster_size / driver['capacity']
@@ -749,12 +808,7 @@ def assign_best_driver_to_cluster_route_optimized(cluster_users,
         }
 
         # Add all users from cluster (route optimized approach)
-        if hasattr(cluster_users, 'iterrows'):
-            users_to_add = list(cluster_users.iterrows())
-        else:
-            users_to_add = [(i, user) for i, user in enumerate(cluster_users)]
-
-        for _, user in users_to_add:
+        for user in cluster_users_records:
             user_data = {
                 'user_id': str(user['user_id']),
                 'lat': float(user['latitude']),
@@ -803,47 +857,46 @@ def calculate_route_cost_route_optimized(driver, cluster_users, office_lat,
     # Driver to first pickup
     if sequence:
         first_user = sequence[0]
-        total_distance += haversine_distance(driver_pos[0], driver_pos[1],
-                                             first_user['latitude'],
-                                             first_user['longitude'])
-
+        total_distance += cached_haversine(driver_pos[0], driver_pos[1],
+                                          first_user['latitude'],
+                                          first_user['longitude'])
     # Between pickups - calculate bearing differences
     for i in range(len(sequence) - 1):
         current_user = sequence[i]
         next_user = sequence[i + 1]
 
-        distance = haversine_distance(current_user['latitude'],
-                                      current_user['longitude'],
-                                      next_user['latitude'],
-                                      next_user['longitude'])
+        distance = cached_haversine(current_user['latitude'],
+                                   current_user['longitude'],
+                                   next_user['latitude'],
+                                   next_user['longitude'])
         total_distance += distance
 
         # Calculate bearing difference between segments
         if i == 0:
-            prev_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
-                                             current_user['latitude'],
-                                             current_user['longitude'])
+            prev_bearing = cached_bearing(driver_pos[0], driver_pos[1],
+                                         current_user['latitude'],
+                                         current_user['longitude'])
         else:
             prev_pos = (sequence[i - 1]['latitude'],
                         sequence[i - 1]['longitude'])
-            prev_bearing = calculate_bearing(prev_pos[0], prev_pos[1],
-                                             current_user['latitude'],
-                                             current_user['longitude'])
+            prev_bearing = cached_bearing(prev_pos[0], prev_pos[1],
+                                         current_user['latitude'],
+                                         current_user['longitude'])
 
-        next_bearing = calculate_bearing(current_user['latitude'],
-                                         current_user['longitude'],
-                                         next_user['latitude'],
-                                         next_user['longitude'])
+        next_bearing = cached_bearing(current_user['latitude'],
+                                     current_user['longitude'],
+                                     next_user['latitude'],
+                                     next_user['longitude'])
 
-        bearing_diff = bearing_difference(prev_bearing, next_bearing)
+        bearing_diff = cached_bearing_difference(prev_bearing, next_bearing)
         bearing_differences.append(bearing_diff)
 
     # Last pickup to office
     if sequence:
         last_user = sequence[-1]
-        total_distance += haversine_distance(last_user['latitude'],
-                                             last_user['longitude'],
-                                             office_lat, office_lon)
+        total_distance += cached_haversine(last_user['latitude'],
+                                          last_user['longitude'],
+                                          office_lat, office_lon)
 
     # Calculate mean turning angle - route optimized weight (neither too strict nor too lenient)
     mean_turning_degrees = sum(bearing_differences) / len(
@@ -851,30 +904,96 @@ def calculate_route_cost_route_optimized(driver, cluster_users, office_lat,
 
     return total_distance, sequence, mean_turning_degrees
 
+def assign_leftover_users_to_drivers(unassigned_users, available_drivers, office_lat, office_lon):
+    """
+    Assign leftover unassigned users to available drivers with simple proximity-based assignment
+    """
+    leftover_routes = []
+    remaining_users = unassigned_users.copy()
+
+    # Sort drivers by capacity (prefer higher capacity first) and priority
+    sorted_drivers = available_drivers.sort_values(['capacity', 'priority'], ascending=[False, True])
+
+    for _, driver in sorted_drivers.iterrows():
+        if not remaining_users:
+            break
+
+        vehicle_capacity = int(driver['capacity'])
+        driver_pos = (driver['latitude'], driver['longitude'])
+
+        # Find closest users to this driver (simple distance-based assignment)
+        user_distances = []
+        for user in remaining_users:
+            distance = haversine_distance(driver['latitude'], driver['longitude'],
+                                        user['lat'], user['lng'])
+            user_distances.append((distance, user))
+
+        # Sort by distance and take up to vehicle capacity
+        user_distances.sort(key=lambda x: x[0])
+        users_for_driver = [user for _, user in user_distances[:vehicle_capacity]]
+
+        if users_for_driver:
+            # Create route for this driver
+            route = {
+                'driver_id': str(driver['driver_id']),
+                'vehicle_id': str(driver.get('vehicle_id', '')),
+                'vehicle_type': vehicle_capacity,
+                'latitude': float(driver['latitude']),
+                'longitude': float(driver['longitude']),
+                'assigned_users': []
+            }
+
+            # Add users to route
+            for user in users_for_driver:
+                user_data = {
+                    'user_id': str(user['user_id']),
+                    'lat': float(user['lat']),
+                    'lng': float(user['lng']),
+                    'office_distance': float(user.get('office_distance', 0))
+                }
+                if 'first_name' in user and pd.notna(user['first_name']):
+                    user_data['first_name'] = str(user['first_name'])
+                if 'email' in user and pd.notna(user['email']):
+                    user_data['email'] = str(user['email'])
+
+                route['assigned_users'].append(user_data)
+
+            # Optimize route sequence
+            route = optimize_route_sequence_improved(route, office_lat, office_lon)
+            update_route_metrics_improved(route, office_lat, office_lon)
+
+            leftover_routes.append(route)
+
+            # Remove assigned users from remaining list
+            assigned_user_ids = {u['user_id'] for u in users_for_driver}
+            remaining_users = [u for u in remaining_users if u['user_id'] not in assigned_user_ids]
+
+            utilization = len(route['assigned_users']) / vehicle_capacity * 100
+            print(f"   🚗 Created leftover route: Driver {driver['driver_id']} with {len(route['assigned_users'])}/{vehicle_capacity} users ({utilization:.1f}%)")
+
+    return leftover_routes
 
 def calculate_optimal_sequence_route_optimized(driver_pos, cluster_users,
                                                office_pos):
     """Calculate sequence with route optimization - route focused between distance and direction"""
     if len(cluster_users) <= 1:
-        return cluster_users.to_dict('records') if hasattr(
-            cluster_users, 'to_dict') else list(cluster_users)
+        return cluster_users # Return as is if 0 or 1 user
 
-    users_list = cluster_users.to_dict('records') if hasattr(
-        cluster_users, 'to_dict') else list(cluster_users)
+    users_list = cluster_users # Already a list of records
 
     # Calculate main route bearing (driver to office)
-    main_route_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
-                                           office_pos[0], office_pos[1])
+    main_route_bearing = cached_bearing(driver_pos[0], driver_pos[1],
+                                         office_pos[0], office_pos[1])
 
     # Route optimized scoring: exactly 50% distance, 50% direction
     def route_optimized_score(user):
         # Distance component (50%)
-        distance = haversine_distance(driver_pos[0], driver_pos[1],
-                                      user['latitude'], user['longitude'])
+        distance = cached_haversine(driver_pos[0], driver_pos[1],
+                                   user['latitude'], user['longitude'])
 
         # Direction component (50%)
-        user_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
-                                         user['latitude'], user['longitude'])
+        user_bearing = cached_bearing(driver_pos[0], driver_pos[1],
+                                     user['latitude'], user['longitude'])
 
         bearing_diff = normalize_bearing_difference(user_bearing -
                                                     main_route_bearing)
@@ -906,7 +1025,7 @@ def apply_route_optimized_2opt(sequence, driver_pos, office_pos):
     iteration = 0
 
     # Calculate main bearing from driver to office
-    main_bearing = calculate_bearing(driver_pos[0], driver_pos[1],
+    main_bearing = cached_bearing(driver_pos[0], driver_pos[1],
                                      office_pos[0], office_pos[1])
 
     # Route optimized turning angle threshold (exactly between efficiency and capacity)
@@ -938,7 +1057,7 @@ def apply_route_optimized_2opt(sequence, driver_pos, office_pos):
                 # Route optimized acceptance criteria - route weight to both factors
                 distance_improvement = (
                     best_distance -
-                    new_distance) / best_distance  # Normalized improvement
+                    new_distance) / best_distance if best_distance > 0 else 0 # Normalized improvement
                 turning_improvement = (best_turning_score - new_turning_score
                                        )  # Absolute improvement
 
@@ -995,7 +1114,7 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
             # 1. Direction compatibility check (route optimized)
             b1 = calculate_average_bearing_improved(r1, office_lat, office_lon)
             b2 = calculate_average_bearing_improved(r2, office_lat, office_lon)
-            bearing_diff = bearing_difference(b1, b2)
+            bearing_diff = cached_bearing_difference(b1, b2)
 
             if bearing_diff > MERGE_BEARING_THRESHOLD:
                 continue
@@ -1003,7 +1122,7 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
             # 2. Distance compatibility check (route optimized)
             c1 = calculate_route_center_improved(r1)
             c2 = calculate_route_center_improved(r2)
-            centroid_distance = haversine_distance(c1[0], c1[1], c2[0], c2[1])
+            centroid_distance = cached_haversine(c1[0], c1[1], c2[0], c2[1])
 
             if centroid_distance > MERGE_DISTANCE_KM:
                 continue
@@ -1023,9 +1142,9 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
 
             # 4. Quality assessment with route optimized criteria
             combined_center = calculate_combined_route_center(r1, r2)
-            dist1 = haversine_distance(r1['latitude'], r1['longitude'],
+            dist1 = cached_haversine(r1['latitude'], r1['longitude'],
                                        combined_center[0], combined_center[1])
-            dist2 = haversine_distance(r2['latitude'], r2['longitude'],
+            dist2 = cached_haversine(r2['latitude'], r2['longitude'],
                                        combined_center[0], combined_center[1])
 
             better_route = r1 if dist1 <= dist2 else r2
@@ -1083,10 +1202,10 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
                 combined_center = calculate_combined_route_center(r1, r2)
 
                 # Use the better positioned driver
-                dist1_to_combined = haversine_distance(driver1_pos[0], driver1_pos[1],
+                dist1_to_combined = cached_haversine(driver1_pos[0], driver1_pos[1],
                                                        combined_center[0],
                                                        combined_center[1])
-                dist2_to_combined = haversine_distance(driver2_pos[0], driver2_pos[1],
+                dist2_to_combined = cached_haversine(driver2_pos[0], driver2_pos[1],
                                                        combined_center[0],
                                                        combined_center[1])
 
@@ -1108,7 +1227,7 @@ def final_pass_merge_route_optimized(routes, config, office_lat, office_lon):
                                                               office_lon)
                 bearing2 = calculate_average_bearing_improved(r2, office_lat,
                                                               office_lon)
-                bearing_diff = bearing_difference(bearing1, bearing2)
+                bearing_diff = cached_bearing_difference(bearing1, bearing2)
 
                 if bearing_diff > 40:  # More lenient bearing requirement
                     logger.info(
@@ -1228,7 +1347,7 @@ def enhanced_route_splitting(routes, driver_df, office_lat, office_lon):
         max_distance_between_users = 0
         for i in range(len(users)):
             for j in range(i + 1, len(users)):
-                dist = haversine_distance(users[i]['lat'], users[i]['lng'],
+                dist = cached_haversine(users[i]['lat'], users[i]['lng'],
                                           users[j]['lat'], users[j]['lng'])
                 max_distance_between_users = max(max_distance_between_users,
                                                  dist)
@@ -1404,7 +1523,7 @@ def _split_users_geographically(users, office_lat, office_lon):
         # Sort by distance from office and split in half
         users_with_distance = []
         for user in users:
-            dist = haversine_distance(user['lat'], user['lng'], office_lat,
+            dist = cached_haversine(user['lat'], user['lng'], office_lat,
                                       office_lon)
             users_with_distance.append((dist, user))
 
@@ -1425,7 +1544,7 @@ def _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
                                                       office_lon)
         bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
+        bearing_diff = cached_bearing_difference(bearing1, bearing2)
         return bearing_diff <= 35  # More reasonable tolerance without road network
 
     try:
@@ -1458,10 +1577,10 @@ def _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
         combined_center = calculate_combined_route_center(route1, route2)
 
         # Use the better positioned driver
-        dist1_to_combined = haversine_distance(driver1_pos[0], driver1_pos[1],
+        dist1_to_combined = cached_haversine(driver1_pos[0], driver1_pos[1],
                                                combined_center[0],
                                                combined_center[1])
-        dist2_to_combined = haversine_distance(driver2_pos[0], driver2_pos[1],
+        dist2_to_combined = cached_haversine(driver2_pos[0], driver2_pos[1],
                                                combined_center[0],
                                                combined_center[1])
 
@@ -1483,7 +1602,7 @@ def _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
                                                       office_lon)
         bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
+        bearing_diff = cached_bearing_difference(bearing1, bearing2)
 
         if bearing_diff > 40:  # More lenient bearing requirement
             logger.info(
@@ -1512,11 +1631,11 @@ def _are_routes_on_same_road_path(route1, route2, office_lat, office_lon):
                                                       office_lon)
         bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
+        bearing_diff = cached_bearing_difference(bearing1, bearing2)
 
         center1 = calculate_route_center_improved(route1)
         center2 = calculate_route_center_improved(route2)
-        distance = haversine_distance(center1[0], center1[1], center2[0],
+        distance = cached_haversine(center1[0], center1[1], center2[0],
                                       center2[1])
 
         return bearing_diff <= 35 and distance <= 4.0
@@ -1531,7 +1650,7 @@ def _are_routes_on_same_strict_road_path(route1, route2, office_lat,
                                                       office_lon)
         bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
+        bearing_diff = cached_bearing_difference(bearing1, bearing2)
         return bearing_diff <= 25  # Reasonable strict tolerance when no road network
 
     try:
@@ -1564,10 +1683,10 @@ def _are_routes_on_same_strict_road_path(route1, route2, office_lat,
         combined_center = calculate_combined_route_center(route1, route2)
 
         # Use the better positioned driver
-        dist1_to_combined = haversine_distance(driver1_pos[0], driver1_pos[1],
+        dist1_to_combined = cached_haversine(driver1_pos[0], driver1_pos[1],
                                                combined_center[0],
                                                combined_center[1])
-        dist2_to_combined = haversine_distance(driver2_pos[0], driver2_pos[1],
+        dist2_to_combined = cached_haversine(driver2_pos[0], driver2_pos[1],
                                                combined_center[0],
                                                combined_center[1])
 
@@ -1589,7 +1708,7 @@ def _are_routes_on_same_strict_road_path(route1, route2, office_lat,
                                                       office_lon)
         bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
+        bearing_diff = cached_bearing_difference(bearing1, bearing2)
 
         if bearing_diff > 30:  # More reasonable strict bearing requirement
             logger.info(
@@ -1618,11 +1737,11 @@ def _are_routes_on_same_strict_road_path(route1, route2, office_lat,
                                                       office_lon)
         bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-        bearing_diff = bearing_difference(bearing1, bearing2)
+        bearing_diff = cached_bearing_difference(bearing1, bearing2)
 
         center1 = calculate_route_center_improved(route1)
         center2 = calculate_route_center_improved(route2)
-        distance = haversine_distance(center1[0], center1[1], center2[0],
+        distance = cached_haversine(center1[0], center1[1], center2[0],
                                       center2[1])
 
         return bearing_diff <= 25 and distance <= 3.0
@@ -1674,15 +1793,15 @@ def final_route_consolidation(routes, driver_df, office_lat, office_lon):
                 multi_route, office_lat, office_lon)
 
             # STRICT distance check - much tighter for quality
-            distance = haversine_distance(route_center[0], route_center[1],
+            distance = cached_haversine(route_center[0], route_center[1],
                                           single_pos[0], single_pos[1])
             if distance > 3.5:  # Much stricter distance - only 3.5km
                 continue
 
             # STRICT bearing check - tighter for quality
-            user_bearing = calculate_bearing(office_lat, office_lon,
+            user_bearing = cached_bearing(office_lat, office_lon,
                                              single_pos[0], single_pos[1])
-            bearing_diff = bearing_difference(route_bearing, user_bearing)
+            bearing_diff = cached_bearing_difference(route_bearing, user_bearing)
             if bearing_diff > 25:  # Much stricter bearing - only 25°
                 continue
 
@@ -1787,14 +1906,14 @@ def final_route_consolidation(routes, driver_df, office_lat, office_lon):
                 pos2 = (user2['lat'], user2['lng'])
 
                 # STRICT distance between users - much tighter
-                distance = haversine_distance(pos1[0], pos1[1], pos2[0], pos2[1])
+                distance = cached_haversine(pos1[0], pos1[1], pos2[0], pos2[1])
                 if distance > 2.5:  # Only very close users - reduced from 5.0km
                     continue
 
                 # STRICT bearing similarity
-                bearing1 = calculate_bearing(office_lat, office_lon, pos1[0], pos1[1])
-                bearing2 = calculate_bearing(office_lat, office_lon, pos2[0], pos2[1])
-                bearing_diff = bearing_difference(bearing1, bearing2)
+                bearing1 = cached_bearing(office_lat, office_lon, pos1[0], pos1[1])
+                bearing2 = cached_bearing(office_lat, office_lon, pos2[0], pos2[1])
+                bearing_diff = cached_bearing_difference(bearing1, bearing2)
                 if bearing_diff > 20:  # Much stricter direction - reduced from 30°
                     continue
 
@@ -1810,8 +1929,8 @@ def final_route_consolidation(routes, driver_df, office_lat, office_lon):
                         # Test which driver position is better
                         center = ((pos1[0] + pos2[0]) / 2, (pos1[1] + pos2[1]) / 2)
 
-                        dist1 = haversine_distance(route1['latitude'], route1['longitude'], center[0], center[1])
-                        dist2 = haversine_distance(route2['latitude'], route2['longitude'], center[0], center[1])
+                        dist1 = cached_haversine(route1['latitude'], route1['longitude'], center[0], center[1])
+                        dist2 = cached_haversine(route2['latitude'], route2['longitude'], center[0], center[1])
 
                         better_driver_pos = (route1['latitude'], route1['longitude']) if dist1 <= dist2 else (route2['latitude'], route2['longitude'])
 
@@ -1859,9 +1978,9 @@ def final_route_consolidation(routes, driver_df, office_lat, office_lon):
             center = ((user1_pos[0] + user2_pos[0]) / 2,
                       (user1_pos[1] + user2_pos[1]) / 2)
 
-            dist1 = haversine_distance(route1['latitude'], route1['longitude'],
+            dist1 = cached_haversine(route1['latitude'], route1['longitude'],
                                        center[0], center[1])
-            dist2 = haversine_distance(route2['latitude'], route2['longitude'],
+            dist2 = cached_haversine(route2['latitude'], route2['longitude'],
                                        center[0], center[1])
 
             better_route = route1 if dist1 <= dist2 else route2
@@ -1997,7 +2116,7 @@ def geographic_clustering_merge(single_routes, other_routes, office_lat,
                 best_distance = float('inf')
 
                 for route in cluster_routes:
-                    distance = haversine_distance(route['latitude'],
+                    distance = cached_haversine(route['latitude'],
                                                   route['longitude'],
                                                   cluster_center[0],
                                                   cluster_center[1])
@@ -2200,13 +2319,13 @@ def strict_merge_compatibility_improved(route1, route2, office_lat, office_lon,
                                                       office_lon)
     avg_bearing2 = calculate_average_bearing_improved(route2, office_lat,
                                                       office_lon)
-    bearing_diff = bearing_difference(avg_bearing1, avg_bearing2)
+    bearing_diff = cached_bearing_difference(avg_bearing1, avg_bearing2)
     if bearing_diff > config.get('MAX_BEARING_DIFFERENCE', 30):
         return False
 
     center1 = calculate_route_center_improved(route1)
     center2 = calculate_route_center_improved(route2)
-    dist_between_centers = haversine_distance(center1[0], center1[1],
+    dist_between_centers = cached_haversine(center1[0], center1[1],
                                               center2[0], center2[1])
     if dist_between_centers > config.get('MERGE_DISTANCE_KM', 3.5):
         return False
@@ -2331,14 +2450,14 @@ def perform_quality_merge_improved(routes, config, office_lat, office_lon):
                 route1, office_lat, office_lon)
             avg_bearing2 = calculate_average_bearing_improved(
                 route2, office_lat, office_lon)
-            bearing_diff = bearing_difference(avg_bearing1, avg_bearing2)
+            bearing_diff = cached_bearing_difference(avg_bearing1, avg_bearing2)
             if bearing_diff > MERGE_BEARING_THRESHOLD:
                 continue
 
             # Check centroid distance
             center1 = calculate_route_center_improved(route1)
             center2 = calculate_route_center_improved(route2)
-            dist_between_centers = haversine_distance(center1[0], center1[1],
+            dist_between_centers = cached_haversine(center1[0], center1[1],
                                                       center2[0], center2[1])
             if dist_between_centers > MERGE_DISTANCE_KM:
                 continue
@@ -2686,7 +2805,7 @@ def run_road_aware_assignment(source_id: str, parameter: int = 1, string_param: 
             enhanced_unassigned_drivers.append(enhanced_driver)
 
         # FINAL STEP: Consolidate nearby users (within 1km) into same routes
-        logger.info("🎯 Final step: Consolidating nearby users within 1km radius")
+        logger.info("Final step: Consolidating nearby users within 1km radius")
         enhanced_routes = consolidate_nearby_users_final(enhanced_routes, office_lat, office_lon)
 
         # Final result assembly
@@ -2782,8 +2901,8 @@ def run_core_assignment_with_optimization(user_df, driver_df, office_lat, office
         logger.info(f"📊 After step 3: Route quality optimized")
         progress.update_stage_progress(f"Route quality improved through user swaps")
     else:
-        print("⏭️ Skipping step 3: Not enough routes for swapping optimization")
-        logger.info("⏭️ Skipping step 3: Not enough routes for swapping optimization")
+        print("⏭️ Skipping step 3: Not enough routes for swapping")
+        logger.info("⏭️ Skipping step 3: Not enough routes for swapping")
 
     final_unassigned_count = len(unassigned_users)
     improvement = initial_unassigned_count - final_unassigned_count
@@ -2954,8 +3073,8 @@ def compute_user_corridor_signature(user, office_lat, office_lon):
     """
     if not road_network:
         # Fallback: use bearing-based corridor
-        bearing = calculate_bearing(user['lat'], user['lng'], office_lat, office_lon)
-        distance = haversine_distance(user['lat'], user['lng'], office_lat, office_lon)
+        bearing = cached_bearing(user['lat'], user['lng'], office_lat, office_lon)
+        distance = cached_haversine(user['lat'], user['lng'], office_lat, office_lon)
         return {
             'type': 'bearing_based',
             'bearing': bearing,
@@ -3088,7 +3207,7 @@ def validate_path_consistency_simple(route, new_user, office_lat, office_lon):
     # Calculate distances to office for all users
     distances_to_office = []
     for user in current_users:
-        dist = haversine_distance(user['lat'], user['lng'], office_lat, office_lon)
+        dist = cached_haversine(user['lat'], user['lng'], office_lat, office_lon)
         distances_to_office.append(dist)
 
     # Check if distances are reasonably ordered (some tolerance for local variations)
@@ -3237,7 +3356,7 @@ def create_corridor_route(user_group, driver, office_lat, office_lon):
         users_added += 1
 
     # Optimize sequence based on distance to office (corridor principle)
-    route['assigned_users'].sort(key=lambda u: haversine_distance(
+    route['assigned_users'].sort(key=lambda u: cached_haversine(
         u['lat'], u['lng'], office_lat, office_lon), reverse=True)
 
     # Update route metrics
@@ -3456,7 +3575,7 @@ def create_user_clusters(unassigned_users, office_lat, office_lon):
                 if len(cluster) >= 6:  # Limit cluster size to force more clusters
                     break
 
-                distance = haversine_distance(cluster_center[0], cluster_center[1],
+                distance = cached_haversine(cluster_center[0], cluster_center[1],
                                             user['lat'], user['lng'])
                 if distance <= 2.0:  # Smaller 2km radius for more granular clusters
                     cluster.append(user)
@@ -3488,7 +3607,7 @@ def create_drivers_from_clusters(clusters, default_capacity, attempt, office_lat
         # Calculate median bearing
         bearings = []
         for user in cluster:
-            bearing = calculate_bearing(office_lat, office_lon, user['lat'], user['lng'])
+            bearing = cached_bearing(office_lat, office_lon, user['lat'], user['lng'])
             bearings.append(bearing)
         bearings.sort()
         median_bearing = bearings[len(bearings) // 2]
@@ -3574,7 +3693,7 @@ def select_best_drivers_for_clusters(clusters, available_drivers, drivers_needed
                 driver = available_drivers_sorted.iloc[idx]
 
                 # Calculate score based on distance to cluster centroid
-                distance = haversine_distance(
+                distance = cached_haversine(
                     driver['latitude'], driver['longitude'],
                     centroid_lat, centroid_lng
                 )
@@ -3632,7 +3751,7 @@ def generate_reassignment_proposals(routes, unassigned_users, office_lat, office
             if len(route['assigned_users']) < route['vehicle_type']:
                 # Check compatibility
                 route_center = calculate_route_center_improved(route)
-                distance = haversine_distance(route_center[0], route_center[1],
+                distance = cached_haversine(route_center[0], route_center[1],
                                             user['lat'], user['lng'])
 
                 if distance <= MAX_FILL_DISTANCE_KM:
@@ -3795,7 +3914,7 @@ def step_3_smart_user_swapping(routes, office_lat, office_lon, config):
                 # Check if routes are close enough for swapping
                 center1 = calculate_route_center_improved(route1)
                 center2 = calculate_route_center_improved(route2)
-                distance = haversine_distance(center1[0], center1[1], center2[0], center2[1])
+                distance = cached_haversine(center1[0], center1[1], center2[0], center2[1])
                 
                 max_swap_distance = config.get('MERGE_DISTANCE_KM', 3.5) * 2.0
                 if distance > max_swap_distance:
@@ -3899,120 +4018,6 @@ def validate_and_cleanup_routes(routes, office_lat, office_lon):
     return validated_routes
 
 
-def create_corridor_route(user_group, driver, office_lat, office_lon):
-    """
-    Create route for a corridor-based user group
-    """
-    route = {
-        'driver_id': str(driver['driver_id']),
-        'vehicle_id': str(driver.get('vehicle_id', '')),
-        'vehicle_type': int(driver['capacity']),
-        'latitude': float(driver['latitude']),
-        'longitude': float(driver['longitude']),
-        'assigned_users': []
-    }
-
-    # Add users to route ensuring we don't exceed capacity
-    users_added = 0
-    max_users = min(len(user_group), driver["capacity"])  # Ensure we don't exceed capacity
-    for user in user_group[:max_users]:
-        user_data = {
-            'user_id': str(user['user_id']),
-            'lat': float(user['lat']),
-            'lng': float(user['lng']),
-            'office_distance': float(user.get('office_distance', 0))
-        }
-        if 'first_name' in user and pd.notna(user['first_name']):
-            user_data['first_name'] = str(user['first_name'])
-        if 'email' in user and pd.notna(user['email']):
-            user_data['email'] = str(user['email'])
-
-        route['assigned_users'].append(user_data)
-        users_added += 1
-
-    # Optimize sequence based on distance to office (corridor principle)
-    route['assigned_users'].sort(key=lambda u: haversine_distance(
-        u['lat'], u['lng'], office_lat, office_lon), reverse=True)
-
-    # Update route metrics
-    update_route_metrics_improved(route, office_lat, office_lon)
-
-    utilization = len(route['assigned_users']) / route['vehicle_type'] * 100
-    print(f"   🛣️ Created corridor route: Driver {driver['driver_id']} with {len(route['assigned_users'])}/{route['vehicle_type']} users ({utilization:.1f}%)")
-
-    return route
-
-
-def assign_leftover_users_to_drivers(unassigned_users, available_drivers, office_lat, office_lon):
-    """
-    Assign leftover unassigned users to available drivers with simple proximity-based assignment
-    """
-    leftover_routes = []
-    remaining_users = unassigned_users.copy()
-
-    # Sort drivers by capacity (prefer higher capacity first) and priority
-    sorted_drivers = available_drivers.sort_values(['capacity', 'priority'], ascending=[False, True])
-
-    for _, driver in sorted_drivers.iterrows():
-        if not remaining_users:
-            break
-
-        vehicle_capacity = int(driver['capacity'])
-        driver_pos = (driver['latitude'], driver['longitude'])
-
-        # Find closest users to this driver (simple distance-based assignment)
-        user_distances = []
-        for user in remaining_users:
-            distance = haversine_distance(driver['latitude'], driver['longitude'],
-                                        user['lat'], user['lng'])
-            user_distances.append((distance, user))
-
-        # Sort by distance and take up to vehicle capacity
-        user_distances.sort(key=lambda x: x[0])
-        users_for_driver = [user for _, user in user_distances[:vehicle_capacity]]
-
-        if users_for_driver:
-            # Create route for this driver
-            route = {
-                'driver_id': str(driver['driver_id']),
-                'vehicle_id': str(driver.get('vehicle_id', '')),
-                'vehicle_type': vehicle_capacity,
-                'latitude': float(driver['latitude']),
-                'longitude': float(driver['longitude']),
-                'assigned_users': []
-            }
-
-            # Add users to route
-            for user in users_for_driver:
-                user_data = {
-                    'user_id': str(user['user_id']),
-                    'lat': float(user['lat']),
-                    'lng': float(user['lng']),
-                    'office_distance': float(user.get('office_distance', 0))
-                }
-                if 'first_name' in user and pd.notna(user['first_name']):
-                    user_data['first_name'] = str(user['first_name'])
-                if 'email' in user and pd.notna(user['email']):
-                    user_data['email'] = str(user['email'])
-
-                route['assigned_users'].append(user_data)
-
-            # Optimize route sequence
-            route = optimize_route_sequence_improved(route, office_lat, office_lon)
-            update_route_metrics_improved(route, office_lat, office_lon)
-
-            leftover_routes.append(route)
-
-            # Remove assigned users from remaining list
-            assigned_user_ids = {u['user_id'] for u in users_for_driver}
-            remaining_users = [u for u in remaining_users if u['user_id'] not in assigned_user_ids]
-
-            utilization = len(route['assigned_users']) / vehicle_capacity * 100
-            print(f"   🚗 Created leftover route: Driver {driver['driver_id']} with {len(route['assigned_users'])}/{vehicle_capacity} users ({utilization:.1f}%)")
-
-    return leftover_routes
-
-
 def consolidate_nearby_users_final(routes, office_lat, office_lon):
     """
     Final consolidation: Move nearby users (within 1km) to the same route if capacity allows
@@ -4045,7 +4050,7 @@ def consolidate_nearby_users_final(routes, office_lat, office_lon):
             # Check each user in current route against each user in other route
             for current_user in current_route['assigned_users'][:]:
                 for other_user in other_route['assigned_users']:
-                    distance = haversine_distance(
+                    distance = cached_haversine(
                         current_user['lat'], current_user['lng'],
                         other_user['lat'], other_user['lng']
                     )
