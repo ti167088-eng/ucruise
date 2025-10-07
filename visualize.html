@@ -609,22 +609,32 @@
 
         /* Marker animations */
         @keyframes markerBounce {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-10px) scale(1.1); }
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-10px) scale(1.1);
+            }
         }
 
         @keyframes markerDrop {
-            0% { 
+            0% {
                 transform: translateY(-100px);
                 opacity: 0;
             }
+
             60% {
                 transform: translateY(5px);
                 opacity: 1;
             }
+
             80% {
                 transform: translateY(-3px);
             }
+
             100% {
                 transform: translateY(0);
                 opacity: 1;
@@ -632,9 +642,12 @@
         }
 
         @keyframes markerPulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 box-shadow: 0 0 0 0 rgba(14, 165, 164, 0.7);
             }
+
             50% {
                 box-shadow: 0 0 0 10px rgba(14, 165, 164, 0);
             }
@@ -1218,8 +1231,10 @@
                     </div>
                     <span>Pickup Routes (Office → Users)</span>
                 </div>
-                <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--gray-200);">
-                    <div style="font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: var(--space-sm);">
+                <div
+                    style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--gray-200);">
+                    <div
+                        style="font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: var(--space-sm);">
                         💡 Hover over routes to highlight • Click to view details
                     </div>
                 </div>
@@ -1233,11 +1248,13 @@
 
             <!-- Mini-maps Panel -->
             <div class="mini-maps-panel" id="miniMapsPanel">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
                     <h3 style="margin: 0; color: var(--gray-800); font-size: 16px;">
                         <i class="fas fa-th"></i> Route Thumbnails
                     </h3>
-                    <button onclick="toggleMiniMaps()" style="background: none; border: none; color: var(--gray-600); cursor: pointer; font-size: 20px;">×</button>
+                    <button onclick="toggleMiniMaps()"
+                        style="background: none; border: none; color: var(--gray-600); cursor: pointer; font-size: 20px;">×</button>
                 </div>
                 <div id="miniMapsContainer"></div>
             </div>
@@ -1264,7 +1281,7 @@
         const API_URL = "/routes";
         const OFFICE_LOCATION = {lat: 30.6810489, lng: 76.7260711};
 
-        // Colorblind-safe Okabe-Ito palette (first 8 colors)
+        // Colorblind-safe Okabe-ito palette (first 8 colors)
         const OKABE_ITO = [
             "#E69F00", "#56B4E9", "#009E73", "#F0E442",
             "#0072B2", "#D55E00", "#CC79A7", "#000000"
@@ -1305,6 +1322,7 @@
         let heatmap = null;
         let routeRenderers = []; // Stores renderer, routePolyline, interactionPolyline, color, index, _outline
         let optimalPaths = [];
+        let spotlightMask = null; // Donut mask polygon for spotlight effect
 
         // Display States
         let displayState = {
@@ -1765,12 +1783,19 @@
         function highlightRouteOnHover(routeIndex) {
             focusedRouteIndex = routeIndex;
 
-            // First, dim all routes
+            // Find the route item to highlight
+            const targetRoute = routeRenderers.find(item => item.index === routeIndex);
+            if (!targetRoute) return;
+
+            // Only show spotlight effect when all routes are visible
+            const allRoutesVisible = allRoutes.length === routeRenderers.length;
+
+            // Keep all routes visible, just elevate the hovered one
             routeRenderers.forEach((item, i) => {
                 if (item.index === routeIndex) {
-                    // Highlight the hovered route
-                    _setRouteStyle(item, { opacity: 1, weight: 9, zIndex: 999, color: item.color || '#fff' });
-                    
+                    // Make hovered route visually dominant with high zIndex
+                    _setRouteStyle(item, {opacity: 1, weight: 9, zIndex: 9999, color: item.color || '#fff'});
+
                     // Create/show outline for extra contrast
                     if (!item._outline && item.interactionPolyline && item.interactionPolyline.getPath) {
                         const path = item.interactionPolyline.getPath();
@@ -1779,9 +1804,9 @@
                                 path: path.getArray ? path.getArray() : path,
                                 geodesic: true,
                                 strokeColor: '#ffffff',
-                                strokeOpacity: 0.18,
+                                strokeOpacity: 0.3,
                                 strokeWeight: 14,
-                                zIndex: 900,
+                                zIndex: 9900,
                                 map: map
                             });
                         }
@@ -1789,9 +1814,9 @@
                         item._outline.setMap(map);
                     }
                 } else {
-                    // Dim all other routes
-                    _setRouteStyle(item, { opacity: 0.15, weight: 3, zIndex: 100, color: item.color || '#888' });
-                    
+                    // Keep other routes at normal visibility
+                    _setRouteStyle(item, {opacity: 0.8, weight: 6, zIndex: 300, color: item.color});
+
                     // Hide outline if exists
                     if (item._outline) {
                         item._outline.setMap(null);
@@ -1799,30 +1824,126 @@
                 }
             });
 
-            // Dim markers not in this route (use stored routeIndex metadata)
+            // Only create spotlight donut mask effect when all routes are visible
+            if (allRoutesVisible) {
+                createSpotlightMask(targetRoute);
+            }
+
+            // Dim all markers EXCEPT those belonging to the highlighted route
             markers.users.forEach(u => {
-                if (u && u.marker) u.marker.setOpacity(u.routeIndex === routeIndex ? 1 : 0.25);
+                if (u && u.marker) {
+                    if (u.routeIndex === routeIndex) {
+                        u.marker.setOpacity(1); // Keep highlighted route's users bright
+                        u.marker.setZIndex(9998); // Above the mask
+                    } else {
+                        u.marker.setOpacity(0.3); // Dim other users
+                        u.marker.setZIndex(400); // Below the mask
+                    }
+                }
             });
+
             markers.drivers.forEach(d => {
-                if (d && d.marker) d.marker.setOpacity(d.routeIndex === routeIndex ? 1 : 0.25);
+                if (d && d.marker) {
+                    if (d.routeIndex === routeIndex) {
+                        d.marker.setOpacity(1); // Keep highlighted route's driver bright
+                        d.marker.setZIndex(9998); // Above the mask
+                    } else {
+                        d.marker.setOpacity(0.3); // Dim other drivers
+                        d.marker.setZIndex(400); // Below the mask
+                    }
+                }
             });
 
             // Highlight corresponding legend item
             document.querySelectorAll('.cluster-color').forEach((el, idx) => {
                 el.classList.remove('active');
-                // Account for "All" button being first (index 0)
                 if (idx === routeIndex + 1) {
                     el.classList.add('active');
                 }
             });
         }
 
+        function createSpotlightMask(routeItem) {
+            // Remove existing mask
+            if (spotlightMask) {
+                spotlightMask.setMap(null);
+                spotlightMask = null;
+            }
+
+            // Check if Turf.js is available
+            if (typeof turf === 'undefined') {
+                console.error('Turf.js is not loaded. Spotlight effect disabled.');
+                return;
+            }
+
+            try {
+                // Get map bounds to create a world-covering polygon with a hole
+                const bounds = map.getBounds();
+                const ne = bounds.getNorthEast();
+                const sw = bounds.getSouthWest();
+
+                // Create outer ring covering beyond visible map area
+                const padding = 10; // degrees of padding
+                const outer = [
+                    {lat: ne.lat() + padding, lng: sw.lng() - padding},  // NW
+                    {lat: ne.lat() + padding, lng: ne.lng() + padding},  // NE
+                    {lat: sw.lat() - padding, lng: ne.lng() + padding},  // SE
+                    {lat: sw.lat() - padding, lng: sw.lng() - padding}   // SW
+                ];
+
+                // Get the route path - use just the route coordinates without buffering
+                let routePath = null;
+
+                if (routeItem.interactionPolyline && routeItem.interactionPolyline.getPath) {
+                    const path = routeItem.interactionPolyline.getPath();
+                    routePath = path.getArray ? path.getArray() : path;
+                } else if (routeItem.routePolyline && routeItem.routePolyline.getPath) {
+                    const path = routeItem.routePolyline.getPath();
+                    routePath = path.getArray ? path.getArray() : path;
+                }
+
+                if (!routePath || routePath.length === 0) {
+                    console.warn('No route path available for spotlight');
+                    return;
+                }
+
+                // Convert route path to hole coordinates (no buffer, exact route line)
+                const holeCoords = routePath.map(point => ({
+                    lat: typeof point.lat === 'function' ? point.lat() : point.lat,
+                    lng: typeof point.lng === 'function' ? point.lng() : point.lng
+                }));
+
+                // Create the donut mask polygon
+                spotlightMask = new google.maps.Polygon({
+                    paths: [outer, holeCoords],
+                    fillColor: '#000000',
+                    fillOpacity: 0.7,
+                    strokeOpacity: 0,
+                    strokeWeight: 0,
+                    map: map,
+                    zIndex: 500,
+                    clickable: false
+                });
+
+                console.log('✨ Spotlight mask created successfully');
+
+            } catch (error) {
+                console.warn('Failed to create spotlight mask:', error);
+            }
+        }
+
         function unhighlightAllRoutes() {
             focusedRouteIndex = null;
 
+            // Remove spotlight mask
+            if (spotlightMask) {
+                spotlightMask.setMap(null);
+                spotlightMask = null;
+            }
+
             // Restore all routes to normal
             routeRenderers.forEach((item) => {
-                _setRouteStyle(item, { opacity: 0.8, weight: 6, zIndex: 300, color: item.color });
+                _setRouteStyle(item, {opacity: 0.8, weight: 6, zIndex: 300, color: item.color});
 
                 // Hide outline if any
                 if (item._outline) {
@@ -1830,12 +1951,18 @@
                 }
             });
 
-            // Restore all markers to full opacity
-            markers.users.forEach(u => { 
-                if (u && u.marker) u.marker.setOpacity(1); 
+            // Restore all markers to full opacity and normal zIndex
+            markers.users.forEach(u => {
+                if (u && u.marker) {
+                    u.marker.setOpacity(1);
+                    u.marker.setZIndex(300);
+                }
             });
-            markers.drivers.forEach(d => { 
-                if (d && d.marker) d.marker.setOpacity(1); 
+            markers.drivers.forEach(d => {
+                if (d && d.marker) {
+                    d.marker.setOpacity(1);
+                    d.marker.setZIndex(500);
+                }
             });
 
             // Remove legend highlights
@@ -1854,6 +1981,21 @@
 
             const routeColor = colorForRoute(routeIndex, allRoutes.length);
             const utilization = (route.assigned_users.length / route.vehicle_type).toFixed(1);
+
+            // Keep the route highlighted
+            highlightRouteOnHover(routeIndex);
+
+            // Fit the route in the visible map area
+            if (route.assigned_users.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                // Include office location
+                bounds.extend(OFFICE_LOCATION);
+                // Include all user locations
+                route.assigned_users.forEach(user => {
+                    bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
+                });
+                map.fitBounds(bounds);
+            }
 
             title.innerHTML = `
                 <i class="fas fa-route" style="color: ${routeColor}"></i> 
@@ -1976,6 +2118,8 @@
 
         function closeRouteDetails() {
             document.getElementById('routeDetailsPanel').classList.remove('active');
+            // Unhighlight the route and remove spotlight effect
+            unhighlightAllRoutes();
         }
 
         function renderMap() {
@@ -2088,11 +2232,11 @@
                                         </filter>
                                     </defs>
                                     <rect x="0" y="0" width="${textWidth}" height="28" rx="14" fill="url(#textbg${index}_${userIndex})" stroke="#ffffff" stroke-width="2" filter="url(#textshadow${index}_${userIndex})"/>
-                                    <text x="${textWidth/2}" y="18" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">${userName}</text>
+                                    <text x="${textWidth / 2}" y="18" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">${userName}</text>
                                 </svg>
                             `),
                             scaledSize: new google.maps.Size(textWidth, 28),
-                            anchor: new google.maps.Point(textWidth/2, 14)
+                            anchor: new google.maps.Point(textWidth / 2, 14)
                         };
                     } else {
                         // Show colored icon
@@ -2318,7 +2462,7 @@
 
                     // Store the route renderer item first
                     const routeItem = {
-                        renderer: directionsRenderer, 
+                        renderer: directionsRenderer,
                         routePolyline: null, // DirectionsRenderer handles the main line
                         interactionPolyline: interactionPolyline,
                         color: color,
@@ -2334,7 +2478,11 @@
                     });
 
                     interactionPolyline.addListener('mouseout', () => {
-                        unhighlightAllRoutes();
+                        // Only unhighlight if details panel is not open
+                        const panel = document.getElementById('routeDetailsPanel');
+                        if (!panel.classList.contains('active')) {
+                            unhighlightAllRoutes();
+                        }
                         document.getElementById('routeInfoPopup').style.display = 'none';
                     });
 
@@ -2399,9 +2547,9 @@
             // Store route item first
             const routeItem = {
                 renderer: null, // No DirectionsRenderer for fallback
-                routePolyline: fallbackRoutePolyline, 
-                interactionPolyline: interactionPolyline, 
-                color: color, 
+                routePolyline: fallbackRoutePolyline,
+                interactionPolyline: interactionPolyline,
+                color: color,
                 index: routeIndex
             };
 
@@ -2414,7 +2562,11 @@
             });
 
             interactionPolyline.addListener('mouseout', () => {
-                unhighlightAllRoutes();
+                // Only unhighlight if details panel is not open
+                const panel = document.getElementById('routeDetailsPanel');
+                if (!panel.classList.contains('active')) {
+                    unhighlightAllRoutes();
+                }
                 document.getElementById('routeInfoPopup').style.display = 'none';
             });
 
@@ -2725,6 +2877,12 @@
             // Clear heatmap
             if (heatmap) heatmap.setMap(null);
             heatmap = null;
+
+            // Clear spotlight mask
+            if (spotlightMask) {
+                spotlightMask.setMap(null);
+                spotlightMask = null;
+            }
         }
 
         function closeAllInfoWindows() {
@@ -3122,10 +3280,13 @@
         });
     </script>
 
+    <!-- Turf.js for geometric operations (must load before Google Maps) -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
     <!-- Google Maps API with visualization library -->
     <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjESclgKTCpmdmHKc7bzCKIQtYe_vIbb4&libraries=places,visualization&callback=initMap&libraries=places"
-        async defer></script>
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjESclgKTCpmdmHKc7bzCKIQtYe_vIbb4&libraries=visualization&callback=initMap"
+        defer></script>
 </body>
 
 </html>
