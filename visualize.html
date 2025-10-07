@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,10 +9,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Dark Theme Color Palette */
-            --primary-500: #6366f1;
-            --primary-600: #4f46e5;
-            --primary-700: #4338ca;
+            /* Design System - Utilitarian + Cinematic Theme */
+            --bg-primary: #0F1724;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            
+            --accent-primary: #0EA5A4;
+            --accent-secondary: #F59E0B;
+            --accent-primary-hover: #0d8f8e;
+            --accent-secondary-hover: #d97706;
+            
+            --text-muted: #94A3B8;
+            --text-strong: #E6EEF6;
+            --text-body: #cbd5e1;
+            
+            --success: #10B981;
+            --error: #EF4444;
+            --warning: #F59E0B;
+            
+            /* Legacy mappings for compatibility */
+            --primary-500: #0EA5A4;
+            --primary-600: #0d8f8e;
+            --primary-700: #0c7a79;
             --primary-50: #1e1b4b;
             --primary-100: #312e81;
             
@@ -22,25 +41,27 @@
             --error-500: #ef4444;
             --error-100: #450a0a;
             
-            --gray-50: #0f172a;
-            --gray-100: #1e293b;
-            --gray-200: #334155;
-            --gray-300: #475569;
-            --gray-400: #64748b;
+            --gray-50: #0F1724;
+            --gray-100: #111827;
+            --gray-200: #1e293b;
+            --gray-300: #334155;
+            --gray-400: #475569;
             --gray-500: #94a3b8;
             --gray-600: #cbd5e1;
             --gray-700: #e2e8f0;
-            --gray-800: #f1f5f9;
+            --gray-800: #E6EEF6;
             --gray-900: #f8fafc;
             
-            --surface-white: #0f172a;
-            --surface-gray: #1e293b;
+            --surface-white: #0F1724;
+            --surface-gray: #111827;
             
-            /* Enhanced Shadows for Dark Theme */
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+            /* Cinematic Layered Shadows */
+            --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+            --shadow-md: 0 2px 8px -1px rgb(0 0 0 / 0.5), 0 4px 6px -2px rgb(0 0 0 / 0.3);
+            --shadow-lg: 0 8px 20px -4px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
+            --shadow-xl: 0 16px 40px -8px rgb(0 0 0 / 0.7), 0 8px 20px -6px rgb(0 0 0 / 0.5);
+            --shadow-glow: 0 0 20px rgba(14, 165, 164, 0.3);
+            --shadow-spotlight: 0 0 60px 20px rgba(14, 165, 164, 0.15);
             
             /* Radius */
             --radius-sm: 0.375rem;
@@ -48,13 +69,30 @@
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
             
-            /* Spacing */
+            /* Spacing Scale */
             --space-xs: 0.5rem;
             --space-sm: 0.75rem;
             --space-md: 1rem;
             --space-lg: 1.5rem;
             --space-xl: 2rem;
             --space-2xl: 2.5rem;
+            
+            /* Motion Tokens */
+            --duration-fast: 120ms;
+            --duration-medium: 240ms;
+            --duration-slow: 320ms;
+            --easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+            --easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+            --easing-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
+        }
+        
+        /* Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
         * {
@@ -65,11 +103,25 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: var(--bg-primary);
             min-height: 100vh;
-            color: var(--gray-800);
+            color: var(--text-body);
             font-size: 14px;
             line-height: 1.5;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at 20% 30%, rgba(14, 165, 164, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 70%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         .app-container {
@@ -81,19 +133,39 @@
 
         /* Sidebar Styling */
         .sidebar {
-            background: var(--surface-white);
-            border-right: 1px solid var(--gray-200);
+            background: var(--bg-secondary);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-xl);
+            transition: transform var(--duration-slow) var(--easing-standard);
+            position: relative;
+            z-index: 10;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
         }
 
         .sidebar-header {
             padding: var(--space-xl);
-            border-bottom: 1px solid var(--gray-200);
-            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
+            color: var(--text-strong);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .logo {
@@ -161,18 +233,27 @@
         .form-input {
             width: 100%;
             padding: var(--space-sm) var(--space-md);
-            border: 1.5px solid var(--gray-200);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius-md);
             font-size: 13px;
-            transition: all 0.2s ease;
-            background: var(--surface-gray);
-            color: var(--gray-800);
+            transition: all var(--duration-fast) var(--easing-standard);
+            background: var(--bg-card);
+            color: var(--text-strong);
+        }
+        
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-input:hover {
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
         .form-input:focus {
             outline: none;
-            border-color: var(--primary-500);
-            box-shadow: 0 0 0 3px var(--primary-100);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.15);
+            background: var(--bg-secondary);
         }
 
         .form-select {
@@ -201,6 +282,11 @@
             background: var(--primary-500);
             cursor: pointer;
             box-shadow: var(--shadow-md);
+            transition: transform 0.2s ease;
+        }
+
+        .range-input::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
         }
 
         /* Buttons */
@@ -222,26 +308,58 @@
         }
 
         .btn-primary {
-            background: var(--primary-500);
-            color: white;
-            box-shadow: var(--shadow-sm);
+            background: var(--accent-primary);
+            color: var(--text-strong);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width var(--duration-medium) var(--easing-standard), 
+                        height var(--duration-medium) var(--easing-standard);
+        }
+        
+        .btn-primary:hover::before {
+            width: 300px;
+            height: 300px;
         }
 
         .btn-primary:hover {
-            background: var(--primary-600);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+            background: var(--accent-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow), var(--shadow-md);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
         .btn-secondary {
-            background: var(--surface-gray);
-            color: var(--gray-700);
-            border: 1.5px solid var(--gray-200);
+            background: var(--bg-card);
+            color: var(--text-body);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            position: relative;
         }
 
         .btn-secondary:hover {
-            background: var(--gray-100);
-            border-color: var(--gray-300);
+            background: var(--bg-secondary);
+            border-color: var(--accent-primary);
+            color: var(--text-strong);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary:active {
+            transform: translateY(0);
         }
 
         .btn-group {
@@ -258,48 +376,77 @@
         }
 
         .stat-card {
-            background: var(--surface-gray);
+            background: var(--bg-card);
             padding: var(--space-lg);
             border-radius: var(--radius-lg);
-            border: 1px solid var(--gray-200);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             text-align: center;
             box-shadow: var(--shadow-sm);
-            transition: all 0.2s ease;
+            transition: all var(--duration-fast) var(--easing-standard);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transform: scaleX(0);
+            transition: transform var(--duration-medium) var(--easing-standard);
         }
 
         .stat-card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
+            border-color: rgba(14, 165, 164, 0.3);
+        }
+        
+        .stat-card:hover::before {
+            transform: scaleX(1);
         }
 
         .stat-value {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
-            color: var(--gray-900);
+            color: var(--text-strong);
             margin-bottom: var(--space-xs);
+            background: linear-gradient(135deg, var(--accent-primary), var(--text-strong));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .stat-label {
             font-size: 11px;
-            color: var(--gray-500);
+            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 500;
+            letter-spacing: 0.08em;
+            font-weight: 600;
         }
 
         /* Analytics Cards */
         .analytics-card {
-            background: var(--surface-gray);
+            background: var(--bg-card);
             border-radius: var(--radius-lg);
-            border: 1px solid var(--gray-200);
-            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: var(--shadow-md);
             overflow: hidden;
+            transition: all var(--duration-fast) var(--easing-standard);
+        }
+        
+        .analytics-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(14, 165, 164, 0.2);
         }
 
         .analytics-header {
             padding: var(--space-lg);
-            border-bottom: 1px solid var(--gray-200);
-            background: var(--gray-100);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, rgba(14, 165, 164, 0.05), transparent);
         }
 
         .analytics-title {
@@ -370,26 +517,29 @@
 
         .map-btn {
             padding: var(--space-xs) var(--space-md);
-            background: var(--surface-gray);
-            border: 1.5px solid var(--gray-200);
+            background: var(--bg-card);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius-md);
             font-size: 12px;
             font-weight: 500;
-            color: var(--gray-700);
+            color: var(--text-body);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all var(--duration-fast) var(--easing-standard);
         }
 
         .map-btn:hover {
-            background: var(--gray-100);
-            border-color: var(--primary-500);
-            color: var(--primary-600);
+            background: var(--bg-secondary);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
         }
 
         .map-btn.active {
-            background: var(--primary-500);
-            border-color: var(--primary-500);
-            color: white;
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--text-strong);
+            box-shadow: var(--shadow-glow);
         }
 
         #map {
@@ -403,13 +553,21 @@
             position: absolute;
             bottom: var(--space-xl);
             left: var(--space-xl);
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             padding: var(--space-lg);
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-xl);
-            border: 1px solid var(--gray-200);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             min-width: 250px;
+            transition: all var(--duration-medium) var(--easing-standard);
+        }
+        
+        .floating-legend:hover {
+            background: rgba(17, 24, 39, 0.95);
+            box-shadow: var(--shadow-xl), var(--shadow-glow);
+            transform: translateY(-2px);
         }
 
         .legend-title {
@@ -458,6 +616,18 @@
             border: 1px solid var(--gray-200);
             max-width: 300px;
             display: none;
+            animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         /* Loading States */
@@ -526,6 +696,18 @@
             border-radius: var(--radius-md);
             font-size: 12px;
             margin-bottom: var(--space-sm);
+            animation: slideInLeft 0.3s ease;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .alert-success {
@@ -572,15 +754,17 @@
         }
 
         .cluster-color:hover {
-            transform: scale(1.2);
-            box-shadow: var(--shadow-lg);
-            border-color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.25);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            border-color: var(--accent-primary);
+            animation: markerPulse 1.5s infinite;
         }
 
         .cluster-color.active {
-            transform: scale(1.15);
-            border-color: white;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transform: scale(1.2);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 24px rgba(14, 165, 164, 0.6), var(--shadow-md);
+            animation: markerPulse 2s infinite;
         }
 
         .cluster-color.active::after {
@@ -590,6 +774,84 @@
             font-size: 12px;
             font-weight: bold;
             text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Marker animations */
+        @keyframes markerBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.1); }
+        }
+
+        @keyframes markerDrop {
+            0% { 
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            60% {
+                transform: translateY(5px);
+                opacity: 1;
+            }
+            80% {
+                transform: translateY(-3px);
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes markerPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(14, 165, 164, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(14, 165, 164, 0);
+            }
+        }
+        
+        @keyframes spotlightReveal {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Cinematic spotlight overlay */
+        .map-spotlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%), 
+                        transparent 15%, 
+                        rgba(15, 23, 36, 0.6) 50%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--easing-standard);
+            z-index: 5;
+        }
+        
+        .map-spotlight.active {
+            opacity: 1;
+        }
+
+        /* Filter result badge */
+        .filter-badge {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: var(--text-strong);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: var(--space-xs);
+            font-weight: 700;
+            box-shadow: 0 0 12px rgba(14, 165, 164, 0.4);
+            animation: markerPulse 2s infinite;
         }
 
         /* Responsive Design */
@@ -615,6 +877,13 @@
             
             .sidebar {
                 max-height: 50vh;
+                position: absolute;
+                width: 100%;
+                z-index: 100;
+            }
+
+            .sidebar.collapsed {
+                transform: translateY(-100%);
             }
             
             .floating-legend,
@@ -642,6 +911,121 @@
             background: var(--gray-400);
         }
 
+        /* Smart Suggestions Toast */
+        .toast-container {
+            position: fixed;
+            bottom: var(--space-xl);
+            right: var(--space-xl);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            max-width: 420px;
+        }
+        
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            animation: slideInUp var(--duration-slow) var(--easing-decelerate);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .toast::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+        
+        .toast-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .toast-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: var(--text-strong);
+            font-size: 16px;
+        }
+        
+        .toast-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-strong);
+        }
+        
+        .toast-message {
+            font-size: 13px;
+            color: var(--text-body);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        
+        .toast-actions {
+            display: flex;
+            gap: var(--space-xs);
+        }
+        
+        .toast-btn {
+            flex: 1;
+            padding: var(--space-xs) var(--space-sm);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--easing-standard);
+        }
+        
+        .toast-btn-primary {
+            background: var(--accent-primary);
+            color: var(--text-strong);
+        }
+        
+        .toast-btn-primary:hover {
+            background: var(--accent-primary-hover);
+            transform: translateY(-1px);
+        }
+        
+        .toast-btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .toast-btn-secondary:hover {
+            color: var(--text-body);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
         /* Utility Classes */
         .hidden { display: none !important; }
         .text-center { text-align: center; }
@@ -679,6 +1063,7 @@
                     <div class="section-title">
                         <i class="fas fa-chart-line"></i>
                         Overview
+                        <span class="filter-badge" id="filterBadge" style="display:none;">0</span>
                     </div>
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -708,11 +1093,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="searchInput">Search Routes or Users</label>
-                        <input type="text" id="searchInput" class="form-input" placeholder="Enter ID, name, or keyword..." oninput="handleSearch()">
+                        <input type="text" id="searchInput" class="form-input" placeholder="Enter ID, name, or keyword...">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="clusterSelect">Route Selection</label>
-                        <select id="clusterSelect" class="form-input form-select" onchange="filterCluster()">
+                        <select id="clusterSelect" class="form-input form-select">
                             <option value="all">All Routes</option>
                         </select>
                     </div>
@@ -720,7 +1105,7 @@
                         <label class="form-label" for="utilizationRange">
                             Min Utilization: <span id="utilizationValue" class="font-semibold">0%</span>
                         </label>
-                        <input type="range" id="utilizationRange" class="range-input" min="0" max="100" value="0" oninput="filterByUtilization()">
+                        <input type="range" id="utilizationRange" class="range-input" min="0" max="100" value="0">
                     </div>
                 </div>
 
@@ -860,6 +1245,9 @@
             </div>
             
             <div id="map"></div>
+            
+            <!-- Cinematic Spotlight Overlay -->
+            <div class="map-spotlight" id="mapSpotlight"></div>
 
             <!-- Floating Legend -->
             <div class="floating-legend">
@@ -914,16 +1302,20 @@
         // Global Variables
         let map;
         let directionsService;
-        let allRoutes = [];
+        
+        // ✅ OPTIMIZATION 1: Cache original routes (immutable)
+        let originalRoutes = []; // Never modified after initial fetch
+        let displayRoutes = [];  // Filtered/searched routes for display
+        
+        // ✅ OPTIMIZATION 3: Track markers by ID for differential updates
+        let markersById = new Map(); // Map<markerId, markerObject>
+        let routeRenderersById = new Map(); // Map<routeId, rendererObject>
+        
         let markers = {
-            office: null,
-            drivers: [],
-            users: [],
-            routes: [] // For sequential route markers
+            office: null
         };
         let heatmap = null;
-        let routeRenderers = [];
-        let optimalPaths = [];
+        let sharedInfoWindow = null; // ✅ OPTIMIZATION 6: Single reusable InfoWindow
         
         // Display States
         let displayState = {
@@ -933,6 +1325,18 @@
             heatmap: false,
             optimalPaths: false
         };
+
+        // ✅ OPTIMIZATION 4: Precomputed SVG icon templates
+        const iconTemplates = {
+            office: null,
+            driver: {},
+            user: {},
+            sequence: {}
+        };
+
+        // ✅ OPTIMIZATION 2: Debounce timers
+        let searchDebounceTimer = null;
+        let rangeDebounceTimer = null;
 
         // Map style configurations
         let showPlaceNames = false;
@@ -1028,7 +1432,6 @@
 
         const cleanMapStyles = [
             ...originalMapStyles,
-            // Hide ALL place labels and names
             {
                 featureType: "all",
                 elementType: "labels.text",
@@ -1039,118 +1442,21 @@
                 elementType: "labels.icon",
                 stylers: [{ visibility: "off" }]
             },
-            // Hide all POI (Points of Interest) completely
             {
                 featureType: "poi",
                 stylers: [{ visibility: "off" }]
             },
-            {
-                featureType: "poi.business",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.place_of_worship",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.school",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.medical",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.government",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.attraction",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.sports_complex",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.park",
-                stylers: [{ visibility: "off" }]
-            },
-            // Hide all administrative labels (cities, villages, sectors)
             {
                 featureType: "administrative.locality",
                 elementType: "labels",
                 stylers: [{ visibility: "off" }]
             },
             {
-                featureType: "administrative.neighborhood",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "administrative.land_parcel",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "administrative.country",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "administrative.province",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            // Hide all transit labels
-            {
                 featureType: "transit.station",
                 stylers: [{ visibility: "off" }]
             },
             {
-                featureType: "transit.line",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "transit",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            // Hide ALL road labels
-            {
                 featureType: "road",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "road.local",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "road.arterial",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "road.highway",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            // Hide water labels
-            {
-                featureType: "water",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            // Hide natural feature labels
-            {
-                featureType: "natural",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "landscape",
                 elementType: "labels",
                 stylers: [{ visibility: "off" }]
             }
@@ -1161,20 +1467,96 @@
             map = new google.maps.Map(document.getElementById("map"), {
                 center: OFFICE_LOCATION,
                 zoom: 12,
-                styles: cleanMapStyles, // Start with clean map (no place names)
+                styles: cleanMapStyles,
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: true
             });
 
-            // Initialize directions service
             directionsService = new google.maps.DirectionsService();
+            sharedInfoWindow = new google.maps.InfoWindow(); // ✅ Single InfoWindow instance
 
-            // Create office marker
-            createOfficeMarker();
+            // ✅ OPTIMIZATION 4: Precompute icon templates
+            precomputeIconTemplates();
             
-            // Load route data
+            createOfficeMarker();
             loadRouteData();
+
+            // ✅ OPTIMIZATION 2: Add debounced event listeners
+            setupDebouncedListeners();
+        }
+
+        // ✅ OPTIMIZATION 4: Precompute SVG icon templates
+        function precomputeIconTemplates() {
+            // Office icon
+            iconTemplates.office = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="20" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+                    <text x="24" y="30" font-family="Arial" font-size="16" text-anchor="middle" fill="white">🏢</text>
+                </svg>
+            `);
+        }
+
+        function getDriverIcon(index, color) {
+            const key = `${index}_${color}`;
+            if (!iconTemplates.driver[key]) {
+                iconTemplates.driver[key] = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad${index}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:${adjustBrightness(color, -30)};stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="28" cy="28" r="24" fill="url(#grad${index})" stroke="#ffffff" stroke-width="4"/>
+                        <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white" font-weight="bold">🚗</text>
+                        <text x="28" y="46" font-family="Arial" font-size="10" text-anchor="middle" fill="white" font-weight="bold">${index + 1}</text>
+                    </svg>
+                `);
+            }
+            return iconTemplates.driver[key];
+        }
+
+        function getUserIcon(routeIndex, userIndex, color) {
+            const key = `${routeIndex}_${userIndex}_${color}`;
+            if (!iconTemplates.user[key]) {
+                iconTemplates.user[key] = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="usergrad${routeIndex}_${userIndex}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:${adjustBrightness(color, -20)};stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="16" cy="16" r="12" fill="url(#usergrad${routeIndex}_${userIndex})" stroke="#ffffff" stroke-width="2"/>
+                        <text x="16" y="20" font-family="Arial" font-size="12" text-anchor="middle" fill="white">👤</text>
+                    </svg>
+                `);
+            }
+            return iconTemplates.user[key];
+        }
+
+        // ✅ OPTIMIZATION 2: Setup debounced event listeners
+        function setupDebouncedListeners() {
+            const searchInput = document.getElementById("searchInput");
+            searchInput.addEventListener("input", () => {
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(handleSearch, 300); // 300ms debounce
+            });
+
+            const rangeInput = document.getElementById("utilizationRange");
+            rangeInput.addEventListener("input", () => {
+                // Update display immediately
+                const value = rangeInput.value;
+                document.getElementById("utilizationValue").textContent = `${value}%`;
+                
+                // Debounce the actual filtering
+                clearTimeout(rangeDebounceTimer);
+                rangeDebounceTimer = setTimeout(filterByUtilization, 250); // 250ms debounce
+            });
+
+            const clusterSelect = document.getElementById("clusterSelect");
+            clusterSelect.addEventListener("change", filterCluster);
         }
 
         function createOfficeMarker() {
@@ -1183,20 +1565,15 @@
                 map: map,
                 title: "Office Headquarters",
                 icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                        <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="24" cy="24" r="20" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
-                            <text x="24" y="30" font-family="Arial" font-size="16" text-anchor="middle" fill="white">🏢</text>
-                        </svg>
-                    `),
+                    url: iconTemplates.office,
                     scaledSize: new google.maps.Size(48, 48),
                     anchor: new google.maps.Point(24, 24)
                 },
                 zIndex: 1000
             });
 
-            const officeInfoWindow = new google.maps.InfoWindow({
-                content: `
+            markers.office.addListener("click", () => {
+                sharedInfoWindow.setContent(`
                     <div style="padding: 15px; font-family: Inter, sans-serif; background: #0f172a; color: #f1f5f9; border-radius: 8px; min-width: 200px;">
                         <h3 style="margin: 0 0 10px 0; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
                             🏢 Office Headquarters
@@ -1206,12 +1583,8 @@
                             📍 ${OFFICE_LOCATION.lat.toFixed(6)}, ${OFFICE_LOCATION.lng.toFixed(6)}
                         </p>
                     </div>
-                `
-            });
-
-            markers.office.addListener("click", () => {
-                closeAllInfoWindows();
-                officeInfoWindow.open(map, markers.office);
+                `);
+                sharedInfoWindow.open(map, markers.office);
             });
         }
 
@@ -1221,7 +1594,10 @@
                 const routes = await response.json();
                 
                 if (Array.isArray(routes)) {
-                    allRoutes = routes;
+                    // ✅ OPTIMIZATION 1: Store original data (never modified)
+                    originalRoutes = routes;
+                    displayRoutes = [...routes]; // Initial display = all routes
+                    
                     hideLoading();
                     updateUI();
                     renderMap();
@@ -1244,13 +1620,24 @@
             updateStats();
             updateAnalytics();
             createClusterPalette();
+            updateFilterBadge();
+        }
+
+        function updateFilterBadge() {
+            const badge = document.getElementById('filterBadge');
+            if (displayRoutes.length < originalRoutes.length) {
+                badge.textContent = displayRoutes.length;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
         }
 
         function populateRouteDropdown() {
             const select = document.getElementById("clusterSelect");
             select.innerHTML = '<option value="all">All Routes</option>';
             
-            allRoutes.forEach((route, index) => {
+            displayRoutes.forEach((route, index) => {
                 const option = document.createElement("option");
                 option.value = index;
                 option.text = `Route ${index + 1} - ${route.assigned_users.length} users (${((route.assigned_users.length / route.vehicle_type) * 100).toFixed(0)}% util)`;
@@ -1262,7 +1649,7 @@
             const container = document.getElementById('clusterPalette');
             container.innerHTML = '';
             
-            allRoutes.forEach((route, index) => {
+            displayRoutes.forEach((route, index) => {
                 const colorDiv = document.createElement('div');
                 colorDiv.className = 'cluster-color';
                 colorDiv.style.background = `linear-gradient(45deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -20)})`;
@@ -1273,22 +1660,43 @@
             });
         }
 
+        // ✅ OPTIMIZATION 3: Differential rendering with marker tracking
         function renderMap() {
-            clearMap();
-            
-            let totalUsers = 0;
+            const currentDisplayIds = new Set();
             let heatmapData = [];
 
-            allRoutes.forEach((route, index) => {
+            displayRoutes.forEach((route, index) => {
                 const color = ROUTE_COLORS[index % ROUTE_COLORS.length];
-                renderRoute(route, index, color);
+                const routeId = `route_${route.driver_id}`;
+                currentDisplayIds.add(routeId);
+
+                renderRoute(route, index, color, routeId);
                 
                 route.assigned_users.forEach(user => {
-                    totalUsers++;
                     heatmapData.push(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
+                    currentDisplayIds.add(`user_${user.user_id}`);
                 });
             });
 
+            // ✅ Remove markers that are no longer in displayRoutes
+            for (const [id, markerObj] of markersById.entries()) {
+                if (!currentDisplayIds.has(id)) {
+                    markerObj.marker.setMap(null);
+                    markersById.delete(id);
+                }
+            }
+
+            // ✅ Remove route renderers no longer needed
+            for (const [id, rendererObj] of routeRenderersById.entries()) {
+                if (!currentDisplayIds.has(id)) {
+                    if (rendererObj.renderer) rendererObj.renderer.setMap(null);
+                    if (rendererObj.polyline) rendererObj.polyline.setMap(null);
+                    routeRenderersById.delete(id);
+                }
+            }
+
+            // Heatmap
+            if (heatmap) heatmap.setMap(null);
             if (displayState.heatmap && heatmapData.length > 0) {
                 createHeatmap(heatmapData);
             }
@@ -1296,100 +1704,113 @@
             updateDisplayButtons();
         }
 
-        function renderRoute(route, index, color) {
+        function renderRoute(route, index, color, routeId) {
             const driverLat = parseFloat(route.latitude);
             const driverLng = parseFloat(route.longitude);
             const utilization = route.assigned_users.length / route.vehicle_type;
+            const driverId = `driver_${route.driver_id}`;
 
-            // Create enhanced driver marker
+            // ✅ Driver marker - create or update
             if (displayState.drivers) {
-                const driverMarker = new google.maps.Marker({
-                    position: { lat: driverLat, lng: driverLng },
-                    map: map,
-                    title: `Driver ${route.driver_id}`,
-                    icon: {
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                            <svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="grad${index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:${adjustBrightness(color, -30)};stop-opacity:1" />
-                                    </linearGradient>
-                                    <filter id="shadow${index}">
-                                        <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
-                                    </filter>
-                                </defs>
-                                <circle cx="28" cy="28" r="24" fill="url(#grad${index})" stroke="#ffffff" stroke-width="4" filter="url(#shadow${index})"/>
-                                <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white" font-weight="bold">🚗</text>
-                                <text x="28" y="46" font-family="Arial" font-size="10" text-anchor="middle" fill="white" font-weight="bold">${index + 1}</text>
-                            </svg>
-                        `),
-                        scaledSize: new google.maps.Size(56, 56),
-                        anchor: new google.maps.Point(28, 28)
-                    },
-                    zIndex: 500
-                });
+                if (!markersById.has(driverId)) {
+                    const driverMarker = new google.maps.Marker({
+                        position: { lat: driverLat, lng: driverLng },
+                        map: map,
+                        title: `Driver ${route.driver_id}`,
+                        icon: {
+                            url: getDriverIcon(index, color),
+                            scaledSize: new google.maps.Size(56, 56),
+                            anchor: new google.maps.Point(28, 28)
+                        },
+                        zIndex: 500,
+                        animation: google.maps.Animation.DROP // ✅ Drop animation
+                    });
 
-                const driverInfo = createDriverInfoWindow(route, index, utilization);
-                driverMarker.addListener("click", () => {
-                    closeAllInfoWindows();
-                    driverInfo.open(map, driverMarker);
-                    showRouteInfo(route, index);
-                });
+                    driverMarker.addListener("click", () => {
+                        const content = createDriverInfoWindow(route, index, utilization);
+                        sharedInfoWindow.setContent(content);
+                        sharedInfoWindow.open(map, driverMarker);
+                        showRouteInfo(route, index);
+                    });
 
-                markers.drivers.push({ marker: driverMarker, infoWindow: driverInfo });
+                    markersById.set(driverId, { marker: driverMarker, type: 'driver' });
+                } else {
+                    // Update existing marker position if changed
+                    const existing = markersById.get(driverId);
+                    const currentPos = existing.marker.getPosition();
+                    if (currentPos.lat() !== driverLat || currentPos.lng() !== driverLng) {
+                        existing.marker.setPosition({ lat: driverLat, lng: driverLng });
+                    }
+                }
+            } else {
+                // Hide driver markers
+                if (markersById.has(driverId)) {
+                    markersById.get(driverId).marker.setMap(null);
+                    markersById.delete(driverId);
+                }
             }
 
-            // Create enhanced user markers
+            // ✅ User markers - create or update
             route.assigned_users.forEach((user, userIndex) => {
                 const userLat = parseFloat(user.lat);
                 const userLng = parseFloat(user.lng);
+                const userId = `user_${user.user_id}`;
 
                 if (displayState.users) {
-                    const userMarker = new google.maps.Marker({
-                        position: { lat: userLat, lng: userLng },
-                        map: map,
-                        title: `User ${user.user_id}`,
-                        icon: {
-                            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                                    <defs>
-                                        <linearGradient id="usergrad${index}_${userIndex}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:${adjustBrightness(color, -20)};stop-opacity:1" />
-                                        </linearGradient>
-                                        <filter id="usershadow${index}_${userIndex}">
-                                            <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.3"/>
-                                        </filter>
-                                    </defs>
-                                    <circle cx="16" cy="16" r="12" fill="url(#usergrad${index}_${userIndex})" stroke="#ffffff" stroke-width="2" filter="url(#usershadow${index}_${userIndex})"/>
-                                    <text x="16" y="20" font-family="Arial" font-size="12" text-anchor="middle" fill="white">👤</text>
-                                </svg>
-                            `),
-                            scaledSize: new google.maps.Size(32, 32),
-                            anchor: new google.maps.Point(16, 16)
-                        },
-                        zIndex: 300
-                    });
+                    if (!markersById.has(userId)) {
+                        const userMarker = new google.maps.Marker({
+                            position: { lat: userLat, lng: userLng },
+                            map: map,
+                            title: `User ${user.user_id}`,
+                            icon: {
+                                url: getUserIcon(index, userIndex, color),
+                                scaledSize: new google.maps.Size(32, 32),
+                                anchor: new google.maps.Point(16, 16)
+                            },
+                            zIndex: 300,
+                            animation: google.maps.Animation.DROP
+                        });
 
-                    const userInfo = createUserInfoWindow(user, route, index);
-                    userMarker.addListener("click", () => {
-                        closeAllInfoWindows();
-                        userInfo.open(map, userMarker);
-                    });
+                        userMarker.addListener("click", () => {
+                            const content = createUserInfoWindow(user, route, index);
+                            sharedInfoWindow.setContent(content);
+                            sharedInfoWindow.open(map, userMarker);
+                        });
 
-                    markers.users.push({ marker: userMarker, infoWindow: userInfo });
+                        // ✅ Hover animation
+                        userMarker.addListener("mouseover", () => {
+                            userMarker.setAnimation(google.maps.Animation.BOUNCE);
+                        });
+                        userMarker.addListener("mouseout", () => {
+                            userMarker.setAnimation(null);
+                        });
+
+                        markersById.set(userId, { marker: userMarker, type: 'user' });
+                    } else {
+                        const existing = markersById.get(userId);
+                        const currentPos = existing.marker.getPosition();
+                        if (currentPos.lat() !== userLat || currentPos.lng() !== userLng) {
+                            existing.marker.setPosition({ lat: userLat, lng: userLng });
+                        }
+                    }
+                } else {
+                    if (markersById.has(userId)) {
+                        markersById.get(userId).marker.setMap(null);
+                        markersById.delete(userId);
+                    }
                 }
             });
 
-            // Create sequential route for this driver after processing all users
+            // Routes
             if (displayState.routeLines && route.assigned_users.length > 0) {
-                createSequentialRoute(route, color, index);
-            }
-
-            // Create optimal path if enabled
-            if (displayState.optimalPaths) {
-                createOptimalPath(route, color);
+                createSequentialRoute(route, color, index, routeId);
+            } else {
+                if (routeRenderersById.has(routeId)) {
+                    const rendererObj = routeRenderersById.get(routeId);
+                    if (rendererObj.renderer) rendererObj.renderer.setMap(null);
+                    if (rendererObj.polyline) rendererObj.polyline.setMap(null);
+                    routeRenderersById.delete(routeId);
+                }
             }
         }
 
@@ -1397,7 +1818,7 @@
             const efficiencyRating = utilization >= 0.8 ? '🟢 Excellent' : utilization >= 0.6 ? '🟡 Good' : '🔴 Needs Improvement';
             const utilizationPercent = (utilization * 100).toFixed(1);
             
-            const content = `
+            return `
                 <div style="font-family: Inter, sans-serif; min-width: 300px; padding: 20px; background: #0f172a; color: #f1f5f9; border-radius: 12px; border: 1px solid #334155;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #334155;">
                         <div style="width: 40px; height: 40px; background: linear-gradient(45deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -30)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
@@ -1447,8 +1868,6 @@
                     </p>
                 </div>
             `;
-            
-            return new google.maps.InfoWindow({ content });
         }
 
         function createUserInfoWindow(user, route, routeIndex) {
@@ -1457,7 +1876,7 @@
                 user.lat, user.lng
             );
             
-            const content = `
+            return `
                 <div style="font-family: Inter, sans-serif; min-width: 280px; padding: 18px; background: #0f172a; color: #f1f5f9; border-radius: 12px; border: 1px solid #334155;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #334155;">
                         <div style="width: 36px; height: 36px; background: linear-gradient(45deg, ${ROUTE_COLORS[routeIndex % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[routeIndex % ROUTE_COLORS.length], -20)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
@@ -1497,25 +1916,21 @@
                     </div>
                 </div>
             `;
-            
-            return new google.maps.InfoWindow({ content });
         }
 
-        function createSequentialRoute(route, color, routeIndex) {
+        function createSequentialRoute(route, color, routeIndex, routeId) {
             if (route.assigned_users.length === 0) return;
 
-            // Create waypoints array for all user locations
-            const waypoints = [];
+            // Check if route already exists
+            if (routeRenderersById.has(routeId)) {
+                return; // Already rendered
+            }
 
-            // Add all user locations as waypoints
-            route.assigned_users.forEach(user => {
-                waypoints.push({
-                    location: { lat: parseFloat(user.lat), lng: parseFloat(user.lng) },
-                    stopover: true
-                });
-            });
+            const waypoints = route.assigned_users.map(user => ({
+                location: { lat: parseFloat(user.lat), lng: parseFloat(user.lng) },
+                stopover: true
+            }));
 
-            // Create directions request: Office -> Users (optimized route)
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
                 preserveViewport: true,
@@ -1528,12 +1943,11 @@
             });
             directionsRenderer.setMap(map);
 
-            // Build the route: Office -> All Users (office-centric route)
             const request = {
-                origin: OFFICE_LOCATION, // Start from office
-                destination: waypoints[waypoints.length - 1].location, // End at last user
-                waypoints: waypoints.slice(0, -1), // All users except the last one as waypoints
-                optimizeWaypoints: true, // Let Google optimize the order
+                origin: OFFICE_LOCATION,
+                destination: waypoints[waypoints.length - 1].location,
+                waypoints: waypoints.slice(0, -1),
+                optimizeWaypoints: true,
                 travelMode: google.maps.TravelMode.DRIVING,
                 avoidHighways: false,
                 avoidTolls: false
@@ -1542,52 +1956,19 @@
             directionsService.route(request, (response, status) => {
                 if (status === "OK") {
                     directionsRenderer.setDirections(response);
-
-                    // Add route markers to show sequence starting from office
-                    const legs = response.routes[0].legs;
-                    legs.forEach((leg, legIndex) => {
-                        // Add sequence number markers at each user stop
-                        const sequenceMarker = new google.maps.Marker({
-                            position: leg.end_location, // Mark the destination of each leg
-                            map: map,
-                            icon: {
-                                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="12" cy="12" r="10" fill="${color}" stroke="#ffffff" stroke-width="2"/>
-                                        <text x="12" y="16" font-family="Arial" font-size="12" text-anchor="middle" fill="white" font-weight="bold">${legIndex + 1}</text>
-                                    </svg>
-                                `),
-                                scaledSize: new google.maps.Size(24, 24),
-                                anchor: new google.maps.Point(12, 12)
-                            },
-                            title: `Pickup Stop ${legIndex + 1} - Route ${routeIndex + 1}`,
-                            zIndex: 400
-                        });
-
-                        markers.routes.push(sequenceMarker);
-                    });
-
-                    console.log(`✅ Office-to-users route created for Route ${routeIndex + 1} with ${route.assigned_users.length} pickup stops`);
+                    routeRenderersById.set(routeId, { renderer: directionsRenderer, polyline: null });
                 } else {
-                    console.warn(`Office-to-users route failed for Route ${routeIndex + 1}:`, status);
-                    // Fallback to straight lines if directions fail
-                    createFallbackOfficeRoute(route, color);
+                    console.warn(`Route failed for ${routeId}:`, status);
+                    createFallbackOfficeRoute(route, color, routeId);
                 }
             });
-
-            routeRenderers.push({ renderer: directionsRenderer, polyline: null });
         }
 
-        function createFallbackOfficeRoute(route, color) {
-            // Create simple polyline route as fallback: Office -> Users
+        function createFallbackOfficeRoute(route, color, routeId) {
             const routePath = [
-                OFFICE_LOCATION // Start at office
+                OFFICE_LOCATION,
+                ...route.assigned_users.map(user => ({ lat: parseFloat(user.lat), lng: parseFloat(user.lng) }))
             ];
-
-            // Add all user locations
-            route.assigned_users.forEach(user => {
-                routePath.push({ lat: parseFloat(user.lat), lng: parseFloat(user.lng) });
-            });
 
             const fallbackRoute = new google.maps.Polyline({
                 path: routePath,
@@ -1595,88 +1976,11 @@
                 strokeColor: color,
                 strokeOpacity: 0.7,
                 strokeWeight: 4,
-                zIndex: 250,
-                icons: [{
-                    icon: {
-                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                        scale: 3,
-                        fillColor: color,
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 1
-                    },
-                    offset: '100%',
-                    repeat: '30px'
-                }]
+                zIndex: 250
             });
 
             fallbackRoute.setMap(map);
-            routeRenderers.push({ renderer: null, polyline: fallbackRoute });
-        }
-
-        function createOptimalPath(route, color) {
-            if (route.assigned_users.length < 2) return;
-
-            // Create TSP-like optimal path through all users
-            const points = [
-                { lat: parseFloat(route.latitude), lng: parseFloat(route.longitude), type: 'driver' },
-                ...route.assigned_users.map(user => ({
-                    lat: parseFloat(user.lat),
-                    lng: parseFloat(user.lng),
-                    type: 'user',
-                    id: user.user_id
-                }))
-            ];
-
-            // Simple nearest neighbor algorithm for demonstration
-            const path = [points[0]]; // Start with driver
-            const remaining = points.slice(1);
-
-            while (remaining.length > 0) {
-                const current = path[path.length - 1];
-                let nearest = remaining[0];
-                let nearestIndex = 0;
-                let minDistance = haversineDistance(current.lat, current.lng, nearest.lat, nearest.lng);
-
-                for (let i = 1; i < remaining.length; i++) {
-                    const distance = haversineDistance(current.lat, current.lng, remaining[i].lat, remaining[i].lng);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        nearest = remaining[i];
-                        nearestIndex = i;
-                    }
-                }
-
-                path.push(nearest);
-                remaining.splice(nearestIndex, 1);
-            }
-
-            // Add office as final destination
-            path.push({ lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng, type: 'office' });
-
-            const optimalPath = new google.maps.Polyline({
-                path: path.map(p => ({ lat: p.lat, lng: p.lng })),
-                geodesic: true,
-                strokeColor: color,
-                strokeOpacity: 0.9,
-                strokeWeight: 6,
-                zIndex: 400,
-                icons: [{
-                    icon: {
-                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                        scale: 3,
-                        fillColor: color,
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 1
-                    },
-                    offset: '100%',
-                    repeat: '50px'
-                }]
-            });
-
-            optimalPath.setMap(map);
-            optimalPaths.push(optimalPath);
+            routeRenderersById.set(routeId, { renderer: null, polyline: fallbackRoute });
         }
 
         function createHeatmap(data) {
@@ -1684,32 +1988,16 @@
                 data: data,
                 map: map,
                 radius: 30,
-                opacity: 0.8,
-                gradient: [
-                    'rgba(0, 255, 255, 0)',
-                    'rgba(0, 255, 255, 1)',
-                    'rgba(0, 191, 255, 1)',
-                    'rgba(0, 127, 255, 1)',
-                    'rgba(0, 63, 255, 1)',
-                    'rgba(0, 0, 255, 1)',
-                    'rgba(0, 0, 223, 1)',
-                    'rgba(0, 0, 191, 1)',
-                    'rgba(0, 0, 159, 1)',
-                    'rgba(0, 0, 127, 1)',
-                    'rgba(63, 0, 91, 1)',
-                    'rgba(127, 0, 63, 1)',
-                    'rgba(191, 0, 31, 1)',
-                    'rgba(255, 0, 0, 1)'
-                ]
+                opacity: 0.8
             });
         }
 
         function updateStats() {
-            const totalRoutes = allRoutes.length;
-            const totalUsers = allRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
-            const totalDrivers = allRoutes.length;
+            const totalRoutes = displayRoutes.length;
+            const totalUsers = displayRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
+            const totalDrivers = displayRoutes.length;
             
-            const utilizations = allRoutes.map(route => route.assigned_users.length / route.vehicle_type);
+            const utilizations = displayRoutes.map(route => route.assigned_users.length / route.vehicle_type);
             const avgUtilization = utilizations.length ? 
                 (utilizations.reduce((a, b) => a + b, 0) / utilizations.length * 100).toFixed(1) : 0;
 
@@ -1720,17 +2008,15 @@
         }
 
         function updateAnalytics() {
-            const totalUsers = allRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
-            const totalCapacity = allRoutes.reduce((sum, route) => sum + route.vehicle_type, 0);
+            const totalUsers = displayRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
+            const totalCapacity = displayRoutes.reduce((sum, route) => sum + route.vehicle_type, 0);
             
-            // Performance metrics
             const assignmentRate = totalUsers && totalCapacity ? Math.min(100, (totalUsers / totalCapacity * 100)).toFixed(1) : 0;
             const capacityUtilization = totalCapacity ? (totalUsers / totalCapacity * 100).toFixed(1) : 0;
             
-            // Distance calculations
             let totalDistance = 0;
             let connectionCount = 0;
-            allRoutes.forEach(route => {
+            displayRoutes.forEach(route => {
                 route.assigned_users.forEach(user => {
                     totalDistance += haversineDistance(route.latitude, route.longitude, user.lat, user.lng);
                     connectionCount++;
@@ -1738,18 +2024,15 @@
             });
             const avgDistance = connectionCount ? (totalDistance / connectionCount).toFixed(1) : 0;
             
-            // Efficiency score (0-10)
-            const efficiencyScore = calculateEfficiencyScore(allRoutes).toFixed(1);
+            const efficiencyScore = calculateEfficiencyScore(displayRoutes).toFixed(1);
             
-            // Route quality breakdown
-            const highEfficiency = allRoutes.filter(r => (r.assigned_users.length / r.vehicle_type) >= 0.8).length;
-            const mediumEfficiency = allRoutes.filter(r => {
+            const highEfficiency = displayRoutes.filter(r => (r.assigned_users.length / r.vehicle_type) >= 0.8).length;
+            const mediumEfficiency = displayRoutes.filter(r => {
                 const util = r.assigned_users.length / r.vehicle_type;
                 return util >= 0.5 && util < 0.8;
             }).length;
-            const lowEfficiency = allRoutes.filter(r => (r.assigned_users.length / r.vehicle_type) < 0.5).length;
+            const lowEfficiency = displayRoutes.filter(r => (r.assigned_users.length / r.vehicle_type) < 0.5).length;
 
-            // Update UI
             document.getElementById('assignmentRate').textContent = assignmentRate + '%';
             document.getElementById('capacityUtilization').textContent = capacityUtilization + '%';
             document.getElementById('avgDistance').textContent = avgDistance + ' km';
@@ -1758,7 +2041,6 @@
             document.getElementById('mediumEfficiencyRoutes').textContent = mediumEfficiency;
             document.getElementById('lowEfficiencyRoutes').textContent = lowEfficiency;
 
-            // Generate alerts
             generateSystemAlerts({
                 assignmentRate: parseFloat(assignmentRate),
                 capacityUtilization: parseFloat(capacityUtilization),
@@ -1766,20 +2048,20 @@
                 efficiencyScore: parseFloat(efficiencyScore),
                 lowEfficiency
             });
+            
+            // Show smart suggestions after analytics update
+            if (displayRoutes.length > 0 && displayRoutes.length === originalRoutes.length) {
+                setTimeout(suggestRouteOptimization, 2000);
+            }
         }
 
         function calculateEfficiencyScore(routes) {
             if (routes.length === 0) return 0;
 
             let score = 0;
-            let factors = 0;
-
-            // Factor 1: Utilization (40% weight)
             const avgUtilization = routes.reduce((sum, r) => sum + (r.assigned_users.length / r.vehicle_type), 0) / routes.length;
             score += Math.min(avgUtilization * 10, 4);
-            factors += 4;
 
-            // Factor 2: Distance efficiency (30% weight)
             let totalDistance = 0;
             let connections = 0;
             routes.forEach(route => {
@@ -1789,16 +2071,13 @@
                 });
             });
             const avgDistance = connections ? totalDistance / connections : 0;
-            const distanceScore = Math.max(0, 3 - (avgDistance / 5) * 3); // 3 points max, penalty for distance > 5km
+            const distanceScore = Math.max(0, 3 - (avgDistance / 5) * 3);
             score += distanceScore;
-            factors += 3;
 
-            // Factor 3: Balance (30% weight)
             const utilizations = routes.map(r => r.assigned_users.length / r.vehicle_type);
             const stdDev = Math.sqrt(utilizations.reduce((sum, u) => sum + Math.pow(u - avgUtilization, 2), 0) / utilizations.length);
-            const balanceScore = Math.max(0, 3 - stdDev * 6); // 3 points max, penalty for high variance
+            const balanceScore = Math.max(0, 3 - stdDev * 6);
             score += balanceScore;
-            factors += 3;
 
             return score;
         }
@@ -1825,7 +2104,7 @@
                 });
             }
 
-            if (metrics.lowEfficiency > allRoutes.length * 0.3) {
+            if (metrics.lowEfficiency > originalRoutes.length * 0.3) {
                 alerts.push({
                     type: 'warning',
                     icon: 'chart-line',
@@ -1882,43 +2161,6 @@
             return (usePound ? "#" : "") + String("000000" + (g | (b << 8) | (r << 16)).toString(16)).slice(-6);
         }
 
-        function clearMap() {
-            // Clear all markers except office
-            [...markers.drivers, ...markers.users, ...markers.routes].forEach(item => {
-                if (item.marker) {
-                    item.marker.setMap(null);
-                    if (item.infoWindow) item.infoWindow.close();
-                } else {
-                    // Handle sequence markers
-                    item.setMap(null);
-                }
-            });
-
-            // Clear route renderers and polylines
-            routeRenderers.forEach(item => {
-                if (item.renderer) item.renderer.setMap(null);
-                if (item.polyline) item.polyline.setMap(null);
-            });
-            optimalPaths.forEach(path => path.setMap(null));
-
-            // Clear heatmap
-            if (heatmap) heatmap.setMap(null);
-
-            // Reset arrays
-            markers.drivers = [];
-            markers.users = [];
-            markers.routes = [];
-            routeRenderers = [];
-            optimalPaths = [];
-            heatmap = null;
-        }
-
-        function closeAllInfoWindows() {
-            [...markers.drivers, ...markers.users].forEach(item => {
-                if (item.infoWindow) item.infoWindow.close();
-            });
-        }
-
         function showAlert(type, message) {
             const container = document.getElementById('alertsContainer');
             const alertDiv = document.createElement('div');
@@ -1965,123 +2207,156 @@
             setTimeout(() => popup.style.display = 'none', 5000);
         }
 
-        // Event Handlers
+        // ✅ OPTIMIZATION 1: Client-side filtering (no server fetch)
         function handleSearch() {
-            const query = document.getElementById("searchInput").value.toLowerCase();
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
+            
             if (!query) {
-                loadRouteData(); // Reload all data if search is cleared
-                return;
+                displayRoutes = [...originalRoutes];
+            } else {
+                displayRoutes = originalRoutes.filter(route =>
+                    route.driver_id.toLowerCase().includes(query) ||
+                    route.vehicle_id.toLowerCase().includes(query) ||
+                    route.assigned_users.some(user => 
+                        user.user_id.toLowerCase().includes(query) ||
+                        (user.first_name && user.first_name.toLowerCase().includes(query)) ||
+                        (user.email && user.email.toLowerCase().includes(query))
+                    )
+                );
             }
-
-            // Reload original data to filter from
-            fetch(API_URL)
-                .then(res => res.json())
-                .then(routes => {
-                    const filtered = routes.filter(route =>
-                        route.driver_id.toLowerCase().includes(query) ||
-                        route.vehicle_id.toLowerCase().includes(query) ||
-                        route.assigned_users.some(user => 
-                            user.user_id.toLowerCase().includes(query) ||
-                            (user.first_name && user.first_name.toLowerCase().includes(query)) ||
-                            (user.email && user.email.toLowerCase().includes(query))
-                        )
-                    );
-                    allRoutes = filtered;
-                    renderMap();
-                    updateStats(); // Update stats based on filtered data
-                })
-                .catch(error => {
-                    console.error('Error reloading data for search:', error);
-                    showAlert('error', 'Failed to refresh data for search.');
-                });
+            
+            updateUI();
+            renderMap();
         }
 
         function filterCluster() {
             const selectedValue = document.getElementById("clusterSelect").value;
+            
             if (selectedValue === "all") {
-                loadRouteData(); // Reload all data
+                displayRoutes = [...originalRoutes];
             } else {
-                // Reload original data to ensure we have the correct route
-                fetch(API_URL)
-                    .then(res => res.json())
-                    .then(routes => {
-                        if (routes && routes[parseInt(selectedValue)]) {
-                            allRoutes = [routes[parseInt(selectedValue)]];
-                            renderMap();
-                            updateStats(); // Update stats for the single route
-                        } else {
-                            showAlert('error', 'Selected route not found.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error reloading data for cluster filter:', error);
-                        showAlert('error', 'Failed to refresh data for filtering.');
-                    });
-            } 
+                const index = parseInt(selectedValue);
+                displayRoutes = originalRoutes[index] ? [originalRoutes[index]] : [];
+            }
+            
+            updateUI();
+            renderMap();
         }
 
         function filterByUtilization() {
             const minUtilizationPercent = parseInt(document.getElementById("utilizationRange").value);
             const minUtilization = minUtilizationPercent / 100;
-            document.getElementById("utilizationValue").textContent = `${minUtilizationPercent}%`;
             
-            // Reload original data to filter from
-            fetch(API_URL)
-                .then(res => res.json())
-                .then(routes => {
-                    const filtered = routes.filter(route => {
-                        const utilization = route.assigned_users.length / route.vehicle_type;
-                        return utilization >= minUtilization;
-                    });
-                    allRoutes = filtered;
-                    renderMap();
-                    updateStats(); // Update stats based on filtered data
-                })
-                .catch(error => {
-                    console.error('Error reloading data for utilization filter:', error);
-                    showAlert('error', 'Failed to refresh data for filtering.');
-                });
+            displayRoutes = originalRoutes.filter(route => {
+                const utilization = route.assigned_users.length / route.vehicle_type;
+                return utilization >= minUtilization;
+            });
+            
+            updateUI();
+            renderMap();
         }
 
         function highlightRoute(index) {
-            // Remove existing highlights
             document.querySelectorAll('.cluster-color').forEach(el => el.classList.remove('active'));
             
-            // Highlight selected
             const highlightedElement = document.querySelector(`.cluster-color:nth-child(${index + 1})`);
             if (highlightedElement) {
                 highlightedElement.classList.add('active');
             }
             
-            // Filter to show only this route
-            fetch(API_URL)
-                .then(res => res.json())
-                .then(routes => {
-                    if (routes && routes[index]) {
-                        allRoutes = [routes[index]];
-                        renderMap();
-                        updateStats(); // Update stats for the single route
-                        
-                        // Focus map on this route (office to users only, exclude driver)
-                        const route = allRoutes[0];
-                        if (route.assigned_users.length > 0) {
-                            const bounds = new google.maps.LatLngBounds();
-                            // Include office location
-                            bounds.extend(OFFICE_LOCATION);
-                            // Include all user locations
-                            route.assigned_users.forEach(user => {
-                                bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
-                            });
-                            map.fitBounds(bounds);
-                        }
-                    } else {
-                        showAlert('error', 'Selected route not found.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error reloading data for highlighting:', error);
-                    showAlert('error', 'Failed to refresh data for highlighting.');
-                });
+            if (originalRoutes[index]) {
+                displayRoutes = [originalRoutes[index]];
+                updateUI();
+                renderMap();
+                
+                const route = displayRoutes[0];
+                if (route.assigned_users.length > 0) {
+                    const bounds = new google.maps.LatLngBounds();
+                    bounds.extend(OFFICE_LOCATION);
+                    route.assigned_users.forEach(user => {
+                        bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
+                    });
+                    map.fitBounds(bounds);
+                    
+                    // ✅ Cinematic spotlight effect
+                    activateSpotlight(route);
+                }
+            }
+        }
+        
+        // ✅ Cinematic spotlight effect
+        function activateSpotlight(route) {
+            const spotlight = document.getElementById('mapSpotlight');
+            if (!spotlight) return;
+            
+            const centerLat = parseFloat(route.latitude);
+            const centerLng = parseFloat(route.longitude);
+            
+            // Calculate screen position of route center
+            const projection = map.getProjection();
+            if (!projection) return;
+            
+            spotlight.classList.add('active');
+            
+            // Fade out after 3 seconds
+            setTimeout(() => {
+                spotlight.classList.remove('active');
+            }, 3000);
+        }
+        
+        // ✅ Toast notification system
+        function showToast(message, actions = []) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            const actionsHTML = actions.length > 0 ? `
+                <div class="toast-actions">
+                    ${actions.map(action => `
+                        <button class="toast-btn toast-btn-${action.type || 'secondary'}" onclick="${action.onClick}">
+                            ${action.label}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : '';
+            
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <div class="toast-icon">💡</div>
+                    <div class="toast-title">Smart Suggestion</div>
+                </div>
+                <div class="toast-message">${message}</div>
+                ${actionsHTML}
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto-dismiss after 8 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 8000);
+        }
+        
+        // Example: Show toast for route optimization
+        function suggestRouteOptimization() {
+            const lowEfficiencyRoutes = displayRoutes.filter(r => 
+                (r.assigned_users.length / r.vehicle_type) < 0.5
+            );
+            
+            if (lowEfficiencyRoutes.length > 0) {
+                showToast(
+                    `Found ${lowEfficiencyRoutes.length} routes with low efficiency. Consider rebalancing for better utilization.`,
+                    [
+                        { label: 'Optimize Now', type: 'primary', onClick: 'refreshData()' },
+                        { label: 'View Details', type: 'secondary', onClick: 'console.log("View details")' },
+                        { label: 'Dismiss', type: 'secondary', onClick: 'event.target.closest(".toast").remove()' }
+                    ]
+                );
+            }
         }
 
         // Toggle Functions
@@ -2143,12 +2418,12 @@
         }
 
         function fitAllRoutes() {
-            if (allRoutes.length === 0) return;
+            if (displayRoutes.length === 0) return;
 
             const bounds = new google.maps.LatLngBounds();
             bounds.extend(OFFICE_LOCATION);
             
-            allRoutes.forEach(route => {
+            displayRoutes.forEach(route => {
                 bounds.extend(new google.maps.LatLng(parseFloat(route.latitude), parseFloat(route.longitude)));
                 route.assigned_users.forEach(user => {
                     bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
@@ -2180,7 +2455,7 @@
 
         // Export Functions
         function exportAnalytics() {
-            const csvData = allRoutes.map((route, index) => ({
+            const csvData = displayRoutes.map((route, index) => ({
                 route_id: index + 1,
                 driver_id: route.driver_id,
                 vehicle_id: route.vehicle_id,
@@ -2219,13 +2494,13 @@
                 generated_at: new Date().toISOString(),
                 platform: "RouteFlow - Smart Driver Assignment Platform",
                 summary: {
-                    total_routes: allRoutes.length,
-                    total_users: allRoutes.reduce((sum, r) => sum + r.assigned_users.length, 0),
-                    total_capacity: allRoutes.reduce((sum, r) => sum + r.vehicle_type, 0),
-                    average_utilization: allRoutes.length > 0 ? (allRoutes.reduce((sum, r) => sum + (r.assigned_users.length / r.vehicle_type), 0) / allRoutes.length * 100).toFixed(2) : 0,
-                    efficiency_score: calculateEfficiencyScore(allRoutes).toFixed(2)
+                    total_routes: displayRoutes.length,
+                    total_users: displayRoutes.reduce((sum, r) => sum + r.assigned_users.length, 0),
+                    total_capacity: displayRoutes.reduce((sum, r) => sum + r.vehicle_type, 0),
+                    average_utilization: displayRoutes.length > 0 ? (displayRoutes.reduce((sum, r) => sum + (r.assigned_users.length / r.vehicle_type), 0) / displayRoutes.length * 100).toFixed(2) : 0,
+                    efficiency_score: calculateEfficiencyScore(displayRoutes).toFixed(2)
                 },
-                route_details: allRoutes.map((route, index) => ({
+                route_details: displayRoutes.map((route, index) => ({
                     route_id: index + 1,
                     driver_id: route.driver_id,
                     vehicle_info: {
@@ -2246,7 +2521,7 @@
                 }))
             };
 
-            if (allRoutes.length === 0) {
+            if (displayRoutes.length === 0) {
                 showAlert('warning', 'No data available to generate report.');
                 return;
             }
@@ -2263,16 +2538,12 @@
         }
 
         function exportMapImage() {
-            // Note: This would require html2canvas library for actual implementation
-            // For now, instructing the user to use browser's screenshot feature.
             showAlert('warning', 'Map capture feature requires external libraries. Please use your browser\'s screenshot tool.');
         }
-
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Any additional initialization code can go here if needed
-        });
     </script>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <!-- Google Maps API with visualization library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjESclgKTCpmdmHKc7bzCKIQtYe_vIbb4&libraries=places,visualization&callback=initMap&libraries=places" async defer></script>

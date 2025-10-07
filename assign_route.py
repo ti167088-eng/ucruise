@@ -68,20 +68,117 @@ def cached_bearing_difference(b1, b2):
         diff = 360 - diff
     return diff
 
-# Import road_network_manager for background loading
-from road_network_manager import road_network_manager
+# Import road_network module for route coherence scoring
+try:
+    import road_network as road_network_module
+    # Create an instance of RoadNetwork class if it exists
+    try:
+        # Try to create RoadNetwork instance (assuming GraphML file exists)
+        road_network = road_network_module.RoadNetwork(
+            'tricity_main_roads.graphml')
+        logger.info("Successfully loaded RoadNetwork with GraphML data")
+    except Exception as e:
+        logger.warning(
+            f"Could not create RoadNetwork instance: {e}. Using mock implementation."
+        )
 
-# Get road network - will wait briefly if still loading, or use cached if ready
-def get_road_network():
-    """Get road network with minimal wait time"""
-    return road_network_manager.get_road_network(wait_timeout=0)  # Non-blocking
+        class MockRoadNetwork:
 
-# Initialize - this triggers background loading immediately
-road_network = get_road_network()
-if road_network:
-    logger.info("Road network ready from manager")
-else:
-    logger.info("Road network still loading in background, will use when ready")
+            def get_route_coherence_score(self, driver_pos, user_positions,
+                                          office_pos):
+                # Mock implementation: returns a score based on simple distance heuristic
+                if not user_positions:
+                    return 1.0
+                avg_dist_from_driver = sum(
+                    cached_haversine(driver_pos[0], driver_pos[1], u[0],
+                                       u[1])
+                    for u in user_positions) / len(user_positions)
+                avg_dist_from_office = sum(
+                    cached_haversine(office_pos[0], office_pos[1], u[0],
+                                       u[1])
+                    for u in user_positions) / len(user_positions)
+
+                # Simple heuristic: higher coherence if users are closer to the driver's path
+                # and not too far from the office
+                score = max(
+                    0, 1.0 - (avg_dist_from_driver / 50.0) -
+                    (avg_dist_from_office / 100.0))
+                return min(1.0, score)
+
+            def is_user_on_route_path(self,
+                                      driver_pos,
+                                      current_user_positions,
+                                      user_pos,
+                                      office_pos,
+                                      max_detour_ratio=1.5,
+                                      route_type="optimization"):
+                # Mock implementation: always returns True for simplicity in mock
+                return True
+
+            def get_road_distance(self, lat1, lon1, lat2, lon2):
+                # Mock implementation: returns haversine distance
+                return cached_haversine(lat1, lon1, lat2, lon2)
+
+            def find_nearest_road_node(self, lat, lon):
+                # Mock implementation
+                return None, None
+
+            def simplify_path_nodes(self, path, max_nodes=10):
+                # Mock implementation
+                return path
+
+        road_network = MockRoadNetwork()
+except ImportError:
+    logger.warning(
+        "road_network module not found. Road network features will be limited."
+    )
+
+    class MockRoadNetwork:
+
+        def get_route_coherence_score(self, driver_pos, user_positions,
+                                      office_pos):
+            # Mock implementation: returns a score based on simple distance heuristic
+            if not user_positions:
+                return 1.0
+            avg_dist_from_driver = sum(
+                cached_haversine(driver_pos[0], driver_pos[1], u[0],
+                                   u[1])
+                for u in user_positions) / len(user_positions)
+            avg_dist_from_office = sum(
+                cached_haversine(office_pos[0], office_pos[1], u[0],
+                                   u[1])
+                for u in user_positions) / len(user_positions)
+
+            # Simple heuristic: higher coherence if users are closer to the driver's path
+            # and not too far from the office
+            score = max(
+                0, 1.0 - (avg_dist_from_driver / 50.0) -
+                (avg_dist_from_office / 100.0))
+            return min(1.0, score)
+
+        def is_user_on_route_path(self,
+                                  driver_pos,
+                                  current_user_positions,
+                                  user_pos,
+                                  office_pos,
+                                  max_detour_ratio=1.5,
+                                  route_type="optimization"):
+            # Mock implementation: always returns True for simplicity in mock
+            return True
+
+        def get_road_distance(self, lat1, lon1, lat2, lon2):
+            # Mock implementation: returns haversine distance
+            return cached_haversine(lat1, lon1, lat2, lon2)
+
+        def find_nearest_road_node(self, lat, lon):
+            # Mock implementation
+            return None, None
+
+        def simplify_path_nodes(self, path, max_nodes=10):
+            # Mock implementation
+            return path
+
+    road_network = MockRoadNetwork()
 
 
 # Load and validate configuration with route optimization settings
@@ -290,14 +387,8 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                                                office_lon):
     """
     Route optimized driver assignment: Smart route between capacity utilization and route efficiency
-    WITH PARALLEL PROCESSING for faster execution
     """
-    logger.info("🗺️ Step 3: Route optimized driver assignment (PARALLEL MODE)...")
-
-    # Get road network from manager (it's been loading in background since startup)
-    from road_network_manager import road_network_manager
-    global road_network
-    road_network = road_network_manager.get_road_network(wait_timeout=10, force_wait=False)
+    logger.info("🗺️ Step 3: Route optimized driver assignment...")
 
     routes = []
     assigned_user_ids = set()
@@ -315,72 +406,6 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
     all_unassigned_users_records = all_unassigned_users.to_dict('records')
     available_drivers_records = available_drivers.to_dict('records')
 
-    # PARALLEL PROCESSING: Pre-calculate user-driver compatibility in parallel
-    def validate_user_for_driver(args):
-        """Validate single user against driver constraints - for parallel processing"""
-        user, driver, main_route_bearing = args
-
-        distance = cached_haversine(driver['latitude'], driver['longitude'],
-                                   user['latitude'], user['longitude'])
-
-        office_to_user_bearing = cached_bearing(office_lat, office_lon,
-                                               user['latitude'], user['longitude'])
-
-        bearing_diff = cached_bearing_difference(main_route_bearing, office_to_user_bearing)
-
-        # Primary checks
-        max_distance_limit = MAX_FILL_DISTANCE_KM * 1.5
-        max_bearing_deviation = 37
-
-        if distance > max_distance_limit or bearing_diff > max_bearing_deviation:
-            return None
-
-        # Quick road validation (if available)
-        is_on_route = True
-        efficiency_score = 0.0
-
-        try:
-            from road_network_manager import road_network_manager
-            road_net = road_network_manager.get_road_network(wait_timeout=0)
-
-            if road_net and not road_network_manager.is_using_mock():
-                driver_pos = (driver['latitude'], driver['longitude'])
-                user_pos = (user['latitude'], user['longitude'])
-                office_pos = (office_lat, office_lon)
-
-                # Quick path check
-                is_on_route = road_net.is_user_on_route_path(
-                    driver_pos, [], user_pos, office_pos,
-                    max_detour_ratio=1.1, route_type="route_optimization")
-
-                if is_on_route:
-                    driver_to_office = road_net.get_road_distance(
-                        driver['latitude'], driver['longitude'], office_lat, office_lon)
-                    driver_to_user = road_net.get_road_distance(
-                        driver['latitude'], driver['longitude'], user['latitude'], user['longitude'])
-                    user_to_office = road_net.get_road_distance(
-                        user['latitude'], user['longitude'], office_lat, office_lon)
-
-                    if driver_to_office > 0:
-                        detour = (driver_to_user + user_to_office) / driver_to_office
-                        if detour > 1.15:
-                            is_on_route = False
-                        else:
-                            efficiency_score = 1.0 / max(1.0, detour)
-        except:
-            pass
-
-        if not is_on_route:
-            return None
-
-        # Calculate score
-        distance_score = distance * 0.3
-        bearing_score = bearing_diff * 0.05
-        efficiency_penalty = (1.0 - efficiency_score) * 5.0
-        total_score = distance_score + bearing_score + efficiency_penalty
-
-        return (total_score, user)
-
     # Hybrid approach: Start with clusters but allow cross-cluster filling for capacity
     for driver in available_drivers_records:
         if driver['driver_id'] in used_driver_ids or not all_unassigned_users_records:
@@ -394,37 +419,98 @@ def assign_drivers_by_priority_route_optimized(user_df, driver_df, office_lat,
                                              driver['latitude'],
                                              driver['longitude'])
 
-        # PARALLEL PROCESSING: Collect candidate users with parallel validation
+        # Find users with route optimized distance/direction constraints
+        users_for_vehicle = []
+        max_distance_limit = MAX_FILL_DISTANCE_KM * 1.5  # Between strict efficiency and lenient capacity
+        max_bearing_deviation = 37  # Between 20° (efficiency) and 45° (capacity)
+
+        # Collect candidate users with enhanced road-aware scoring
         candidate_users = []
+        for user in all_unassigned_users_records:
+            # Skip if already assigned
+            if user['user_id'] in assigned_user_ids:
+                continue
 
-        # Prepare arguments for parallel processing
-        unassigned_to_check = [u for u in all_unassigned_users_records 
-                              if u['user_id'] not in assigned_user_ids]
+            distance = cached_haversine(driver['latitude'],
+                                       driver['longitude'],
+                                       user['latitude'], user['longitude'])
 
-        if len(unassigned_to_check) > 10:
-            # Use parallel processing for large datasets
-            validation_args = [(user, driver, main_route_bearing) 
-                             for user in unassigned_to_check]
+            office_to_user_bearing = cached_bearing(office_lat, office_lon,
+                                                   user['latitude'], user['longitude'])
 
-            # Use ThreadPoolExecutor for I/O-bound road network operations
-            with ThreadPoolExecutor(max_workers=min(8, len(validation_args))) as executor:
-                results = list(executor.map(validate_user_for_driver, validation_args))
+            bearing_diff = cached_bearing_difference(main_route_bearing,
+                                                    office_to_user_bearing)
 
-            # Collect valid results
-            candidate_users = [r for r in results if r is not None]
-        else:
-            # Sequential processing for small datasets (faster due to no overhead)
-            for user in unassigned_to_check:
-                result = validate_user_for_driver((user, driver, main_route_bearing))
-                if result is not None:
-                    candidate_users.append(result)
+            # Primary check: distance and bearing
+            if distance > max_distance_limit or bearing_diff > max_bearing_deviation:
+                continue
+
+            # ENHANCED road path validation with stricter route coherence
+            is_on_route_path = True
+            route_efficiency_score = 0.0
+
+            if road_network:
+                try:
+                    # Check if user is actually on the driver's route to office
+                    driver_pos = (driver['latitude'], driver['longitude'])
+                    user_pos = (user['latitude'], user['longitude'])
+                    office_pos = (office_lat, office_lon)
+
+                    # STRICTER road network validation
+                    is_on_route_path = road_network.is_user_on_route_path(
+                        driver_pos,
+                        [],
+                        user_pos,
+                        office_pos,
+                        max_detour_ratio=1.1,  # MUCH stricter - from 1.15 to 1.1
+                        route_type="route_optimization")
+
+                    # ENHANCED backtracking prevention
+                    if is_on_route_path:
+                        driver_to_office_dist = road_network.get_road_distance(
+                            driver['latitude'], driver['longitude'],
+                            office_lat, office_lon)
+                        driver_to_user_dist = road_network.get_road_distance(
+                            driver['latitude'], driver['longitude'],
+                            user['latitude'], user['longitude'])
+                        user_to_office_dist = road_network.get_road_distance(
+                            user['latitude'], user['longitude'], office_lat,
+                            office_lon)
+
+                        # STRICTER backtracking check
+                        detour_penalty = (
+                            driver_to_user_dist +
+                            user_to_office_dist) / driver_to_office_dist
+                        if detour_penalty > 1.15:  # Reduced from 1.2 to 1.15 (15% max detour)
+                            is_on_route_path = False
+
+                        # Calculate route efficiency score for ranking
+                        route_efficiency_score = 1.0 / max(
+                            1.0, detour_penalty
+                        )  # Higher score for more efficient routes
+
+                except Exception as e:
+                    logger.warning(
+                        f"Road path validation failed for user {user['user_id']}: {e}"
+                    )
+                    is_on_route_path = False
+
+            if is_on_route_path:
+                # ENHANCED scoring: prioritize route efficiency over distance
+                distance_score = distance * 0.3  # Reduced weight
+                bearing_score = bearing_diff * 0.05  # Reduced penalty per degree
+                efficiency_score = (
+                    1.0 - route_efficiency_score
+                ) * 5.0  # High penalty for inefficient routes
+
+                total_score = distance_score + bearing_score + efficiency_score
+                candidate_users.append((total_score, user))
 
         # Sort by route optimized score and fill to 85% capacity (route optimized target)
         candidate_users.sort(key=lambda x: x[0])
         target_capacity = min(vehicle_capacity,
                               max(2, int(vehicle_capacity * 0.85)))
 
-        users_for_vehicle = []
         for score, user in candidate_users:
             if len(users_for_vehicle) >= target_capacity:
                 break
