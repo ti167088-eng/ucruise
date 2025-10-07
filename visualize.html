@@ -778,84 +778,72 @@
             font-size: 12px;
         }
 
-        /* Enhanced legend with checkboxes */
-        .legend-checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: var(--space-xs);
-            margin-bottom: var(--space-sm);
-            padding: var(--space-xs);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: background 0.2s;
+        /* Route dimming for hover effects */
+        .route-dimmed {
+            opacity: 0.3 !important;
+            transition: opacity 0.3s ease;
         }
 
-        .legend-checkbox-row:hover {
-            background: rgba(100, 116, 139, 0.1);
+        .route-highlighted {
+            opacity: 1 !important;
+            filter: drop-shadow(0 0 8px currentColor);
+            transition: opacity 0.3s ease, filter 0.3s ease;
         }
 
-        .legend-checkbox {
-            cursor: pointer;
-        }
-
-        .legend-isolate-btn {
-            margin-left: auto;
-            background: none;
-            border: 1px solid var(--gray-400);
-            color: var(--gray-600);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .legend-isolate-btn:hover {
-            background: var(--primary-500);
-            color: white;
-            border-color: var(--primary-500);
-        }
-
-        /* Focused route panel */
-        .focused-route-panel {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
+        /* Sliding route details panel */
+        .route-details-panel {
+            position: fixed;
+            top: 0;
+            right: -500px;
+            width: 500px;
+            height: 100vh;
             background: rgba(15, 23, 42, 0.98);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+            border-left: 2px solid var(--primary-500);
+            z-index: 2000;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .route-details-panel.active {
+            right: 0;
+        }
+
+        .route-details-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
             padding: var(--space-xl);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-xl);
-            border: 2px solid var(--primary-500);
-            display: none;
-            z-index: 1000;
-            min-width: 400px;
-            max-width: 600px;
+            border-bottom: 2px solid var(--primary-700);
+            z-index: 10;
         }
 
-        .focused-route-panel.active {
-            display: block;
-        }
-
-        .focused-route-header {
+        .route-details-title {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--space-lg);
-            padding-bottom: var(--space-md);
-            border-bottom: 2px solid var(--gray-200);
+            justify-content: space-between;
+            color: white;
         }
 
-        .focused-route-close {
-            background: none;
+        .route-details-title h3 {
+            margin: 0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .route-details-close {
+            background: rgba(255, 255, 255, 0.2);
             border: none;
-            color: var(--gray-600);
+            color: white;
             font-size: 24px;
             cursor: pointer;
             padding: 0;
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -863,9 +851,126 @@
             transition: all 0.2s;
         }
 
-        .focused-route-close:hover {
+        .route-details-close:hover {
             background: var(--error-500);
-            color: white;
+            transform: rotate(90deg);
+        }
+
+        .route-details-content {
+            padding: var(--space-xl);
+        }
+
+        .details-section {
+            background: var(--surface-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+            border: 1px solid var(--gray-200);
+        }
+
+        .details-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-500);
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding-bottom: var(--space-sm);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .details-grid {
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-xs) 0;
+            font-size: 13px;
+        }
+
+        .details-label {
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+
+        .details-value {
+            color: var(--gray-800);
+            font-weight: 600;
+        }
+
+        .user-card {
+            background: var(--gray-100);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            margin-bottom: var(--space-sm);
+            border-left: 3px solid var(--primary-500);
+            transition: all 0.2s;
+        }
+
+        .user-card:hover {
+            background: var(--gray-200);
+            transform: translateX(4px);
+        }
+
+        .user-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-xs);
+        }
+
+        .user-card-name {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 14px;
+        }
+
+        .user-card-id {
+            font-size: 11px;
+            color: var(--gray-500);
+            background: var(--gray-200);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .user-card-details {
+            font-size: 12px;
+            color: var(--gray-600);
+            display: grid;
+            gap: 4px;
+        }
+
+        .route-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .metric-box {
+            background: var(--gray-100);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            text-align: center;
+        }
+
+        .metric-box-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-500);
+            margin-bottom: var(--space-xs);
+        }
+
+        .metric-box-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
     </style>
 </head>
@@ -1114,8 +1219,9 @@
                     <span>Pickup Routes (Office → Users)</span>
                 </div>
                 <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--gray-200);">
-                    <div style="font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: var(--space-sm);">Route Controls</div>
-                    <div id="legendRoutesContainer"></div>
+                    <div style="font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: var(--space-sm);">
+                        💡 Hover over routes to highlight • Click to view details
+                    </div>
                 </div>
                 <div class="cluster-palette" id="clusterPalette"></div>
             </div>
@@ -1136,15 +1242,19 @@
                 <div id="miniMapsContainer"></div>
             </div>
 
-            <!-- Focused Route Panel -->
-            <div class="focused-route-panel" id="focusedRoutePanel">
-                <div class="focused-route-header">
-                    <h3 style="margin: 0; color: var(--gray-800); font-size: 18px;" id="focusedRouteTitle">
-                        <i class="fas fa-route"></i> Route Details
-                    </h3>
-                    <button class="focused-route-close" onclick="closeFocusedRoute()">×</button>
+            <!-- Route Details Sliding Panel -->
+            <div class="route-details-panel" id="routeDetailsPanel">
+                <div class="route-details-header">
+                    <div class="route-details-title">
+                        <h3 id="routeDetailsTitle">
+                            <i class="fas fa-route"></i> Route Details
+                        </h3>
+                        <button class="route-details-close" onclick="closeRouteDetails()">×</button>
+                    </div>
                 </div>
-                <div id="focusedRouteContent"></div>
+                <div class="route-details-content" id="routeDetailsContent">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
             </div>
         </div>
     </div>
@@ -1193,7 +1303,7 @@
             routes: [] // For sequential route markers
         };
         let heatmap = null;
-        let routeRenderers = [];
+        let routeRenderers = []; // Stores renderer, routePolyline, interactionPolyline, color, index, _outline
         let optimalPaths = [];
 
         // Display States
@@ -1579,7 +1689,7 @@
                 const routeColor = colorForRoute(index, allRoutes.length);
                 const row = document.createElement('div');
                 row.className = 'legend-checkbox-row';
-                
+
                 row.innerHTML = `
                     <input type="checkbox" class="legend-checkbox" id="route-check-${index}" ${routeVisibility[index] !== false ? 'checked' : ''}>
                     <div class="legend-icon" style="background: ${routeColor}; width: 16px; height: 16px; border-radius: 4px;"></div>
@@ -1587,12 +1697,12 @@
                     <button class="legend-isolate-btn" onclick="isolateRoute(${index}); event.stopPropagation();">Solo</button>
                     <button class="legend-isolate-btn" onclick="focusRoute(${index}); event.stopPropagation();" style="margin-left: 4px;">Focus</button>
                 `;
-                
+
                 const checkbox = row.querySelector(`#route-check-${index}`);
                 checkbox.addEventListener('change', (e) => {
                     toggleRouteVisibility(index, e.target.checked);
                 });
-                
+
                 container.appendChild(row);
             });
         }
@@ -1612,192 +1722,260 @@
         }
 
         function focusRoute(index) {
-            focusedRouteIndex = index;
-            const route = allRoutes[index];
-            const routeColor = colorForRoute(index, allRoutes.length);
-            
-            const panel = document.getElementById('focusedRoutePanel');
-            const title = document.getElementById('focusedRouteTitle');
-            const content = document.getElementById('focusedRouteContent');
-            
-            title.innerHTML = `<i class="fas fa-route" style="color: ${routeColor}"></i> Route ${index + 1} Details`;
-            
-            const utilization = (route.assigned_users.length / route.vehicle_type * 100).toFixed(1);
-            
-            content.innerHTML = `
-                <div style="display: grid; gap: var(--space-md);">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
-                        <div style="background: #1e293b; padding: var(--space-md); border-radius: var(--radius-md);">
-                            <div style="font-size: 11px; color: var(--gray-500); margin-bottom: 4px;">Driver</div>
-                            <div style="font-size: 16px; font-weight: 600; color: var(--gray-800);">${route.driver_id}</div>
-                        </div>
-                        <div style="background: #1e293b; padding: var(--space-md); border-radius: var(--radius-md);">
-                            <div style="font-size: 11px; color: var(--gray-500); margin-bottom: 4px;">Vehicle</div>
-                            <div style="font-size: 16px; font-weight: 600; color: var(--gray-800);">${route.vehicle_id}</div>
-                        </div>
-                        <div style="background: #1e293b; padding: var(--space-md); border-radius: var(--radius-md);">
-                            <div style="font-size: 11px; color: var(--gray-500); margin-bottom: 4px;">Utilization</div>
-                            <div style="font-size: 16px; font-weight: 600; color: ${utilization >= 80 ? '#10b981' : utilization >= 50 ? '#f59e0b' : '#ef4444'};">${utilization}%</div>
-                        </div>
-                        <div style="background: #1e293b; padding: var(--space-md); border-radius: var(--radius-md);">
-                            <div style="font-size: 11px; color: var(--gray-500); margin-bottom: 4px;">Passengers</div>
-                            <div style="font-size: 16px; font-weight: 600; color: var(--gray-800);">${route.assigned_users.length}/${route.vehicle_type}</div>
-                        </div>
-                    </div>
-                    <div style="background: #1e293b; padding: var(--space-md); border-radius: var(--radius-md);">
-                        <div style="font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: var(--space-sm);">Assigned Users</div>
-                        <div style="max-height: 200px; overflow-y: auto;">
-                            ${route.assigned_users.map(user => `
-                                <div style="padding: 6px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
-                                    <span style="font-size: 12px; color: var(--gray-700);">${user.first_name || user.user_id}</span>
-                                    <span style="font-size: 11px; color: var(--gray-500);">${user.office_distance} km</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" onclick="isolateRoute(${index}); closeFocusedRoute();">
-                        <i class="fas fa-eye"></i> View on Map
-                    </button>
-                </div>
-            `;
-            
-            panel.classList.add('active');
+            // This function is now replaced by showRouteDetails which opens the sliding panel
+            // Keeping it here for reference but it should ideally be removed or refactored
+            // to call showRouteDetails
+            showRouteDetails(index);
         }
 
-        function closeFocusedRoute() {
-            focusedRouteIndex = null;
-            document.getElementById('focusedRoutePanel').classList.remove('active');
-        }
+        function _setRouteStyle(item, opts) {
+            // If we have a DirectionsRenderer, change its polylineOptions
+            if (item.renderer && typeof item.renderer.setOptions === 'function') {
+                item.renderer.setOptions({
+                    polylineOptions: Object.assign({}, item.renderer.get('polylineOptions') || {}, {
+                        strokeOpacity: opts.opacity,
+                        strokeWeight: opts.weight,
+                        zIndex: opts.zIndex,
+                        strokeColor: opts.color
+                    })
+                });
+            }
 
-        function toggleMiniMaps() {
-            miniMapsVisible = !miniMapsVisible;
-            const panel = document.getElementById('miniMapsPanel');
-            const btn = document.getElementById('toggleMiniMapsBtn');
-            
-            if (miniMapsVisible) {
-                panel.classList.add('active');
-                btn.classList.add('active');
-                generateMiniMaps();
-            } else {
-                panel.classList.remove('active');
-                btn.classList.remove('active');
+            // If routePolyline is a google.maps.Polyline instance
+            if (item.routePolyline && typeof item.routePolyline.setOptions === 'function') {
+                item.routePolyline.setOptions({
+                    strokeOpacity: opts.opacity,
+                    strokeWeight: opts.weight,
+                    zIndex: opts.zIndex,
+                    strokeColor: opts.color
+                });
+            }
+
+            // fallback polyline key (your fallback route uses fallbackRoute)
+            if (item.fallbackPolyline && typeof item.fallbackPolyline.setOptions === 'function') {
+                item.fallbackPolyline.setOptions({
+                    strokeOpacity: opts.opacity,
+                    strokeWeight: opts.weight,
+                    zIndex: opts.zIndex,
+                    strokeColor: opts.color
+                });
             }
         }
 
-        function generateMiniMaps() {
-            const container = document.getElementById('miniMapsContainer');
-            container.innerHTML = '';
-            
-            allRoutes.forEach((route, index) => {
-                const routeColor = colorForRoute(index, allRoutes.length);
-                const item = document.createElement('div');
-                item.className = 'mini-map-item';
-                item.id = `mini-map-${index}`;
-                
-                const canvas = document.createElement('canvas');
-                canvas.className = 'mini-map-canvas';
-                canvas.width = 280;
-                canvas.height = 120;
-                
-                const info = document.createElement('div');
-                info.className = 'mini-map-info';
-                const utilization = (route.assigned_users.length / route.vehicle_type * 100).toFixed(0);
-                info.innerHTML = `
-                    <strong style="color: ${routeColor};">Route ${index + 1}</strong> - 
-                    ${route.assigned_users.length}/${route.vehicle_type} passengers (${utilization}%)
-                `;
-                
-                item.appendChild(canvas);
-                item.appendChild(info);
-                item.onclick = () => selectMiniMap(index);
-                container.appendChild(item);
-                
-                // Draw simple route visualization
-                drawMiniMap(canvas, route, routeColor);
+        function highlightRouteOnHover(routeIndex) {
+            focusedRouteIndex = routeIndex;
+
+            // First, dim all routes
+            routeRenderers.forEach((item, i) => {
+                if (item.index === routeIndex) {
+                    // Highlight the hovered route
+                    _setRouteStyle(item, { opacity: 1, weight: 9, zIndex: 999, color: item.color || '#fff' });
+                    
+                    // Create/show outline for extra contrast
+                    if (!item._outline && item.interactionPolyline && item.interactionPolyline.getPath) {
+                        const path = item.interactionPolyline.getPath();
+                        if (path) {
+                            item._outline = new google.maps.Polyline({
+                                path: path.getArray ? path.getArray() : path,
+                                geodesic: true,
+                                strokeColor: '#ffffff',
+                                strokeOpacity: 0.18,
+                                strokeWeight: 14,
+                                zIndex: 900,
+                                map: map
+                            });
+                        }
+                    } else if (item._outline) {
+                        item._outline.setMap(map);
+                    }
+                } else {
+                    // Dim all other routes
+                    _setRouteStyle(item, { opacity: 0.15, weight: 3, zIndex: 100, color: item.color || '#888' });
+                    
+                    // Hide outline if exists
+                    if (item._outline) {
+                        item._outline.setMap(null);
+                    }
+                }
+            });
+
+            // Dim markers not in this route (use stored routeIndex metadata)
+            markers.users.forEach(u => {
+                if (u && u.marker) u.marker.setOpacity(u.routeIndex === routeIndex ? 1 : 0.25);
+            });
+            markers.drivers.forEach(d => {
+                if (d && d.marker) d.marker.setOpacity(d.routeIndex === routeIndex ? 1 : 0.25);
+            });
+
+            // Highlight corresponding legend item
+            document.querySelectorAll('.cluster-color').forEach((el, idx) => {
+                el.classList.remove('active');
+                // Account for "All" button being first (index 0)
+                if (idx === routeIndex + 1) {
+                    el.classList.add('active');
+                }
             });
         }
 
-        function drawMiniMap(canvas, route, color) {
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            // Clear canvas
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(0, 0, width, height);
-            
-            // Get all points
-            const points = [
-                {lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng, type: 'office'},
-                {lat: parseFloat(route.latitude), lng: parseFloat(route.longitude), type: 'driver'},
-                ...route.assigned_users.map(u => ({lat: parseFloat(u.lat), lng: parseFloat(u.lng), type: 'user'}))
-            ];
-            
-            // Find bounds
-            const lats = points.map(p => p.lat);
-            const lngs = points.map(p => p.lng);
-            const minLat = Math.min(...lats);
-            const maxLat = Math.max(...lats);
-            const minLng = Math.min(...lngs);
-            const maxLng = Math.max(...lngs);
-            
-            // Scale function
-            const padding = 10;
-            const scaleX = (lng) => ((lng - minLng) / (maxLng - minLng || 1)) * (width - 2 * padding) + padding;
-            const scaleY = (lat) => height - (((lat - minLat) / (maxLat - minLat || 1)) * (height - 2 * padding) + padding);
-            
-            // Draw lines from office to users
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 0.6;
-            
-            const officeX = scaleX(OFFICE_LOCATION.lng);
-            const officeY = scaleY(OFFICE_LOCATION.lat);
-            
-            route.assigned_users.forEach(user => {
-                ctx.beginPath();
-                ctx.moveTo(officeX, officeY);
-                ctx.lineTo(scaleX(parseFloat(user.lng)), scaleY(parseFloat(user.lat)));
-                ctx.stroke();
+        function unhighlightAllRoutes() {
+            focusedRouteIndex = null;
+
+            // Restore all routes to normal
+            routeRenderers.forEach((item) => {
+                _setRouteStyle(item, { opacity: 0.8, weight: 6, zIndex: 300, color: item.color });
+
+                // Hide outline if any
+                if (item._outline) {
+                    item._outline.setMap(null);
+                }
             });
-            
-            ctx.globalAlpha = 1;
-            
-            // Draw points
-            points.forEach(p => {
-                const x = scaleX(p.lng);
-                const y = scaleY(p.lat);
-                
-                ctx.beginPath();
-                ctx.arc(x, y, p.type === 'office' ? 6 : p.type === 'driver' ? 5 : 3, 0, 2 * Math.PI);
-                ctx.fillStyle = p.type === 'office' ? '#ef4444' : p.type === 'driver' ? color : '#10b981';
-                ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.stroke();
+
+            // Restore all markers to full opacity
+            markers.users.forEach(u => { 
+                if (u && u.marker) u.marker.setOpacity(1); 
+            });
+            markers.drivers.forEach(d => { 
+                if (d && d.marker) d.marker.setOpacity(1); 
+            });
+
+            // Remove legend highlights
+            document.querySelectorAll('.cluster-color').forEach(el => {
+                el.classList.remove('active');
             });
         }
 
-        function selectMiniMap(index) {
-            // Remove previous selection
-            document.querySelectorAll('.mini-map-item').forEach(item => item.classList.remove('selected'));
-            
-            // Add selection
-            const item = document.getElementById(`mini-map-${index}`);
-            if (item) item.classList.add('selected');
-            
-            // Focus on route
-            isolateRoute(index);
-            
-            // Fit bounds to this route
-            const route = allRoutes[index];
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend(OFFICE_LOCATION);
-            bounds.extend(new google.maps.LatLng(parseFloat(route.latitude), parseFloat(route.longitude)));
-            route.assigned_users.forEach(user => {
-                bounds.extend(new google.maps.LatLng(parseFloat(user.lat), parseFloat(user.lng)));
-            });
-            map.fitBounds(bounds);
+        function showRouteDetails(routeIndex) {
+            const route = allRoutes[routeIndex];
+            if (!route) return;
+
+            const panel = document.getElementById('routeDetailsPanel');
+            const title = document.getElementById('routeDetailsTitle');
+            const content = document.getElementById('routeDetailsContent');
+
+            const routeColor = colorForRoute(routeIndex, allRoutes.length);
+            const utilization = (route.assigned_users.length / route.vehicle_type).toFixed(1);
+
+            title.innerHTML = `
+                <i class="fas fa-route" style="color: ${routeColor}"></i> 
+                Route ${routeIndex + 1}
+            `;
+
+            content.innerHTML = `
+                <!-- Route Metrics -->
+                <div class="route-metrics">
+                    <div class="metric-box">
+                        <div class="metric-box-value">${utilization}%</div>
+                        <div class="metric-box-label">Utilization</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-box-value">${route.assigned_users.length}/${route.vehicle_type}</div>
+                        <div class="metric-box-label">Passengers</div>
+                    </div>
+                </div>
+
+                <!-- Driver Section -->
+                <div class="details-section">
+                    <div class="details-section-title">
+                        <i class="fas fa-id-card"></i> Driver Information
+                    </div>
+                    <div class="details-grid">
+                        <div class="details-row">
+                            <span class="details-label">Driver ID</span>
+                            <span class="details-value">${route.driver_id}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Name</span>
+                            <span class="details-value">${route.first_name || 'N/A'} ${route.last_name || ''}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Email</span>
+                            <span class="details-value">${route.email || 'N/A'}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Location</span>
+                            <span class="details-value">${parseFloat(route.latitude).toFixed(4)}, ${parseFloat(route.longitude).toFixed(4)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Section -->
+                <div class="details-section">
+                    <div class="details-section-title">
+                        <i class="fas fa-car"></i> Vehicle Information
+                    </div>
+                    <div class="details-grid">
+                        <div class="details-row">
+                            <span class="details-label">Vehicle ID</span>
+                            <span class="details-value">${route.vehicle_id || 'N/A'}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Vehicle Name</span>
+                            <span class="details-value">${route.vehicle_name || 'N/A'}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Vehicle Number</span>
+                            <span class="details-value">${route.vehicle_no || 'N/A'}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Capacity</span>
+                            <span class="details-value">${route.vehicle_type} passengers</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Color</span>
+                            <span class="details-value">${route.color || 'N/A'}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Registration No</span>
+                            <span class="details-value">${route.registration_no || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Section -->
+                <div class="details-section">
+                    <div class="details-section-title">
+                        <i class="fas fa-users"></i> Assigned Users (${route.assigned_users.length})
+                    </div>
+                    ${route.assigned_users.map(user => `
+                        <div class="user-card">
+                            <div class="user-card-header">
+                                <span class="user-card-name">${user.first_name || `User ${user.user_id}`}</span>
+                                <span class="user-card-id">${user.user_id}</span>
+                            </div>
+                            <div class="user-card-details">
+                                <div>📧 ${user.email || 'No email'}</div>
+                                <div>📍 ${parseFloat(user.lat).toFixed(4)}, ${parseFloat(user.lng).toFixed(4)}</div>
+                                <div>🏢 ${user.office_distance} km from office</div>
+                                ${user.address ? `<div>🏠 ${user.address}</div>` : ''}
+                                ${user.employee_shift ? `<div>⏰ ${user.employee_shift}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Route Statistics -->
+                <div class="details-section">
+                    <div class="details-section-title">
+                        <i class="fas fa-chart-line"></i> Route Statistics
+                    </div>
+                    <div class="details-grid">
+                        <div class="details-row">
+                            <span class="details-label">Efficiency Rating</span>
+                            <span class="details-value">${utilization >= 80 ? '🟢 Excellent' : utilization >= 50 ? '🟡 Good' : '🔴 Needs Improvement'}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">Route Type</span>
+                            <span class="details-value">Office-centric pickup</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            panel.classList.add('active');
+        }
+
+        function closeRouteDetails() {
+            document.getElementById('routeDetailsPanel').classList.remove('active');
         }
 
         function renderMap() {
@@ -1821,6 +1999,11 @@
             }
 
             updateDisplayButtons();
+
+            // Setup route interactions after rendering
+            setTimeout(() => {
+                // This function is now removed. Interactions are handled within highlightRouteOnHover/unhighlightAllRoutes
+            }, 500);
         }
 
         function renderRoute(route, index, color) {
@@ -1874,10 +2057,10 @@
                 driverMarker.addListener("click", () => {
                     closeAllInfoWindows();
                     driverInfo.open(map, driverMarker);
-                    showRouteInfo(route, index);
+                    showRouteInfo(route, index); // Keep this for the quick popup
                 });
 
-                markers.drivers.push({marker: driverMarker, infoWindow: driverInfo});
+                markers.drivers.push({marker: driverMarker, infoWindow: driverInfo, routeIndex: index});
             }
 
             // Create enhanced user markers
@@ -1957,7 +2140,7 @@
                         userMarker.setAnimation(null);
                     });
 
-                    markers.users.push({marker: userMarker, infoWindow: userInfo});
+                    markers.users.push({marker: userMarker, infoWindow: userInfo, routeIndex: index});
                 }
             });
 
@@ -2094,20 +2277,7 @@
                 });
             });
 
-            // Create outline polyline for better visibility
-            const outlineRenderer = new google.maps.DirectionsRenderer({
-                suppressMarkers: true,
-                preserveViewport: true,
-                polylineOptions: {
-                    strokeColor: '#ffffff',
-                    strokeOpacity: 0.6,
-                    strokeWeight: 10,
-                    zIndex: 299
-                },
-            });
-            outlineRenderer.setMap(map);
-
-            // Create main colored route line
+            // Create enhanced route line with outline
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
                 preserveViewport: true,
@@ -2133,25 +2303,56 @@
 
             directionsService.route(request, (response, status) => {
                 if (status === "OK") {
-                    outlineRenderer.setDirections(response);
                     directionsRenderer.setDirections(response);
-                    
-                    // Add hover/click interactions
+
+                    // Create invisible interaction polyline over the route
                     const path = response.routes[0].overview_path;
-                    addRouteInteractions(directionsRenderer, outlineRenderer, routeIndex, color);
-                    
+                    const interactionPolyline = new google.maps.Polyline({
+                        path: path,
+                        strokeColor: color,
+                        strokeOpacity: 0,
+                        strokeWeight: 20, // Wide for easy hovering
+                        zIndex: 400,
+                        map: map
+                    });
+
+                    // Store the route renderer item first
+                    const routeItem = {
+                        renderer: directionsRenderer, 
+                        routePolyline: null, // DirectionsRenderer handles the main line
+                        interactionPolyline: interactionPolyline,
+                        color: color,
+                        index: routeIndex
+                    };
+
+                    routeRenderers.push(routeItem);
+
+                    // Add hover interactions with correct routeIndex closure
+                    interactionPolyline.addListener('mouseover', () => {
+                        highlightRouteOnHover(routeIndex);
+                        showRouteInfo(route, routeIndex);
+                    });
+
+                    interactionPolyline.addListener('mouseout', () => {
+                        unhighlightAllRoutes();
+                        document.getElementById('routeInfoPopup').style.display = 'none';
+                    });
+
+                    // Add click interaction to show details panel
+                    interactionPolyline.addListener('click', () => {
+                        showRouteDetails(routeIndex);
+                    });
+
                     console.log(`✅ Office-to-users route created for Route ${routeIndex + 1} with ${route.assigned_users.length} pickup stops`);
                 } else {
                     console.warn(`Office-to-users route failed for Route ${routeIndex + 1}:`, status);
                     // Fallback to straight lines if directions fail
-                    createFallbackOfficeRoute(route, color);
+                    createFallbackOfficeRoute(route, color, routeIndex);
                 }
             });
-
-            routeRenderers.push({renderer: directionsRenderer, outline: outlineRenderer, polyline: null, index: routeIndex});
         }
 
-        function createFallbackOfficeRoute(route, color) {
+        function createFallbackOfficeRoute(route, color, routeIndex) {
             // Create simple polyline route as fallback: Office -> Users
             const routePath = [
                 OFFICE_LOCATION // Start at office
@@ -2162,7 +2363,7 @@
                 routePath.push({lat: parseFloat(user.lat), lng: parseFloat(user.lng)});
             });
 
-            const fallbackRoute = new google.maps.Polyline({
+            const fallbackRoutePolyline = new google.maps.Polyline({
                 path: routePath,
                 geodesic: true,
                 strokeColor: color,
@@ -2183,8 +2384,44 @@
                 }]
             });
 
-            fallbackRoute.setMap(map);
-            routeRenderers.push({renderer: null, polyline: fallbackRoute});
+            fallbackRoutePolyline.setMap(map);
+
+            // Create invisible interaction polyline for hover/click
+            const interactionPolyline = new google.maps.Polyline({
+                path: routePath,
+                strokeColor: color,
+                strokeOpacity: 0,
+                strokeWeight: 20, // Wide for easy hovering
+                zIndex: 400,
+                map: map
+            });
+
+            // Store route item first
+            const routeItem = {
+                renderer: null, // No DirectionsRenderer for fallback
+                routePolyline: fallbackRoutePolyline, 
+                interactionPolyline: interactionPolyline, 
+                color: color, 
+                index: routeIndex
+            };
+
+            routeRenderers.push(routeItem);
+
+            // Add hover interactions with correct routeIndex closure
+            interactionPolyline.addListener('mouseover', () => {
+                highlightRouteOnHover(routeIndex);
+                showRouteInfo(route, routeIndex);
+            });
+
+            interactionPolyline.addListener('mouseout', () => {
+                unhighlightAllRoutes();
+                document.getElementById('routeInfoPopup').style.display = 'none';
+            });
+
+            // Add click interaction to show details panel
+            interactionPolyline.addListener('click', () => {
+                showRouteDetails(routeIndex);
+            });
         }
 
         function createOptimalPath(route, color) {
@@ -2443,47 +2680,50 @@
         }
 
         function adjustBrightness(color, amount) {
-            const usePound = color[0] === "#";
-            const col = usePound ? color.slice(1) : color;
-            const num = parseInt(col, 16);
+            let usePound = false;
+            if (color[0] == "#") {
+                color = color.slice(1);
+                usePound = true;
+            }
+            const num = parseInt(color, 16);
             let r = (num >> 16) + amount;
-            let b = (num >> 8 & 0x00FF) + amount;
+            if (r > 255) r = 255;
+            else if (r < 0) r = 0;
+            let b = ((num >> 8) & 0x00FF) + amount;
+            if (b > 255) b = 255;
+            else if (b < 0) b = 0;
             let g = (num & 0x0000FF) + amount;
-            r = r > 255 ? 255 : r < 0 ? 0 : r;
-            b = b > 255 ? 255 : b < 0 ? 0 : b;
-            g = g > 255 ? 255 : g < 0 ? 0 : g;
-            return (usePound ? "#" : "") + String("000000" + (g | (b << 8) | (r << 16)).toString(16)).slice(-6);
+            if (g > 255) g = 255;
+            else if (g < 0) g = 0;
+            return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
         }
 
         function clearMap() {
             // Clear all markers except office
-            [...markers.drivers, ...markers.users, ...markers.routes].forEach(item => {
+            [...markers.drivers, ...markers.users].forEach(item => {
                 if (item.marker) {
                     item.marker.setMap(null);
                     if (item.infoWindow) item.infoWindow.close();
-                } else {
-                    // Handle sequence markers
-                    item.setMap(null);
                 }
             });
+            markers.drivers = [];
+            markers.users = [];
 
             // Clear route renderers and polylines
             routeRenderers.forEach(item => {
                 if (item.renderer) item.renderer.setMap(null);
-                if (item.outline) item.outline.setMap(null);
-                if (item.polyline) item.polyline.setMap(null);
+                if (item.routePolyline) item.routePolyline.setMap(null);
+                if (item.fallbackPolyline) item.fallbackPolyline.setMap(null);
+                if (item._outline) item._outline.setMap(null);
+                if (item.interactionPolyline) item.interactionPolyline.setMap(null);
             });
+            routeRenderers = [];
+
             optimalPaths.forEach(path => path.setMap(null));
+            optimalPaths = [];
 
             // Clear heatmap
             if (heatmap) heatmap.setMap(null);
-
-            // Reset arrays
-            markers.drivers = [];
-            markers.users = [];
-            markers.routes = [];
-            routeRenderers = [];
-            optimalPaths = [];
             heatmap = null;
         }
 
@@ -2497,7 +2737,7 @@
             const container = document.getElementById('alertsContainer');
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
-            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'check-circle'}"></i> ${message}`;
             container.appendChild(alertDiv);
         }
 
@@ -2638,7 +2878,7 @@
         }
 
         function highlightRoute(index) {
-            // Remove existing highlights
+            // Remove all highlights
             document.querySelectorAll('.cluster-color').forEach(el => el.classList.remove('active'));
 
             // Highlight selected (add 2 to account for "All" button being first)
@@ -2713,7 +2953,7 @@
             displayState.showUserNames = !displayState.showUserNames;
             renderMap();
             updateDisplayButtons();
-            
+
             const btn = document.getElementById('toggleUserNameBtn');
             if (displayState.showUserNames) {
                 btn.innerHTML = '<i class="fas fa-user-circle"></i> Show Icons';
