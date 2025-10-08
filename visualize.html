@@ -441,6 +441,12 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: var(--shadow-sm);
+            transition: border-color 0.3s ease;
+        }
+
+        .map-header.edit-mode {
+            border-top: 4px solid #ff6b35;
+            border-bottom: 2px solid #ff6b35;
         }
 
         .map-title {
@@ -452,6 +458,29 @@
         .map-controls {
             display: flex;
             gap: var(--space-sm);
+        }
+
+        .edit-mode-indicator {
+            background: #ff6b35;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: var(--space-md);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
 
         .map-btn {
@@ -478,6 +507,22 @@
             color: white;
         }
 
+        #editRoutesBtn {
+            background: linear-gradient(135deg, #ff6b35, #f7931e) !important;
+            color: white !important;
+            font-weight: 700 !important;
+            padding: 12px 24px !important;
+            font-size: 15px !important;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.5) !important;
+            border: 2px solid #ff8c61 !important;
+        }
+
+        #editRoutesBtn:hover {
+            background: linear-gradient(135deg, #f7931e, #ff6b35) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 107, 53, 0.6) !important;
+        }
+
         #map {
             flex: 1;
             width: 100%;
@@ -496,6 +541,12 @@
             box-shadow: var(--shadow-xl);
             border: 1px solid var(--gray-200);
             min-width: 250px;
+            z-index: 1000;
+            /* Ensure legend is above map tiles but below markers/routes */
+        }
+
+        .floating-legend.hidden-in-edit {
+            display: none;
         }
 
         .legend-title {
@@ -891,6 +942,303 @@
             background: #1e293b;
             color: var(--gray-700);
             font-size: 12px;
+        }
+
+        /* Route Editor Panel */
+        .route-editor-panel {
+            position: fixed;
+            top: 0;
+            left: -600px;
+            width: 600px;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(20px);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            border-right: 2px solid var(--primary-500);
+            z-index: 3000;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .route-editor-panel.active {
+            left: 0;
+        }
+
+        .editor-header {
+            padding: var(--space-lg);
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border-bottom: 2px solid #ff6b35;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .editor-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .editor-close:hover {
+            background: rgba(239, 68, 68, 0.8);
+            transform: rotate(90deg);
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: var(--gray-100);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .editor-tab {
+            flex: 1;
+            padding: var(--space-md);
+            background: transparent;
+            border: none;
+            color: var(--gray-600);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .editor-tab.active {
+            color: var(--primary-500);
+            background: var(--surface-gray);
+            border-bottom-color: var(--primary-500);
+        }
+
+        .editor-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-lg);
+        }
+
+        .user-pool {
+            background: var(--surface-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .pool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+
+        .user-card-draggable {
+            background: var(--gray-100);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            margin-bottom: var(--space-sm);
+            cursor: move;
+            transition: all 0.2s;
+            border-left: 4px solid var(--primary-500);
+        }
+
+        .user-card-draggable:hover {
+            background: var(--gray-200);
+            transform: translateX(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .user-card-draggable.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .route-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .route-card-editor {
+            background: var(--surface-gray);
+            border-radius: var(--radius-lg);
+            border: 2px solid var(--gray-200);
+            transition: all 0.2s;
+        }
+
+        .route-card-editor.drag-over {
+            border-color: var(--primary-500);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .route-card-header {
+            padding: var(--space-md);
+            background: var(--gray-100);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .route-card-editor.expanded .route-card-body {
+            display: block;
+        }
+
+        .drop-zone {
+            min-height: 60px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-500);
+            transition: all 0.2s;
+            margin-top: var(--space-md);
+        }
+
+        .drop-zone.active {
+            border-color: var(--primary-500);
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-500);
+        }
+
+        /* Undo/Redo Timeline */
+        .history-timeline {
+            background: var(--surface-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-sm);
+            border-left: 3px solid var(--gray-300);
+            margin-left: var(--space-md);
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -9px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--gray-300);
+        }
+
+        .timeline-item.current {
+            border-left-color: var(--primary-500);
+        }
+
+        .timeline-item.current:before {
+            background: var(--primary-500);
+        }
+
+        .timeline-item:hover {
+            background: var(--gray-100);
+            cursor: pointer;
+        }
+
+        /* What-if Simulator */
+        .simulator-panel {
+            background: var(--surface-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .simulator-preview {
+            background: var(--gray-100);
+            border-radius: var(--radius-md);
+            padding: var(--space-lg);
+            margin-top: var(--space-md);
+        }
+
+        .preview-animation {
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .metric-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md);
+            margin-top: var(--space-md);
+        }
+
+        .metric-box-compare {
+            background: var(--gray-100);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .metric-delta {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: var(--space-xs);
+        }
+
+        .metric-delta.positive {
+            color: var(--success-500);
+        }
+
+        .metric-delta.negative {
+            color: var(--error-500);
+        }
+
+        /* Drag overlay */
+        .drag-overlay {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            background: rgba(99, 102, 241, 0.9);
+            color: white;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-xl);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .insertion-indicator {
+            position: absolute;
+            height: 3px;
+            background: var(--primary-500);
+            box-shadow: 0 0 10px var(--primary-500);
+            pointer-events: none;
+            z-index: 1000;
+            transition: all 0.1s;
         }
 
         /* Route dimming for hover effects */
@@ -1393,13 +1741,17 @@
 
         <!-- Main Map Area -->
         <div class="map-container">
-            <div class="map-header">
+            <div class="map-header" id="mapHeader">
                 <h2 class="map-title">Live Route Visualization</h2>
                 <div class="map-controls">
+                    <button class="map-btn" id="editRoutesBtn"
+                        style="background: linear-gradient(135deg, #ff6b35, #f7931e) !important; color: white !important; font-weight: 700 !important; padding: 12px 24px !important; font-size: 15px !important; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.5) !important; border: 2px solid #ff8c61 !important;">
+                        <i class="fas fa-edit" style="margin-right: 8px;"></i>✏️ Edit Routes
+                    </button>
                     <button class="map-btn" onclick="centerOnOffice()">
                         <i class="fas fa-home"></i> Center on Office
                     </button>
-                    <button class="map-btn" onclick="fitAllRoutes()">
+                    <button class="map-btn" onclick="fitAllRoutes()" id="fitBoundsBtn">
                         <i class="fas fa-expand"></i> Fit All Routes
                     </button>
                     <button class="map-btn" onclick="togglePlaceNames()" id="togglePlaceNamesBtn">
@@ -1485,6 +1837,131 @@
                     <!-- Dynamic content will be inserted here -->
                 </div>
             </div>
+
+            <!-- Route Editor Panel -->
+            <div class="route-editor-panel" id="routeEditorPanel">
+                <div class="editor-header">
+                    <div class="editor-title">
+                        <i class="fas fa-edit"></i>
+                        Route Editor
+                    </div>
+                    <button class="editor-close" onclick="closeRouteEditor()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="editor-tabs">
+                    <button class="editor-tab active" onclick="switchEditorTab('users')">
+                        <i class="fas fa-users"></i> Users & Routes
+                    </button>
+                    <button class="editor-tab" onclick="switchEditorTab('history')">
+                        <i class="fas fa-history"></i> History
+                    </button>
+                    <button class="editor-tab" onclick="switchEditorTab('simulator')">
+                        <i class="fas fa-magic"></i> What-If
+                    </button>
+                </div>
+
+                <div class="editor-content">
+                    <!-- Users & Routes Tab -->
+                    <div id="editorTabUsers" class="editor-tab-content">
+                        <div class="user-pool">
+                            <div class="pool-header">
+                                <h3 style="margin: 0; color: var(--gray-800); font-size: 16px;">
+                                    <i class="fas fa-inbox"></i> Unassigned Users (<span id="unassignedCount">0</span>)
+                                </h3>
+                                <input type="text" class="form-input" placeholder="Search users..."
+                                    style="width: 200px;" oninput="searchUnassignedUsers(this.value)">
+                            </div>
+                            <div id="unassignedUsersContainer">
+                                <!-- Draggable user cards will be inserted here -->
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: var(--space-md);">
+                            <h3 style="color: var(--gray-800); font-size: 16px; margin-bottom: var(--space-md);">
+                                <i class="fas fa-route"></i> Routes
+                            </h3>
+                            <div id="routeListEditor" class="route-list">
+                                <!-- Route cards will be inserted here -->
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: var(--space-sm);">
+                            <button class="btn btn-primary" onclick="saveRouteChanges()">
+                                <i class="fas fa-save"></i> Save All Changes
+                            </button>
+                            <button class="btn btn-secondary" onclick="revertRouteChanges()">
+                                <i class="fas fa-undo"></i> Revert All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div id="editorTabHistory" class="editor-tab-content" style="display: none;">
+                        <div class="history-timeline" id="historyTimeline">
+                            <h3 style="color: var(--gray-800); margin-bottom: var(--space-lg);">
+                                <i class="fas fa-clock"></i> Edit History
+                            </h3>
+                            <div id="timelineItems">
+                                <!-- Timeline items will be inserted here -->
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: var(--space-sm);">
+                            <button class="btn btn-secondary" onclick="undoEdit()" id="undoBtn" disabled>
+                                <i class="fas fa-undo"></i> Undo
+                            </button>
+                            <button class="btn btn-secondary" onclick="redoEdit()" id="redoBtn" disabled>
+                                <i class="fas fa-redo"></i> Redo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- What-If Simulator Tab -->
+                    <div id="editorTabSimulator" class="editor-tab-content" style="display: none;">
+                        <div class="simulator-panel">
+                            <h3 style="color: var(--gray-800); margin-bottom: var(--space-md);">
+                                <i class="fas fa-flask"></i> What-If Scenario Simulator
+                            </h3>
+                            <p style="color: var(--gray-600); font-size: 13px; margin-bottom: var(--space-lg);">
+                                Preview changes before applying them. See animated route updates and quality metrics.
+                            </p>
+
+                            <div class="simulator-preview" id="simulatorPreview">
+                                <div style="text-align: center; color: var(--gray-500); padding: var(--space-xl);">
+                                    <i class="fas fa-hand-pointer"
+                                        style="font-size: 48px; margin-bottom: var(--space-md);"></i>
+                                    <p>Make changes in the editor to preview them here</p>
+                                </div>
+                            </div>
+
+                            <div class="metric-comparison" id="metricComparison" style="display: none;">
+                                <div class="metric-box-compare">
+                                    <div
+                                        style="font-size: 11px; color: var(--gray-500); margin-bottom: var(--space-xs);">
+                                        UTILIZATION</div>
+                                    <div style="font-size: 20px; font-weight: 700; color: var(--primary-500);"
+                                        id="simUtilization">0%</div>
+                                    <div class="metric-delta" id="simUtilizationDelta"></div>
+                                </div>
+                                <div class="metric-box-compare">
+                                    <div
+                                        style="font-size: 11px; color: var(--gray-500); margin-bottom: var(--space-xs);">
+                                        ROUTE QUALITY</div>
+                                    <div style="font-size: 20px; font-weight: 700; color: var(--primary-500);"
+                                        id="simQuality">0/10</div>
+                                    <div class="metric-delta" id="simQualityDelta"></div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="applySimulatedChanges()"
+                                style="margin-top: var(--space-lg); width: 100%;">
+                                <i class="fas fa-check"></i> Apply Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1521,10 +1998,12 @@
         // Legacy color array for compatibility
         const ROUTE_COLORS = generateHslPalette(20);
 
-        // Global Variables
-        let map;
-        let directionsService;
-        let allRoutes = [];
+        // ============================================================================
+        // STATE MANAGEMENT
+        // ============================================================================
+
+        let allRoutes = []; // Renamed from routesData to align with usage
+        let map = null;
         let markers = {
             office: null,
             drivers: [],
@@ -1772,7 +2251,29 @@
         let sidebarCollapsed = false;
         let sidebarWidth = 380;
 
-        // Initialize Application
+        // ============================================================================
+        // EDITOR STATE MANAGEMENT
+        // ============================================================================
+        let editMode = false;
+        let unassignedUsers = []; // Users not currently assigned to any route
+        let draggedUser = null; // The user currently being dragged
+        let draggedFromRouteIndex = null; // The original route index of the dragged user
+        let dragOverRouteIndex = null; // The route index the user is being dragged over
+        let dirtyRoutes = new Set(); // Set of route indices that have been modified
+        let routeLocks = {}; // To prevent concurrent edits on the same route if needed
+        let dragOverlay = null; // A semi-transparent overlay to indicate drag target
+        let dragTooltip = null; // A tooltip showing user and target route info during drag
+        let editorHistory = []; // History for undo/redo functionality
+        let historyIndex = -1; // Current position in history
+        let originalRoutesSnapshot = null; // Snapshot of routes before editing
+        let pendingChanges = {}; // Track changes made in the editor before saving
+        let draggedMarker = null; // The marker currently being dragged on the map
+        let draggedUserData = null; // The data associated with the dragged marker
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 center: OFFICE_LOCATION,
@@ -1797,6 +2298,9 @@
 
             // Initialize sidebar resize functionality
             initializeSidebarResize();
+
+            // Initialize edit mode toggle
+            initializeEditModeToggle();
         }
 
         function initializeSidebarState() {
@@ -1851,7 +2355,7 @@
 
             handle.addEventListener('mousedown', (e) => {
                 if (sidebarCollapsed) return;
-                
+
                 isResizing = true;
                 startX = e.clientX;
                 startWidth = sidebarWidth;
@@ -1865,7 +2369,7 @@
 
                 const deltaX = e.clientX - startX;
                 const newWidth = Math.min(600, Math.max(60, startWidth + deltaX));
-                
+
                 sidebarWidth = newWidth;
                 applySidebarWidth(newWidth);
             });
@@ -1925,6 +2429,7 @@
         }
 
         async function loadRouteData() {
+            showLoading();
             try {
                 const response = await fetch(API_URL);
                 const routes = await response.json();
@@ -1934,6 +2439,10 @@
                     hideLoading();
                     updateUI();
                     renderMap();
+                    // Initialize editor state if in edit mode
+                    if (editMode) {
+                        initializeEditorState();
+                    }
                 } else {
                     throw new Error('Invalid route data format');
                 }
@@ -1942,6 +2451,10 @@
                 hideLoading();
                 showAlert('error', 'Failed to load route data. Please check if the server is running.');
             }
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
         }
 
         function hideLoading() {
@@ -1962,7 +2475,7 @@
             allRoutes.forEach((route, index) => {
                 const option = document.createElement("option");
                 option.value = index;
-                option.text = `Route ${index + 1} - ${route.assigned_users.length} users (${((route.assigned_users.length / route.vehicle_type) * 100).toFixed(0)}% util)`;
+                option.text = `Route ${index + 1} - ${route.assigned_users.length} users`;
                 select.appendChild(option);
             });
         }
@@ -2485,6 +2998,7 @@
                 }
 
                 updateDisplayButtons();
+                updateMapHeaderControls(); // Update based on edit mode
             });
         }
 
@@ -2517,7 +3031,7 @@
                         </linearGradient>
                     </defs>
                     <circle cx="28" cy="28" r="24" fill="url(#grad${index})" stroke="#ffffff" stroke-width="4"/>
-                    <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white" font-weight="bold">🚗</text>
+                    <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white">🚗</text>
                     <text x="28" y="46" font-family="Arial" font-size="10" text-anchor="middle" fill="white" font-weight="bold">${index + 1}</text>
                 </svg>`;
 
@@ -2607,6 +3121,10 @@
                         animation: google.maps.Animation.DROP
                     });
 
+                    // Store user data on the marker for drag/drop
+                    userMarker.userData = user;
+                    userMarker.routeIndex = index; // Store route index for drag/drop logic
+
                     const userInfo = createUserInfoWindow(user, route, index);
                     userMarker.addListener("click", () => {
                         closeAllInfoWindows();
@@ -2681,7 +3199,7 @@
                             <span style="font-size: 11px; color: #94a3b8;">${utilizationPercent}%</span>
                         </div>
                         <div style="width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                            <div style="height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f97316 50%, #22c55e 100%); width: ${utilizationPercent}%; transition: width 0.3s ease;"></div>
+                            <div style="height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f7931e 50%, #22c55e 100%); width: ${utilizationPercent}%; transition: width 0.3s ease;"></div>
                         </div>
                     </div>
 
@@ -2812,24 +3330,27 @@
                     // Add click interaction to show details panel (always works)
                     interactionPolyline.addListener('click', (e) => {
                         if (e && e.stop) e.stop();
-                        showRouteDetails(routeIndex);
+                        requestAnimationFrame(() => showRouteDetails(routeIndex));
                     });
 
                     // Add hover to highlight route and switch routes if panel is open
                     interactionPolyline.addListener('mouseover', (e) => {
-                        highlightRouteOnHover(routeIndex);
+                        // Don't apply spotlight effect in edit mode
+                        if (!editMode) {
+                            highlightRouteOnHover(routeIndex);
 
-                        // If panel is open, switch to this route
-                        const panel = document.getElementById('routeDetailsPanel');
-                        if (panel.classList.contains('active')) {
-                            showRouteDetails(routeIndex);
+                            // If panel is open, switch to this route
+                            const panel = document.getElementById('routeDetailsPanel');
+                            if (panel.classList.contains('active')) {
+                                showRouteDetails(routeIndex);
+                            }
                         }
                     });
 
                     interactionPolyline.addListener('mouseout', () => {
-                        // Only unhighlight if details panel is not open
+                        // Only unhighlight if details panel is not open and not in edit mode
                         const panel = document.getElementById('routeDetailsPanel');
-                        if (!panel.classList.contains('active')) {
+                        if (!panel.classList.contains('active') && !editMode) {
                             unhighlightAllRoutes();
                         }
                     });
@@ -2905,19 +3426,22 @@
 
             // Add hover to highlight route and switch routes if panel is open
             interactionPolyline.addListener('mouseover', (e) => {
-                highlightRouteOnHover(routeIndex);
+                // Don't apply spotlight effect in edit mode
+                if (!editMode) {
+                    highlightRouteOnHover(routeIndex);
 
-                // If panel is open, switch to this route
-                const panel = document.getElementById('routeDetailsPanel');
-                if (panel.classList.contains('active')) {
-                    showRouteDetails(routeIndex);
+                    // If panel is open, switch to this route
+                    const panel = document.getElementById('routeDetailsPanel');
+                    if (panel.classList.contains('active')) {
+                        showRouteDetails(routeIndex);
+                    }
                 }
             });
 
             interactionPolyline.addListener('mouseout', () => {
-                // Only unhighlight if details panel is not open
+                // Only unhighlight if details panel is not open and not in edit mode
                 const panel = document.getElementById('routeDetailsPanel');
-                if (!panel.classList.contains('active')) {
+                if (!panel.classList.contains('active') && !editMode) {
                     unhighlightAllRoutes();
                 }
             });
@@ -3168,7 +3692,7 @@
 
         // Utility Functions
         function haversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
+            const R = 6371; // Radius of the earth in km
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -3177,6 +3701,12 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         }
+
+        // Helper function to calculate distance between two points using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            return haversineDistance(lat1, lon1, lat2, lon2);
+        }
+
 
         function adjustBrightness(color, amount) {
             let usePound = false;
@@ -3198,18 +3728,18 @@
         }
 
         function clearMap() {
-            // Batch operations for better performance
-            const allMarkers = [...markers.drivers, ...markers.users];
-
-            // Clear markers in single pass
-            allMarkers.forEach(item => {
-                if (item) {
-                    if (item.marker) item.marker.setMap(null);
-                    if (item.infoWindow) item.infoWindow.close();
+            // Clear markers
+            Object.values(markers).forEach(group => {
+                if (Array.isArray(group)) {
+                    group.forEach(item => {
+                        if (item && item.marker) item.marker.setMap(null);
+                        if (item && item.infoWindow) item.infoWindow.close();
+                    });
+                } else if (group && group.marker) { // For office marker
+                    group.marker.setMap(null);
                 }
             });
-            markers.drivers = [];
-            markers.users = [];
+            markers = {office: null, drivers: [], users: [], routes: []}; // Reset
 
             // Clear route renderers efficiently
             routeRenderers.forEach(item => {
@@ -3242,6 +3772,9 @@
             [...markers.drivers, ...markers.users].forEach(item => {
                 if (item.infoWindow) item.infoWindow.close();
             });
+            if (markers.office && markers.office.infoWindow) {
+                markers.office.infoWindow.close(); // Assuming office has an infoWindow if needed
+            }
         }
 
         function showAlert(type, message) {
@@ -3292,7 +3825,7 @@
                                 <div class="metric-compact-label">${efficiencyText}</div>
                             </div>
                         </div>
-                        
+
                         <div class="sparkline-container">
                             <div class="sparkline-label">Occupancy Trend</div>
                             <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
@@ -3315,13 +3848,13 @@
             `;
 
             document.getElementById('routeInfoContent').innerHTML = content;
-            
+
             // Position near cursor with offset
             const offsetX = 20;
             const offsetY = 20;
             const maxX = window.innerWidth - 300;
             const maxY = window.innerHeight - 250;
-            
+
             popup.style.left = Math.min(mouseX + offsetX, maxX) + 'px';
             popup.style.top = Math.min(mouseY + offsetY, maxY) + 'px';
             popup.classList.add('visible');
@@ -3337,14 +3870,14 @@
             const points = 12; // 12 data points for trend
             const utilization = route.assigned_users.length / route.vehicle_type;
             const data = [];
-            
+
             for (let i = 0; i < points; i++) {
                 // Simulate variation around current utilization
                 const variance = (Math.random() - 0.5) * 0.3;
                 const value = Math.max(0, Math.min(1, utilization + variance));
                 data.push(value);
             }
-            
+
             return data;
         }
 
@@ -3353,15 +3886,15 @@
             const width = 100;
             const height = 30;
             const step = width / (data.length - 1);
-            
+
             let path = `M 0,${height - data[0] * height}`;
-            
+
             for (let i = 1; i < data.length; i++) {
                 const x = i * step;
                 const y = height - data[i] * height;
                 path += ` L ${x},${y}`;
             }
-            
+
             return path;
         }
 
@@ -3621,7 +4154,7 @@
             miniMapsVisible = !miniMapsVisible;
             const panel = document.getElementById('miniMapsPanel');
             const btn = document.getElementById('toggleMiniMapsBtn');
-            
+
             if (miniMapsVisible) {
                 panel.classList.add('active');
                 btn.classList.add('active');
@@ -3727,10 +4260,471 @@
             showAlert('warning', 'Map capture feature requires external libraries. Please use your browser\'s screenshot tool.');
         }
 
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function () {
-            // Any additional initialization code can go here if needed
-        });
+        // ============================================================================
+        // EDIT MODE FUNCTIONS
+        // ============================================================================
+        function initializeEditModeToggle() {
+            const editBtn = document.getElementById('editRoutesBtn');
+            if (editBtn) {
+                editBtn.addEventListener('click', toggleEditMode);
+            }
+        }
+
+        function toggleEditMode() {
+            editMode = !editMode;
+            const mapHeader = document.getElementById('mapHeader');
+            const editorPanel = document.getElementById('routeEditorPanel');
+            const legend = document.querySelector('.floating-legend');
+
+            if (editMode) {
+                mapHeader.classList.add('edit-mode');
+                editorPanel.classList.add('active');
+                legend.classList.add('hidden-in-edit');
+
+                // Disable spotlight effect in edit mode
+                if (spotlightMask) {
+                    spotlightMask.setMap(null);
+                    spotlightMask = null;
+                }
+
+                // Make user markers draggable
+                enableMarkerDragging();
+
+                // Load routes into editor
+                prepareEditorData(); // Prepare data before loading into editor
+                loadRoutesIntoEditor();
+
+
+                // Record initial state for undo/redo
+                originalRoutesSnapshot = JSON.parse(JSON.stringify(allRoutes));
+                editorHistory = []; // Clear history on entering edit mode
+                historyIndex = -1;
+                recordHistoryState('Entered Edit Mode', 'enter');
+
+            } else {
+                mapHeader.classList.remove('edit-mode');
+                editorPanel.classList.remove('active');
+                legend.classList.remove('hidden-in-edit');
+
+                // Re-enable spotlight if needed (will be recreated on hover)
+
+                // Disable marker dragging
+                disableMarkerDragging();
+
+                // Clear editor state
+                unassignedUsers = [];
+                draggedUser = null;
+                draggedFromRouteIndex = null;
+                dragOverRouteIndex = null;
+                dirtyRoutes.clear();
+                originalRoutesSnapshot = null;
+                editorHistory = [];
+                historyIndex = -1;
+                pendingChanges = {}; // Clear pending changes
+
+                // Re-render map to ensure correct state (especially if changes were made)
+                loadRouteData(); // Reload data to reset any unsaved changes
+            }
+            updateMapHeaderControls(); // Update edit button appearance
+        }
+
+        function closeRouteEditor() {
+            const editBtn = document.getElementById('editRoutesBtn');
+            // Simulate a click to toggle edit mode off
+            if (editMode) {
+                editBtn.click();
+            }
+        }
+
+        function switchEditorTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.editor-tab').forEach(tab => {
+                const isActive = tab.textContent.includes(tabName.charAt(0).toUpperCase() + tabName.slice(1));
+                tab.classList.toggle('active', isActive);
+            });
+
+            // Show corresponding content
+            document.querySelectorAll('.editor-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(`editorTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).style.display = 'block';
+
+            // Refresh content based on tab
+            if (tabName === 'history') {
+                renderHistoryTimeline();
+            } else if (tabName === 'simulator') {
+                updateSimulator();
+            }
+        }
+
+        function enableMarkerDragging() {
+            if (!editMode) return;
+
+            // Make user markers draggable
+            markers.users.forEach((markerInfo) => {
+                const marker = markerInfo.marker;
+                if (marker) {
+                    marker.setDraggable(true);
+
+                    // Store original position
+                    marker.originalPosition = marker.getPosition();
+
+                    // Add drag start listener
+                    const dragStartListener = google.maps.event.addListener(marker, 'dragstart', function (event) {
+                        draggedMarker = marker;
+                        draggedUserData = marker.userData;
+
+                        // Find which route this user belongs to
+                        draggedFromRouteIndex = null;
+                        for (let i = 0; i < allRoutes.length; i++) {
+                            const routeUsers = allRoutes[i].assigned_users;
+                            const userIndex = routeUsers.findIndex(u => u.user_id === draggedUserData.user_id);
+                            if (userIndex !== -1) {
+                                draggedFromRouteIndex = i;
+                                break;
+                            }
+                        }
+
+                        // Visual feedback
+                        marker.setOptions({
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 15,
+                                fillColor: '#FF6B35', // Orange color for dragging
+                                fillOpacity: 0.9,
+                                strokeColor: '#FFFFFF',
+                                strokeWeight: 4
+                            },
+                            zIndex: 9999 // Bring to front
+                        });
+                        highlightDropZones(true); // Highlight potential drop targets
+                    });
+                    marker.__dragStartListener = dragStartListener; // Store listener for removal
+
+                    // Add drag listener for visual feedback
+                    const dragListener = google.maps.event.addListener(marker, 'drag', function (event) {
+                        const currentPosition = event.latLng;
+
+                        // Find nearest route for highlighting
+                        let nearestRoute = findNearestRoute(currentPosition.lat(), currentPosition.lng());
+
+                        if (nearestRoute !== dragOverRouteIndex) {
+                            unhighlightRoute(dragOverRouteIndex); // Unhighlight previous
+                            highlightRoute(nearestRoute);       // Highlight new
+                            dragOverRouteIndex = nearestRoute;
+                        }
+                    });
+                    marker.__dragListener = dragListener;
+
+                    // Add drag end listener
+                    const dragEndListener = google.maps.event.addListener(marker, 'dragend', async function (event) {
+                        const newPosition = event.latLng;
+                        const newLat = newPosition.lat();
+                        const newLng = newPosition.lng();
+
+                        // Find nearest route to drop location
+                        const dropRouteIndex = findNearestRoute(newLat, newLng);
+                        const minDistance = dropRouteIndex !== null ?
+                            calculateMinDistanceToRoute(newLat, newLng, allRoutes[dropRouteIndex]) : Infinity;
+
+                        let success = false;
+                        // If dropped near a route (within 3km threshold)
+                        if (dropRouteIndex !== null && minDistance < 3.0) {
+                            success = await handleUserDrop(draggedFromRouteIndex, dropRouteIndex, draggedUserData, newLat, newLng);
+                        } else {
+                            // Revert to original position if not near any route
+                            marker.setPosition(marker.originalPosition);
+                            showNotification('Drop location too far from any route', 'warning');
+                        }
+
+                        // Reset drag state and visuals
+                        draggedMarker = null;
+                        draggedUserData = null;
+                        draggedFromRouteIndex = null;
+
+                        unhighlightRoute(dragOverRouteIndex); // Unhighlight current
+                        dragOverRouteIndex = null;
+                        highlightDropZones(false); // Remove drop zone highlights
+
+                        // Restore original marker icon based on route
+                        updateMarkerIcon(marker);
+                        marker.setOptions({ zIndex: markerInfo.marker.zIndex }); // Restore zIndex
+                    });
+                    marker.__dragEndListener = dragEndListener;
+                }
+            });
+        }
+
+        function disableMarkerDragging() {
+            if (!editMode) return;
+
+            markers.users.forEach(markerInfo => {
+                const marker = markerInfo.marker;
+                if (marker) {
+                    marker.setDraggable(false);
+                    // Reset icon and zIndex
+                    updateMarkerIcon(marker);
+                    marker.setOptions({zIndex: markerInfo.zIndex}); // Restore original zIndex
+
+                    // Remove listeners to prevent memory leaks and duplicate listeners
+                    if (marker.__dragStartListener) {
+                        google.maps.event.removeListener(marker.__dragStartListener);
+                        delete marker.__dragStartListener;
+                    }
+                    if (marker.__dragListener) {
+                        google.maps.event.removeListener(marker.__dragListener);
+                        delete marker.__dragListener;
+                    }
+                    if (marker.__dragEndListener) {
+                        google.maps.event.removeListener(marker.__dragEndListener);
+                        delete marker.__dragEndListener;
+                    }
+                }
+            });
+        }
+
+        function findNearestRoute(lat, lng) {
+            let nearestRoute = null;
+            let minDistance = Infinity;
+
+            allRoutes.forEach((route, routeIndex) => {
+                const distance = calculateMinDistanceToRoute(lat, lng, route);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestRoute = routeIndex;
+                }
+            });
+
+            // Return index only if within a reasonable distance (e.g., 5km)
+            return minDistance < 5.0 ? nearestRoute : null;
+        }
+
+        function calculateMinDistanceToRoute(lat, lng, route) {
+            let minDistance = Infinity;
+
+            // Check distance to driver
+            const driverDistance = calculateDistance(lat, lng, route.latitude, route.longitude);
+            minDistance = Math.min(minDistance, driverDistance);
+
+            // Check distance to all users in route
+            route.assigned_users.forEach(user => {
+                const userDistance = calculateDistance(lat, lng, user.lat, user.lng);
+                minDistance = Math.min(minDistance, userDistance);
+            });
+
+            return minDistance;
+        }
+
+        async function handleUserDrop(fromRouteIndex, toRouteIndex, userData, newLat, newLng) {
+            // Check if moving to a different route
+            if (fromRouteIndex === toRouteIndex) {
+                // Same route, just update position
+                userData.lat = newLat;
+                userData.lng = newLng;
+                dirtyRoutes.add(toRouteIndex);
+
+                // Recalculate this route
+                await recalculateRoute(toRouteIndex);
+
+                renderMap();
+                loadRoutesIntoEditor();
+                addToHistory('move_user_same_route', { routeIndex: toRouteIndex, userId: userData.user_id });
+
+                return true;
+            }
+
+            // Moving to different route - check capacity
+            if (allRoutes[toRouteIndex].assigned_users.length >= allRoutes[toRouteIndex].vehicle_type) {
+                showNotification(`Route ${toRouteIndex + 1} is at full capacity`, 'error');
+                return false;
+            }
+
+            // Remove from original route
+            const userIndex = allRoutes[fromRouteIndex].assigned_users.findIndex(
+                u => u.user_id === userData.user_id
+            );
+            if (userIndex !== -1) {
+                allRoutes[fromRouteIndex].assigned_users.splice(userIndex, 1);
+            }
+
+            // Update user position and add to new route
+            userData.lat = newLat;
+            userData.lng = newLng;
+            allRoutes[toRouteIndex].assigned_users.push(userData);
+
+            // Mark both routes as dirty
+            dirtyRoutes.add(fromRouteIndex);
+            dirtyRoutes.add(toRouteIndex);
+
+            // Recalculate both routes
+            await Promise.all([
+                recalculateRoute(fromRouteIndex),
+                recalculateRoute(toRouteIndex)
+            ]);
+
+            // Update UI
+            renderMap();
+            loadRoutesIntoEditor();
+
+            // Add to history
+            addToHistory('move_user_between_routes', {
+                fromRoute: fromRouteIndex,
+                toRoute: toRouteIndex,
+                userId: userData.user_id,
+                newPosition: { lat: newLat, lng: newLng }
+            });
+
+            showNotification(`Moved user to Route ${toRouteIndex + 1}`, 'success');
+
+            return true;
+        }
+
+        async function recalculateRoute(routeIndex) {
+            const route = allRoutes[routeIndex];
+            if (!route || !route.assigned_users || route.assigned_users.length === 0) {
+                return;
+            }
+
+            // Recalculate optimal sequence
+            const driverPos = { lat: route.latitude, lng: route.longitude };
+            const officePos = { lat: OFFICE_LOCATION.lat, lng: OFFICE_LOCATION.lng };
+
+            // Simple nearest-neighbor optimization
+            const optimizedUsers = optimizeUserSequence(route.assigned_users, driverPos, officePos);
+            route.assigned_users = optimizedUsers;
+
+            // Update route metrics
+            route.total_distance = calculateRouteTotalDistance(route, officePos);
+            route.utilization = route.assigned_users.length / route.vehicle_type;
+        }
+
+        function optimizeUserSequence(users, driverPos, officePos) {
+            if (users.length <= 1) return users;
+
+            const optimized = [];
+            const remaining = [...users];
+            let currentPos = driverPos;
+
+            while (remaining.length > 0) {
+                let nearestIndex = 0;
+                let nearestDistance = Infinity;
+
+                remaining.forEach((user, index) => {
+                    const distance = calculateDistance(currentPos.lat, currentPos.lng, user.lat, user.lng);
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestIndex = index;
+                    }
+                });
+
+                const nearestUser = remaining.splice(nearestIndex, 1)[0];
+                optimized.push(nearestUser);
+                currentPos = { lat: nearestUser.lat, lng: nearestUser.lng };
+            }
+
+            return optimized;
+        }
+
+        function calculateRouteTotalDistance(route, officePos) {
+            if (!route.assigned_users || route.assigned_users.length === 0) return 0;
+
+            let total = 0;
+            let currentPos = { lat: route.latitude, lng: route.longitude };
+
+            route.assigned_users.forEach(user => {
+                total += calculateDistance(currentPos.lat, currentPos.lng, user.lat, user.lng);
+                currentPos = { lat: user.lat, lng: user.lng };
+            });
+
+            // Add distance to office
+            total += calculateDistance(currentPos.lat, currentPos.lng, officePos.lat, officePos.lng);
+
+            return total;
+        }
+
+        function highlightDropZones(show) {
+            // Highlight all route paths as potential drop zones
+            routeRenderers.forEach((renderer, index) => {
+                if (show && index !== draggedFromRouteIndex) {
+                    // Highlight potential drop zones
+                    renderer._outline?.setOptions({ strokeWeight: 12, strokeOpacity: 0.4 });
+                } else {
+                    // Reset
+                    renderer._outline?.setOptions({ strokeWeight: 8, strokeOpacity: 0.3 });
+                }
+            });
+        }
+
+        function highlightRoute(routeIndex) {
+            if (routeIndex === null || routeIndex === draggedFromRouteIndex) return;
+
+            const renderer = routeRenderers[routeIndex];
+            if (renderer && renderer._outline) {
+                renderer._outline.setOptions({
+                    strokeWeight: 14,
+                    strokeOpacity: 0.7,
+                    strokeColor: '#00FF00'
+                });
+            }
+        }
+
+        function unhighlightRoute(routeIndex) {
+            if (routeIndex === null) return;
+
+            const renderer = routeRenderers[routeIndex];
+            if (renderer && renderer._outline) {
+                const color = renderer.color || ROUTE_COLORS[routeIndex % ROUTE_COLORS.length];
+                renderer._outline.setOptions({
+                    strokeWeight: 8,
+                    strokeOpacity: 0.3,
+                    strokeColor: color
+                });
+            }
+        }
+
+        function updateMarkerIcon(marker) {
+            // Find which route this marker belongs to
+            let routeIndex = null;
+            allRoutes.forEach((route, index) => {
+                if (route.assigned_users.some(u => u.user_id === marker.userData.user_id)) {
+                    routeIndex = index;
+                }
+            });
+
+            if (routeIndex !== null) {
+                const color = colorForRoute(routeIndex, allRoutes.length);
+                marker.setIcon({
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 8,
+                    fillColor: color,
+                    fillOpacity: 0.8,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 2
+                });
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const alertClass = type === 'error' ? 'alert-error' :
+                             type === 'warning' ? 'alert-warning' : 'alert-success';
+
+            const alertHtml = `<div class="alert ${alertClass}">
+                <i class="fas fa= ${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i> ${message}
+            </div>`;
+
+            const container = document.getElementById('alertsContainer');
+            container.innerHTML = alertHtml;
+
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // ============================================================================
+        // GOOGLE MAPS API CALLBACK
+        // ============================================================================
+        // The initMap function is called by the Google Maps API script when it's loaded.
+
     </script>
 
     <!-- Turf.js for geometric operations (must load before Google Maps) -->
@@ -3738,7 +4732,7 @@
 
     <!-- Google Maps API with visualization library -->
     <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjESclgKTCpmdmHKc7bzCKIQtYe_vIbb4&libraries=visualization&callback=initMap"
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjESclgKTCpmdmHKc7bzCKIQtYe_vIbb4&libraries=visualization,geometry&callback=initMap"
         defer></script>
 </body>
 
