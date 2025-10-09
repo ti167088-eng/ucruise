@@ -1,4 +1,21 @@
-[
+
+import json
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Your static data
+STATIC_ROUTES_DATA = [
   {
     "driver_id": "335464",
     "vehicle_id": "52",
@@ -480,7 +497,7 @@
         "office_distance": 13.46,
         "first_name": "Vikas",
         "email": "vikas.k29b@gmail.com",
-        "address": "House No:- 771 A, Locality:- SHIVALIK VIHAR, NAYA GOAN, Landmark:- RA FARM GATE NUMBER 2, City :- Mohali, 160103",
+        "address": "House No:- 771 A, Locality:- SHIVALIK VIHAR, NAYA GOAN, Landmark:- RA FARM GATE NUMBER 2, City :-\u00a0Mohali\u00a0,\u00a0160103",
         "employee_shift": "Evening shift",
         "shift_type": "1",
         "last_name": "sirohi",
@@ -865,7 +882,7 @@
         "office_distance": 0.74,
         "first_name": "Jasmeet",
         "email": "None",
-        "address": "#312, block 17, The united co-op housing society, Landmark- Opposite army institute\u00a0of\u00a0law. sector 68 Mohali",
+        "address": "#312, block 17, The united co-op housing society, Landmark- Opposite army institute of law. sector 68 Mohali",
         "employee_shift": "Evening shift",
         "shift_type": "1",
         "last_name": "Kaur",
@@ -893,3 +910,34 @@
     "group": "K"
   }
 ]
+
+
+@app.get("/routes")
+def get_static_routes():
+    """Return the static routes data"""
+    return STATIC_ROUTES_DATA
+
+
+@app.get("/visualize")
+def get_visualization():
+    """Serve the visualization HTML page"""
+    return FileResponse("visualize.html")
+
+
+@app.get("/")
+def root():
+    return {
+        "message": "Static Route Visualization Server",
+        "endpoints": [
+            "/routes - Get static route data",
+            "/visualize - View the interactive map"
+        ]
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    print("🚀 Starting Static Route Visualization Server...")
+    print("📊 Loaded {} routes".format(len(STATIC_ROUTES_DATA)))
+    print("🌐 Open: http://localhost:5000/visualize")
+    uvicorn.run(app, host="0.0.0.0", port=5000)

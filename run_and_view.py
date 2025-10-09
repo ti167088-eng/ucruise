@@ -14,7 +14,6 @@ SOURCE_ID = "UC_logisticllp"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
 STRING_PARAM = "Evening shift" # Example string parameter (no URL encoding)
 CHOICE = " " # Example choice parameter (use "1" to match main.py behavior)
-ALL_MODES = True  # Set to True to run all algorithms in parallel
 
 def start_fastapi():
     """Start the FastAPI server"""
@@ -30,118 +29,6 @@ def launch_browser():
     except Exception as e:
         print(f"⚠️  Could not auto-open browser: {e}")
         print("   Please manually visit: http://localhost:5000/visualize")
-
-def run_single_mode(mode_name, source_id, parameter, string_param, choice):
-    """Run a single assignment mode with its own config"""
-    import shutil
-
-    # Create mode-specific config backup
-    config_backup = f"config_{mode_name}.json"
-
-    try:
-        # Load and modify config for this mode
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-
-        # Set mode-specific optimization
-        if mode_name == "route_efficiency":
-            config['optimization_mode'] = 'route_efficiency'
-        elif mode_name == "capacity":
-            config['optimization_mode'] = 'capacity_optimization'
-        elif mode_name == "balanced":
-            config['optimization_mode'] = 'balanced_optimization'
-
-        # Save mode-specific config
-        with open(config_backup, 'w') as f:
-            json.dump(config, f, indent=2)
-
-        print(f"🔄 Running {mode_name.upper()} mode...")
-
-        # Run the appropriate assignment module directly
-        if mode_name == "route_efficiency":
-            from assignment import run_assignment
-            result = run_assignment(source_id, parameter, string_param, choice)
-        elif mode_name == "capacity":
-            from assign_capacity import run_assignment_capacity
-            result = run_assignment_capacity(source_id, parameter, string_param, choice)
-        elif mode_name == "balanced":
-            from assign_balance import run_assignment_balance
-            result = run_assignment_balance(source_id, parameter, string_param, choice)
-
-        # Save mode-specific results
-        output_file = f"drivers_and_routes_{mode_name}.json"
-        if result and result.get("status") == "true":
-            with open(output_file, 'w') as f:
-                json.dump(result["data"], f, indent=2)
-            print(f"✅ {mode_name.upper()} results saved to {output_file}")
-
-        return result
-
-    except Exception as e:
-        print(f"❌ Error running {mode_name} mode: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-def run_all_modes_parallel(source_id, parameter, string_param, choice):
-    """Run all three modes in parallel"""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    import copy
-
-    print("\n🚀 Running ALL MODES in parallel...")
-    print("="*60)
-
-    # Clear any existing cached routes
-    clear_cached_routes()
-
-    modes = ["route_efficiency", "capacity", "balanced"]
-    results = {}
-
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        # Submit all tasks
-        future_to_mode = {
-            executor.submit(run_single_mode, mode, source_id, parameter, string_param, choice): mode 
-            for mode in modes
-        }
-
-        # Collect results as they complete
-        for future in as_completed(future_to_mode):
-            mode = future_to_mode[future]
-            try:
-                result = future.result()
-                results[mode] = result
-                if result and result.get("status") == "true":
-                    routes_count = len(result.get("data", []))
-                    print(f"✅ {mode.upper()}: {routes_count} routes created")
-            except Exception as e:
-                print(f"❌ {mode.upper()} failed: {e}")
-                results[mode] = None
-
-    # Create combined results file
-    combined_results = {
-        "all_modes": True,
-        "modes": {}
-    }
-
-    for mode, result in results.items():
-        if result and result.get("status") == "true":
-            combined_results["modes"][mode] = {
-                "status": result["status"],
-                "data": result["data"],
-                "execution_time": result.get("execution_time", 0),
-                "optimization_mode": result.get("optimization_mode", mode),
-                "unassignedUsers": result.get("unassignedUsers", []),
-                "unassignedDrivers": result.get("unassignedDrivers", [])
-            }
-
-    # Save combined results
-    with open("drivers_and_routes_all_modes.json", 'w') as f:
-        json.dump(combined_results, f, indent=2)
-
-    print("\n✅ All modes completed!")
-    print(f"📊 Combined results saved to drivers_and_routes_all_modes.json")
-
-    return combined_results
 
 def call_assignment_api(source_id, parameter, string_param, choice):
     """Call the FastAPI assignment endpoint"""
@@ -321,11 +208,7 @@ if __name__ == "__main__":
                        help=f'String parameter (default: {STRING_PARAM})')
     parser.add_argument('--choice', type=str, default=CHOICE,
                        help=f'Choice parameter (default: {CHOICE})')
-    parser.add_argument('--all-modes', action='store_true', default=ALL_MODES,
-                       help='Run all assignment modes in parallel (default: True if ALL_MODES is True)')
     args = parser.parse_args()
-
-    ALL_MODES = args.all_modes # Update ALL_MODES based on command line argument
 
     # Clear logs at the start
     clear_logs()
@@ -348,56 +231,38 @@ if __name__ == "__main__":
             print("❌ Failed to start server")
             exit(1)
 
-        print("\n🤖 Running Assignment...")
+        print("\n🤖 Running Assignment with Automatic Algorithm Detection...")
         print("=" * 60)
         print(f"🔄 Using parameters: source_id={args.source_id}, parameter={args.parameter}, string_param='{args.string_param}', choice={args.choice}")
-        print(f"🎯 ALL_MODES: {ALL_MODES}")
 
-        if ALL_MODES:
-            # Run all modes in parallel
-            result = run_all_modes_parallel(args.source_id, args.parameter, args.string_param, args.choice)
+        # Call the assignment API
+        result = call_assignment_api(args.source_id, args.parameter, args.string_param, args.choice)
 
-            if not result or not result.get("modes"):
-                print("❌ All modes assignment failed")
-                exit(1)
+        if not result:
+            print("❌ Assignment API call failed")
+            print("💡 The server may still be processing. Check http://localhost:5000/routes for results")
+            print("💡 Or try running 'python test_analysis.py' for direct testing")
+            exit(1)
 
-            print("\n📊 ALL MODES SUMMARY:")
-            print("="*60)
-            for mode, mode_result in result["modes"].items():
-                routes_count = len(mode_result.get("data", []))
-                exec_time = mode_result.get("execution_time", 0)
-                print(f"   {mode.upper():20} | {routes_count:3} routes | {exec_time:.1f}s")
-            print("="*60)
+        print(f"📋 Result status: {result.get('status', 'unknown')}")
+        print(f"🔍 Result keys: {list(result.keys())}")
+
+        if result["status"] == "true":
+            # Get the algorithm name from the result
+            algorithm_name = result.get("optimization_mode", "AUTO-DETECTED ALGORITHM")
+            algorithm_name = algorithm_name.replace("_", " ").upper()
+
+            print(f"✅ {algorithm_name} assignment completed successfully!")
+            print(f"📊 Routes Created: {len(result.get('data', []))}")
+
+            # Display detailed analytics
+            display_detailed_analytics(result, algorithm_name)
 
         else:
-            # Call the assignment API (single mode)
-            result = call_assignment_api(args.source_id, args.parameter, args.string_param, args.choice)
-
-            if not result:
-                print("❌ Assignment API call failed")
-                print("💡 The server may still be processing. Check http://localhost:5000/routes for results")
-                print("💡 Or try running 'python test_analysis.py' for direct testing")
-                exit(1)
-
-            print(f"📋 Result status: {result.get('status', 'unknown')}")
-            print(f"🔍 Result keys: {list(result.keys())}")
-
-            if result["status"] == "true":
-                # Get the algorithm name from the result
-                algorithm_name = result.get("optimization_mode", "AUTO-DETECTED ALGORITHM")
-                algorithm_name = algorithm_name.replace("_", " ").upper()
-
-                print(f"✅ {algorithm_name} assignment completed successfully!")
-                print(f"📊 Routes Created: {len(result.get('data', []))}")
-
-                # Display detailed analytics
-                display_detailed_analytics(result, algorithm_name)
-
-            else:
-                print("❌ Assignment failed:")
-                print(f"   Error: {result.get('details', 'Unknown error')}")
-                print(f"   Please check your configuration and API credentials")
-                exit(1)
+            print("❌ Assignment failed:")
+            print(f"   Error: {result.get('details', 'Unknown error')}")
+            print(f"   Please check your configuration and API credentials")
+            exit(1)
 
         print("\n🌐 Launching Dashboard...")
 
