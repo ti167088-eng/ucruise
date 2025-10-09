@@ -97,7 +97,7 @@
         /* Sidebar becomes a floating glass card - positioned absolutely */
         .sidebar {
             pointer-events: auto;
-            position: absolute;
+            position: fixed;
             top: 20px;
             left: 20px;
             width: 360px;
@@ -116,7 +116,7 @@
             display: flex;
             flex-direction: column;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 20;
+            z-index: 100;
         }
 
         /* When collapsed, shrink to a pill on the left */
@@ -532,7 +532,7 @@
             pointer-events: auto;
             position: fixed;
             top: 22px;
-            left: 420px;
+            left: 400px;
             right: 22px;
             height: auto;
             display: flex;
@@ -546,8 +546,8 @@
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
                         0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-            z-index: 15;
-            transition: all 0.3s ease;
+            z-index: 90;
+            transition: left 0.3s ease;
         }
 
         .app-container.sidebar-collapsed .map-header {
@@ -671,7 +671,7 @@
         .floating-legend {
             position: fixed;
             bottom: 28px;
-            left: 28px;
+            left: 400px;
             background: rgba(15, 23, 42, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px) saturate(180%);
@@ -681,12 +681,17 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
                         0 0 0 1px rgba(255, 255, 255, 0.05) inset;
             min-width: 250px;
-            z-index: 18;
+            z-index: 90;
             pointer-events: auto;
+            transition: left 0.3s ease;
         }
 
         .floating-legend.hidden-in-edit {
             display: none;
+        }
+
+        .app-container.sidebar-collapsed .floating-legend {
+            left: 118px;
         }
 
         .legend-title {
@@ -725,23 +730,26 @@
 
         .route-info-popup {
             position: fixed;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            backdrop-filter: blur(16px) saturate(120%);
-            -webkit-backdrop-filter: blur(16px) saturate(120%);
-            padding: var(--space-md);
+            background: rgba(15, 23, 42, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            padding: 0;
             border-radius: 14px;
-            box-shadow: 0 12px 40px rgba(2,6,23,0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
             max-width: 280px;
             display: none;
             pointer-events: none;
             z-index: 9999;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateY(8px);
+            overflow: hidden;
         }
 
         .route-info-popup.visible {
             display: block;
             opacity: 1;
+            transform: translateY(0);
         }
 
         /* Loading States */
@@ -974,7 +982,7 @@
             .map-header { 
                 left: 16px; 
                 right: 16px; 
-                top: calc(16px + 48vh); 
+                top: calc(16px + 42vh); /* Adjust top based on sidebar height */
             }
             
             .floating-legend {
@@ -1123,7 +1131,7 @@
                         0 0 0 1px rgba(255, 255, 255, 0.05) inset;
             border-radius: 0 14px 14px 0;
             border-right: 2px solid rgba(99, 102, 241, 0.5);
-            z-index: 3000;
+            z-index: 120;
             transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
@@ -1430,22 +1438,23 @@
             transition: opacity 0.3s ease, filter 0.3s ease;
         }
 
-        /* Sliding route details panel */
+        /* Sliding route details panel - glassmorphism matching sidebar */
         .route-details-panel {
             position: fixed;
             top: 0;
             right: -500px;
             width: 500px;
             height: 100vh;
-            background: rgba(15, 23, 42, 0.3);
+            background: rgba(15, 23, 42, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.5),
-                        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-            border-radius: 14px 0 0 14px;
-            border-left: 2px solid rgba(99, 102, 241, 0.5);
-            z-index: 2000;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 
+                        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+                        0 20px 60px rgba(0, 0, 0, 0.3);
+            border-radius: 16px 0 0 16px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 110;
             transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
             overflow-x: hidden;
@@ -1454,93 +1463,103 @@
 
         /* Compact route inspector styles */
         .route-inspector-card {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--gray-300);
+            background: transparent;
+            border-radius: 0;
+            border: none;
             overflow: hidden;
         }
 
         .inspector-header {
-            padding: var(--space-sm) var(--space-md);
-            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            padding: 10px 14px;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .inspector-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            color: white;
+            color: #f1f5f9;
             display: flex;
             align-items: center;
-            gap: var(--space-xs);
+            gap: 7px;
         }
 
         .inspector-badge {
-            font-size: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 6px;
-            border-radius: 10px;
+            font-size: 9px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 2px 7px;
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .inspector-body {
-            padding: var(--space-md);
+            padding: 12px 14px;
         }
 
         .inspector-metrics {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: var(--space-sm);
-            margin-bottom: var(--space-sm);
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
         .metric-compact {
             text-align: center;
-            padding: var(--space-xs);
-            background: rgba(30, 41, 59, 0.6);
-            border-radius: var(--radius-sm);
+            padding: 8px;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 9px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
 
         .metric-compact-value {
             font-size: 16px;
             font-weight: 700;
-            color: var(--primary-500);
+            color: #f1f5f9;
         }
 
         .metric-compact-label {
-            font-size: 9px;
-            color: var(--gray-500);
+            font-size: 8px;
+            color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            margin-top: 3px;
         }
 
         /* Sparkline chart styles */
         .sparkline-container {
-            margin-top: var(--space-sm);
-            padding: var(--space-sm);
-            background: rgba(30, 41, 59, 0.4);
-            border-radius: var(--radius-sm);
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(30, 41, 59, 0.25);
+            border-radius: 9px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
 
         .sparkline-label {
-            font-size: 10px;
-            color: var(--gray-500);
-            margin-bottom: 4px;
+            font-size: 8px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .sparkline {
             width: 100%;
-            height: 30px;
+            height: 26px;
         }
 
         .capacity-bar {
             width: 100%;
-            height: 6px;
-            background: var(--gray-200);
+            height: 5px;
+            background: rgba(51, 65, 85, 0.5);
             border-radius: 3px;
             overflow: hidden;
-            margin-top: 4px;
+            margin-top: 5px;
         }
 
         .capacity-fill {
@@ -1550,10 +1569,11 @@
         }
 
         .inspector-footer {
-            padding: var(--space-xs) var(--space-md);
-            background: rgba(30, 41, 59, 0.5);
-            font-size: 9px;
-            color: var(--gray-500);
+            padding: 8px 14px;
+            background: transparent;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 8px;
+            color: #94a3b8;
             text-align: center;
         }
 
@@ -1564,9 +1584,11 @@
         .route-details-header {
             position: sticky;
             top: 0;
-            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(79, 70, 229, 0.4));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             padding: var(--space-xl);
-            border-bottom: 2px solid var(--primary-700);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 10;
         }
 
@@ -1616,11 +1638,15 @@
         }
 
         .details-section {
-            background: var(--surface-gray);
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
             border-radius: var(--radius-lg);
             padding: var(--space-lg);
             margin-bottom: var(--space-lg);
-            border: 1px solid var(--gray-200);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
+                        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
         }
 
         .details-section-title {
@@ -2548,6 +2574,9 @@
                 icon.className = 'fas fa-chevron-left';
             }
 
+            // Update positions of other elements
+            applySidebarWidth(sidebarWidth);
+
             // Save state to localStorage
             localStorage.setItem('sidebarCollapsed', sidebarCollapsed);
 
@@ -2557,8 +2586,22 @@
 
         function applySidebarWidth(width) {
             const sidebar = document.querySelector('.sidebar');
+            const mapHeader = document.querySelector('.map-header');
+            const legend = document.querySelector('.floating-legend');
+
             if (sidebar) {
                 sidebar.style.width = `${width}px`;
+            }
+
+            // Adjust map header and legend position based on sidebar width
+            const offset = sidebarCollapsed ? 118 : width + 40;
+
+            if (mapHeader) {
+                mapHeader.style.left = `${offset}px`;
+            }
+
+            if (legend) {
+                legend.style.left = `${offset}px`;
             }
         }
 
@@ -2721,14 +2764,20 @@
                 colorDiv.className = 'cluster-color';
                 const routeColor = colorForRoute(index, allRoutes.length);
                 colorDiv.style.background = `linear-gradient(45deg, ${routeColor}, ${adjustBrightness(routeColor, -20)})`;
-                colorDiv.title = `Route ${index + 1} - Click to highlight`;
+                colorDiv.title = `Route ${index + 1} - Click to view details`;
                 colorDiv.textContent = index + 1;
-                colorDiv.onclick = () => highlightRoute(index);
+                colorDiv.onclick = () => {
+                    // Show route details panel (same as dropdown selection)
+                    showRouteDetails(index);
+
+                    // Also update the dropdown to match
+                    const dropdown = document.getElementById('clusterSelect');
+                    if (dropdown) {
+                        dropdown.value = index;
+                    }
+                };
                 container.appendChild(colorDiv);
             });
-
-            // Update interactive legend
-            updateInteractiveLegend();
         }
 
         function updateInteractiveLegend() {
@@ -2816,8 +2865,8 @@
                                 path: path.getArray ? path.getArray() : path,
                                 geodesic: true,
                                 strokeColor: '#ffffff',
-                                strokeOpacity: 0.5,
                                 strokeWeight: 14,
+                                strokeOpacity: 0.5, // Increased opacity for better visibility
                                 zIndex: 9900,
                                 map: map
                             });
@@ -3237,18 +3286,35 @@
             // Use deterministic color
             const routeColor = colorForRoute(index, allRoutes.length);
 
-            // Create enhanced driver marker
+            // Create glassmorphic driver marker
             if (displayState.drivers) {
-                // Pre-encode SVG for better performance
+                // Glassmorphism SVG with blur and transparency
                 const driverSvg = `<svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                         <linearGradient id="grad${index}" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:${routeColor};stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:${adjustBrightness(routeColor, -30)};stop-opacity:1" />
+                            <stop offset="0%" style="stop-color:${routeColor};stop-opacity:0.85" />
+                            <stop offset="100%" style="stop-color:${adjustBrightness(routeColor, -30)};stop-opacity:0.9" />
                         </linearGradient>
+                        <filter id="blur${index}" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+                        </filter>
+                        <filter id="glow${index}">
+                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
                     </defs>
-                    <circle cx="28" cy="28" r="24" fill="url(#grad${index})" stroke="#ffffff" stroke-width="4"/>
-                    <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white">🚗</text>
+                    <!-- Outer glow -->
+                    <circle cx="28" cy="28" r="26" fill="${routeColor}" opacity="0.2" filter="url(#blur${index})"/>
+                    <!-- Glass circle -->
+                    <circle cx="28" cy="28" r="24" fill="url(#grad${index})" stroke="#ffffff" stroke-width="3" stroke-opacity="0.6" filter="url(#glow${index})"/>
+                    <!-- Inner shine -->
+                    <circle cx="28" cy="28" r="24" fill="url(#grad${index})" opacity="0.3"/>
+                    <ellipse cx="28" cy="22" rx="18" ry="12" fill="#ffffff" opacity="0.25"/>
+                    <!-- Icon -->
+                    <text x="28" y="34" font-family="Arial" font-size="18" text-anchor="middle" fill="white" filter="url(#glow${index})">🚗</text>
                     <text x="28" y="46" font-family="Arial" font-size="10" text-anchor="middle" fill="white" font-weight="bold">${index + 1}</text>
                 </svg>`;
 
@@ -3269,7 +3335,7 @@
                 driverMarker.addListener("click", () => {
                     closeAllInfoWindows();
                     driverInfo.open(map, driverMarker);
-                    showRouteInfo(route, index); // Keep this for the quick popup
+                    showRouteInfo(route, index);
                 });
 
                 markers.drivers.push({marker: driverMarker, infoWindow: driverInfo, routeIndex: index});
@@ -3284,7 +3350,7 @@
                     // Determine what to display based on showUserNames mode
                     let markerIcon;
                     if (displayState.showUserNames) {
-                        // Show user name as text label
+                        // Glassmorphic name label
                         const userName = user.first_name || `User ${user.user_id}`;
                         const textWidth = userName.length * 8 + 16;
                         markerIcon = {
@@ -3292,14 +3358,22 @@
                                 <svg width="${textWidth}" height="28" viewBox="0 0 ${textWidth} 28" xmlns="http://www.w3.org/2000/svg">
                                     <defs>
                                         <linearGradient id="textbg${index}_${userIndex}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style="stop-color:${routeColor};stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:${adjustBrightness(routeColor, -20)};stop-opacity:1" />
+                                            <stop offset="0%" style="stop-color:${routeColor};stop-opacity:0.8" />
+                                            <stop offset="100%" style="stop-color:${adjustBrightness(routeColor, -20)};stop-opacity:0.85" />
                                         </linearGradient>
+                                        <filter id="textblur${index}_${userIndex}">
+                                            <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" />
+                                        </filter>
                                         <filter id="textshadow${index}_${userIndex}">
                                             <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.4"/>
                                         </filter>
                                     </defs>
-                                    <rect x="0" y="0" width="${textWidth}" height="28" rx="14" fill="url(#textbg${index}_${userIndex})" stroke="#ffffff" stroke-width="2" filter="url(#textshadow${index}_${userIndex})"/>
+                                    <!-- Outer glow -->
+                                    <rect x="0" y="0" width="${textWidth}" height="28" rx="14" fill="${routeColor}" opacity="0.2" filter="url(#textblur${index}_${userIndex})"/>
+                                    <!-- Glass background -->
+                                    <rect x="0" y="0" width="${textWidth}" height="28" rx="14" fill="url(#textbg${index}_${userIndex})" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.5" filter="url(#textshadow${index}_${userIndex})"/>
+                                    <!-- Inner highlight -->
+                                    <rect x="2" y="2" width="${textWidth - 4}" height="12" rx="10" fill="#ffffff" opacity="0.2"/>
                                     <text x="${textWidth / 2}" y="18" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">${userName}</text>
                                 </svg>
                             `),
@@ -3307,25 +3381,37 @@
                             anchor: new google.maps.Point(textWidth / 2, 14)
                         };
                     } else {
-                        // Show colored icon
+                        // Glassmorphic icon
                         markerIcon = {
                             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                                <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
                                     <defs>
                                         <linearGradient id="usergrad${index}_${userIndex}" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style="stop-color:${routeColor};stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:${adjustBrightness(routeColor, -20)};stop-opacity:1" />
+                                            <stop offset="0%" style="stop-color:${routeColor};stop-opacity:0.8" />
+                                            <stop offset="100%" style="stop-color:${adjustBrightness(routeColor, -20)};stop-opacity:0.9" />
                                         </linearGradient>
-                                        <filter id="usershadow${index}_${userIndex}">
-                                            <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.3"/>
+                                        <filter id="userblur${index}_${userIndex}">
+                                            <feGaussianBlur in="SourceGraphic" stdDeviation="1" />
+                                        </filter>
+                                        <filter id="userglow${index}_${userIndex}">
+                                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                            <feMerge>
+                                                <feMergeNode in="coloredBlur"/>
+                                                <feMergeNode in="SourceGraphic"/>
+                                            </feMerge>
                                         </filter>
                                     </defs>
-                                    <circle cx="16" cy="16" r="12" fill="url(#usergrad${index}_${userIndex})" stroke="#ffffff" stroke-width="2" filter="url(#usershadow${index}_${userIndex})"/>
-                                    <text x="16" y="20" font-family="Arial" font-size="12" text-anchor="middle" fill="white">👤</text>
+                                    <!-- Outer glow -->
+                                    <circle cx="18" cy="18" r="14" fill="${routeColor}" opacity="0.2" filter="url(#userblur${index}_${userIndex})"/>
+                                    <!-- Glass circle -->
+                                    <circle cx="18" cy="18" r="13" fill="url(#usergrad${index}_${userIndex})" stroke="#ffffff" stroke-width="2" stroke-opacity="0.6" filter="url(#userglow${index}_${userIndex})"/>
+                                    <!-- Inner highlight -->
+                                    <ellipse cx="18" cy="14" rx="10" ry="6" fill="#ffffff" opacity="0.25"/>
+                                    <text x="18" y="22" font-family="Arial" font-size="14" text-anchor="middle" fill="white">👤</text>
                                 </svg>
                             `),
-                            scaledSize: new google.maps.Size(32, 32),
-                            anchor: new google.maps.Point(16, 16)
+                            scaledSize: new google.maps.Size(36, 36),
+                            anchor: new google.maps.Point(18, 18)
                         };
                     }
 
@@ -3340,7 +3426,7 @@
 
                     // Store user data on the marker for drag/drop
                     userMarker.userData = user;
-                    userMarker.routeIndex = index; // Store route index for drag/drop logic
+                    userMarker.routeIndex = index;
 
                     const userInfo = createUserInfoWindow(user, route, index);
                     userMarker.addListener("click", () => {
@@ -3374,59 +3460,53 @@
         function createDriverInfoWindow(route, index, utilization) {
             const efficiencyRating = utilization >= 0.8 ? '🟢 Excellent' : utilization >= 0.6 ? '🟡 Good' : '🔴 Needs Improvement';
             const utilizationPercent = (utilization * 100).toFixed(1);
+            const routeColor = colorForRoute(index, allRoutes.length);
 
             const content = `
-                <div style="font-family: Inter, sans-serif; min-width: 300px; padding: 20px; background: #0f172a; color: #f1f5f9; border-radius: 12px; border: 1px solid #334155;">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #334155;">
-                        <div style="width: 40px; height: 40px; background: linear-gradient(45deg, ${ROUTE_COLORS[index % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[index % ROUTE_COLORS.length], -30)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                <div style="font-family: Inter, sans-serif; min-width: 260px; padding: 14px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); color: #f1f5f9; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                        <div style="width: 34px; height: 34px; background: linear-gradient(135deg, ${routeColor}66, ${adjustBrightness(routeColor, -20)}88); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15);">
                             🚗
                         </div>
                         <div>
-                            <h3 style="margin: 0; color: #f1f5f9; font-size: 18px;">Driver ${route.driver_id}</h3>
-                            <p style="margin: 0; color: #94a3b8; font-size: 13px;">Route ${index + 1}</p>
+                            <h3 style="margin: 0; color: #f1f5f9; font-size: 15px; font-weight: 600;">Driver ${route.driver_id}</h3>
+                            <p style="margin: 0; color: #94a3b8; font-size: 11px;">Route ${index + 1}</p>
                         </div>
                     </div>
 
-                    <div style="display: grid; gap: 10px; margin-bottom: 16px;">
+                    <div style="display: grid; gap: 7px; margin-bottom: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #94a3b8; font-size: 13px;">🚙 Vehicle:</span>
-                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${route.vehicle_id}</span>
+                            <span style="color: #94a3b8; font-size: 11px;">🚙 Vehicle</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${route.vehicle_id}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #94a3b8; font-size: 13px;"> H Capacity:</span>
-                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${route.vehicle_type} passengers</span>
+                            <span style="color: #94a3b8; font-size: 11px;">📊 Capacity</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${route.assigned_users.length}/${route.vehicle_type}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #94a3b8; font-size: 13px;">✅ Assigned:</span>
-                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${route.assigned_users.length} users</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #94a3b8; font-size: 13px;">📊 Utilization:</span>
-                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${utilizationPercent}%</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #94a3b8; font-size: 13px;">⚡ Efficiency:</span>
-                            <span style="font-weight: 600; color: #f1f5f9; font-size: 13px;">${efficiencyRating}</span>
+                            <span style="color: #94a3b8; font-size: 11px;">⚡ Efficiency</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${efficiencyRating}</span>
                         </div>
                     </div>
 
-                    <div style="background: #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 11px; color: #94a3b8;">Utilization Progress</span>
-                            <span style="font-size: 11px; color: #94a3b8;">${utilizationPercent}%</span>
+                    <div style="background: rgba(30, 41, 59, 0.3); border-radius: 8px; padding: 8px; backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Utilization</span>
+                            <span style="font-size: 10px; color: #f1f5f9; font-weight: 600;">${utilizationPercent}%</span>
                         </div>
-                        <div style="width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                            <div style="height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f7931e 50%, #22c55e 100%); width: ${utilizationPercent}%; transition: width 0.3s ease;"></div>
+                        <div style="width: 100%; height: 5px; background: rgba(51, 65, 85, 0.5); border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; background: linear-gradient(90deg, ${routeColor}, ${adjustBrightness(routeColor, 20)}); width: ${utilizationPercent}%; transition: width 0.3s ease; box-shadow: 0 0 8px ${routeColor}60;"></div>
                         </div>
                     </div>
-
-                    <p style="margin: 0; font-size: 11px; color: #64748b; text-align: center;">
-                        Click users to see their details • Real driving routes shown
-                    </p>
                 </div>
             `;
 
-            return new google.maps.InfoWindow({content});
+            return new google.maps.InfoWindow({
+                content,
+                pixelOffset: new google.maps.Size(0, -10),
+                disableAutoPan: false,
+                maxWidth: 300
+            });
         }
 
         function createUserInfoWindow(user, route, routeIndex) {
@@ -3434,49 +3514,218 @@
                 route.latitude, route.longitude,
                 user.lat, user.lng
             );
+            const routeColor = colorForRoute(routeIndex, allRoutes.length);
 
             const content = `
-                <div style="font-family: Inter, sans-serif; min-width: 280px; padding: 18px; background: #0f172a; color: #f1f5f9; border-radius: 12px; border: 1px solid #334155;">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #334155;">
-                        <div style="width: 36px; height: 36px; background: linear-gradient(45deg, ${ROUTE_COLORS[routeIndex % ROUTE_COLORS.length]}, ${adjustBrightness(ROUTE_COLORS[routeIndex % ROUTE_COLORS.length], -20)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                <div style="font-family: Inter, sans-serif; min-width: 240px; padding: 14px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); color: #f1f5f9; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                        <div style="width: 32px; height: 32px; background: linear-gradient(135deg, ${routeColor}66, ${adjustBrightness(routeColor, -20)}88); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15);">
                             👤
                         </div>
                         <div>
-                            <h4 style="margin: 0; color: #f1f5f9; font-size: 16px;">User ${user.user_id}</h4>
-                            <p style="margin: 0; color: #94a3b8; font-size: 12px;">Route ${routeIndex + 1}</p>
+                            <h4 style="margin: 0; color: #f1f5f9; font-size: 14px; font-weight: 600;">${user.first_name || `User ${user.user_id}`}</h4>
+                            <p style="margin: 0; color: #94a3b8; font-size: 10px;">Route ${routeIndex + 1}</p>
                         </div>
                     </div>
 
-                    <div style="display: grid; gap: 8px; margin-bottom: 14px;">
+                    <div style="display: grid; gap: 6px; margin-bottom: 8px;">
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8; font-size: 12px;">📛 Name:</span>
-                            <span style="font-weight: 500; color: #f1f5f9; font-size: 12px;">${user.first_name || 'N/A'}</span>
+                            <span style="color: #94a3b8; font-size: 10px;">🏢 Office</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 10px;">${user.office_distance} km</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8; font-size: 12px;">🏢 Office Distance:</span>
-                            <span style="font-weight: 500; color: #f1f5f9; font-size: 12px;">${user.office_distance} km</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8; font-size: 12px;">🚗 To Driver:</span>
-                            <span style="font-weight: 500; color: #f1f5f9; font-size: 12px;">${distanceToDriver.toFixed(1)} km</span>
+                            <span style="color: #94a3b8; font-size: 10px;">🚗 Driver</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 10px;">${distanceToDriver.toFixed(1)} km</span>
                         </div>
                         ${user.email ? `
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8; font-size: 12px;">📧 Email:</span>
-                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${user.email}</span>
+                            <span style="color: #94a3b8; font-size: 10px;">📧</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 9px;">${user.email}</span>
                         </div>
                         ` : ''}
                     </div>
 
-                    <div style="background: #1e293b; padding: 12px; border-radius: 8px; text-align: center;">
-                        <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                    <div style="background: rgba(30, 41, 59, 0.3); padding: 7px; border-radius: 8px; text-align: center; backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <p style="margin: 0; font-size: 9px; color: #94a3b8;">
                             📍 ${parseFloat(user.lat).toFixed(4)}, ${parseFloat(user.lng).toFixed(4)}
                         </p>
                     </div>
                 </div>
             `;
 
-            return new google.maps.InfoWindow({content});
+            return new google.maps.InfoWindow({
+                content,
+                pixelOffset: new google.maps.Size(0, -10),
+                disableAutoPan: false,
+                maxWidth: 280
+            });
+        }
+
+        // ============================================================================
+        // ENHANCED ROUTE HOVER DETECTION (Glassmorphism Style)
+        // ============================================================================
+        
+        // Storage for route polylines
+        const routeLayers = [];
+
+        /**
+         * Compute zoom-adaptive hit weight for better hover across zoom levels
+         */
+        function computeAdaptiveHitWeight(hitBase = 40) {
+            const zoom = Math.max(1, Math.round(map.getZoom ? map.getZoom() : 14));
+            const raw = Math.round(hitBase * (16 / zoom));
+            return Math.min(100, Math.max(30, raw));
+        }
+
+        /**
+         * Create glassmorphism-styled route with enhanced hover detection
+         */
+        function createGlassmorphicRoute(pathCoords, color, routeIndex, opts = {}) {
+            const baseWeight = opts.baseWeight ?? 5;
+            const hitBase = opts.hitBase ?? 40;
+            const zIndex = opts.zIndex ?? 300;
+
+            // Glass-style visible polyline with blur effect
+            const visible = new google.maps.Polyline({
+                path: pathCoords,
+                strokeColor: color,
+                strokeOpacity: 0.7, // Semi-transparent for glass effect
+                strokeWeight: baseWeight,
+                clickable: false,
+                geodesic: true,
+                zIndex: zIndex,
+                icons: [{
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: color,
+                        fillOpacity: 0.3,
+                        strokeColor: '#ffffff',
+                        strokeOpacity: 0.5,
+                        strokeWeight: 1,
+                        scale: 3
+                    },
+                    offset: '0',
+                    repeat: '40px'
+                }]
+            });
+            visible.setMap(map);
+
+            // Wide invisible hit-area for easy hovering
+            const hitArea = new google.maps.Polyline({
+                path: pathCoords,
+                strokeColor: color,
+                strokeOpacity: 0.01, // Nearly invisible but clickable
+                strokeWeight: computeAdaptiveHitWeight(hitBase),
+                clickable: true,
+                geodesic: true,
+                zIndex: zIndex + 1
+            });
+            hitArea.setMap(map);
+
+            // Store original styles
+            visible.__orig = {
+                strokeWeight: baseWeight,
+                strokeOpacity: 0.7,
+                zIndex: zIndex
+            };
+
+            // Hover handlers
+            const onHoverStart = () => {
+                if (!editMode) {
+                    // Glassmorphic highlight effect
+                    visible.setOptions({
+                        strokeWeight: baseWeight * 1.8,
+                        strokeOpacity: 0.95,
+                        zIndex: 9999
+                    });
+
+                    // Add outer glow
+                    if (!visible.__glow) {
+                        visible.__glow = new google.maps.Polyline({
+                            path: pathCoords,
+                            strokeColor: '#ffffff',
+                            strokeOpacity: 0.3,
+                            strokeWeight: baseWeight * 3,
+                            clickable: false,
+                            zIndex: 9998,
+                            map: map
+                        });
+                    }
+
+                    const mapDiv = map.getDiv && map.getDiv();
+                    if (mapDiv) mapDiv.style.cursor = 'pointer';
+
+                    highlightRouteOnHover(routeIndex);
+
+                    const panel = document.getElementById('routeDetailsPanel');
+                    if (panel.classList.contains('active')) {
+                        showRouteDetails(routeIndex);
+                    }
+                }
+            };
+
+            const onHoverEnd = () => {
+                if (visible.__orig) {
+                    visible.setOptions({
+                        strokeWeight: visible.__orig.strokeWeight,
+                        strokeOpacity: visible.__orig.strokeOpacity,
+                        zIndex: visible.__orig.zIndex
+                    });
+                }
+
+                if (visible.__glow) {
+                    visible.__glow.setMap(null);
+                    visible.__glow = null;
+                }
+
+                const mapDiv = map.getDiv && map.getDiv();
+                if (mapDiv) mapDiv.style.cursor = '';
+
+                const panel = document.getElementById('routeDetailsPanel');
+                if (!panel.classList.contains('active') && !editMode) {
+                    unhighlightAllRoutes();
+                }
+            };
+
+            const onClick = (e) => {
+                if (e && e.stop) e.stop();
+                requestAnimationFrame(() => showRouteDetails(routeIndex));
+            };
+
+            // Attach events
+            google.maps.event.addListener(hitArea, 'mouseover', onHoverStart);
+            google.maps.event.addListener(hitArea, 'mouseout', onHoverEnd);
+            google.maps.event.addListener(hitArea, 'click', onClick);
+
+            const layer = {
+                id: `route-${routeIndex}`,
+                visible,
+                hitArea,
+                color,
+                index: routeIndex
+            };
+
+            routeLayers.push(layer);
+            return layer;
+        }
+
+        /**
+         * Adapt all hit areas when zoom changes
+         */
+        function adaptAllHitAreasToZoom() {
+            routeLayers.forEach(layer => {
+                const newWeight = computeAdaptiveHitWeight(40);
+                layer.hitArea.setOptions({ strokeWeight: newWeight });
+            });
+        }
+
+        // Add zoom listener
+        let _zoomDebounce;
+        if (map && map.addListener) {
+            map.addListener('zoom_changed', () => {
+                clearTimeout(_zoomDebounce);
+                _zoomDebounce = setTimeout(adaptAllHitAreasToZoom, 120);
+            });
         }
 
         function createSequentialRoute(route, color, routeIndex) {
@@ -3499,8 +3748,8 @@
                 preserveViewport: true,
                 polylineOptions: {
                     strokeColor: color,
-                    strokeOpacity: 0.8,
-                    strokeWeight: 6,
+                    strokeOpacity: 0.7, // Glass effect
+                    strokeWeight: 5,
                     zIndex: 300
                 },
             });
@@ -3508,10 +3757,10 @@
 
             // Build the route: Office -> All Users (office-centric route)
             const request = {
-                origin: OFFICE_LOCATION, // Start from office
-                destination: waypoints[waypoints.length - 1].location, // End at last user
-                waypoints: waypoints.slice(0, -1), // All users except the last one as waypoints
-                optimizeWaypoints: true, // Let Google optimize the order
+                origin: OFFICE_LOCATION,
+                destination: waypoints[waypoints.length - 1].location,
+                waypoints: waypoints.slice(0, -1),
+                optimizeWaypoints: true,
                 travelMode: google.maps.TravelMode.DRIVING,
                 avoidHighways: false,
                 avoidTolls: false
@@ -3521,59 +3770,26 @@
                 if (status === "OK") {
                     directionsRenderer.setDirections(response);
 
-                    // Create invisible interaction polyline over the route
+                    // Create glassmorphic route with enhanced hover
                     const path = response.routes[0].overview_path;
-                    const interactionPolyline = new google.maps.Polyline({
-                        path: path,
-                        strokeColor: color,
-                        strokeOpacity: 0,
-                        strokeWeight: 40, // Extra wide for easy hovering and clicking
-                        zIndex: 400,
-                        map: map,
-                        clickable: true
+                    const layer = createGlassmorphicRoute(path, color, routeIndex, {
+                        baseWeight: 5,
+                        hitBase: 40,
+                        zIndex: 300
                     });
 
-                    // Store the route renderer item first
+                    // Store in route renderers
                     const routeItem = {
                         renderer: directionsRenderer,
-                        routePolyline: null, // DirectionsRenderer handles the main line
-                        interactionPolyline: interactionPolyline,
+                        routePolyline: layer.visible,
+                        interactionPolyline: layer.hitArea,
                         color: color,
                         index: routeIndex
                     };
 
                     routeRenderers.push(routeItem);
-
-                    // Add click interaction to show details panel (always works)
-                    interactionPolyline.addListener('click', (e) => {
-                        if (e && e.stop) e.stop();
-                        requestAnimationFrame(() => showRouteDetails(routeIndex));
-                    });
-
-                    // Add hover to highlight route and switch routes if panel is open
-                    interactionPolyline.addListener('mouseover', (e) => {
-                        // Don't apply spotlight effect in edit mode
-                        if (!editMode) {
-                            highlightRouteOnHover(routeIndex);
-
-                            // If panel is open, switch to this route
-                            const panel = document.getElementById('routeDetailsPanel');
-                            if (panel.classList.contains('active')) {
-                                showRouteDetails(routeIndex);
-                            }
-                        }
-                    });
-
-                    interactionPolyline.addListener('mouseout', () => {
-                        // Only unhighlight if details panel is not open and not in edit mode
-                        const panel = document.getElementById('routeDetailsPanel');
-                        if (!panel.classList.contains('active') && !editMode) {
-                            unhighlightAllRoutes();
-                        }
-                    });
                 } else {
                     console.warn(`Office-to-users route failed for Route ${routeIndex + 1}:`, status);
-                    // Fallback to straight lines if directions fail
                     createFallbackOfficeRoute(route, color, routeIndex);
                 }
             });
@@ -3590,19 +3806,21 @@
                 routePath.push({lat: parseFloat(user.lat), lng: parseFloat(user.lng)});
             });
 
-            const fallbackRoutePolyline = new google.maps.Polyline({
-                path: routePath,
-                geodesic: true,
-                strokeColor: color,
-                strokeOpacity: 0.7,
-                strokeWeight: 4,
-                zIndex: 250,
+            // Use glassmorphic route creation
+            const layer = createGlassmorphicRoute(routePath, color, routeIndex, {
+                baseWeight: 4,
+                hitBase: 40,
+                zIndex: 250
+            });
+
+            // Add directional arrows to visible polyline
+            layer.visible.setOptions({
                 icons: [{
                     icon: {
                         path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
                         scale: 3,
                         fillColor: color,
-                        fillOpacity: 1,
+                        fillOpacity: 0.8,
                         strokeColor: '#ffffff',
                         strokeWeight: 1
                     },
@@ -3611,57 +3829,17 @@
                 }]
             });
 
-            fallbackRoutePolyline.setMap(map);
-
-            // Create invisible interaction polyline for hover/click
-            const interactionPolyline = new google.maps.Polyline({
-                path: routePath,
-                strokeColor: color,
-                strokeOpacity: 0,
-                strokeWeight: 40, // Extra wide for easy hovering and clicking
-                zIndex: 400,
-                map: map,
-                clickable: true
-            });
-
-            // Store route item first
+            // Store route item
             const routeItem = {
-                renderer: null, // No DirectionsRenderer for fallback
-                routePolyline: fallbackRoutePolyline,
-                interactionPolyline: interactionPolyline,
+                renderer: null,
+                routePolyline: layer.visible,
+                interactionPolyline: layer.hitArea,
+                fallbackPolyline: layer.visible,
                 color: color,
                 index: routeIndex
             };
 
             routeRenderers.push(routeItem);
-
-            // Add click interaction to show details panel (always works)
-            interactionPolyline.addListener('click', (e) => {
-                if (e && e.stop) e.stop();
-                requestAnimationFrame(() => showRouteDetails(routeIndex));
-            });
-
-            // Add hover to highlight route and switch routes if panel is open
-            interactionPolyline.addListener('mouseover', (e) => {
-                // Don't apply spotlight effect in edit mode
-                if (!editMode) {
-                    highlightRouteOnHover(routeIndex);
-
-                    // If panel is open, switch to this route
-                    const panel = document.getElementById('routeDetailsPanel');
-                    if (panel.classList.contains('active')) {
-                        showRouteDetails(routeIndex);
-                    }
-                }
-            });
-
-            interactionPolyline.addListener('mouseout', () => {
-                // Only unhighlight if details panel is not open and not in edit mode
-                const panel = document.getElementById('routeDetailsPanel');
-                if (!panel.classList.contains('active') && !editMode) {
-                    unhighlightAllRoutes();
-                }
-            });
         }
 
         function createOptimalPath(route, color) {
@@ -3986,11 +4164,13 @@
         }
 
         function closeAllInfoWindows() {
-            [...markers.drivers, ...markers.users].forEach(item => {
-                if (item.infoWindow) item.infoWindow.close();
+            // close for drivers and users
+            [...(markers.drivers || []), ...(markers.users || [])].forEach(item => {
+                if (item && item.infoWindow) item.infoWindow.close();
             });
+
             if (markers.office && markers.office.infoWindow) {
-                markers.office.infoWindow.close(); // Assuming office has an infoWindow if needed
+                markers.office.infoWindow.close();
             }
         }
 
@@ -4549,8 +4729,8 @@
 
                 // Re-enable spotlight if needed (will be recreated on hover)
 
-                // Disable marker dragging
-                disableMarkerDragging();
+                // Disable marker dragging with force flag to ensure cleanup
+                disableMarkerDragging(true);
 
                 // Clear editor state
                 unassignedUsers = [];
@@ -4573,11 +4753,18 @@
         }
 
         function closeRouteEditor() {
-            const editBtn = document.getElementById('editRoutesBtn');
-            // Simulate a click to toggle edit mode off
-            if (editMode) {
-                editBtn.click();
+            if (!editMode) return;
+
+            // If there are pending changes, confirm before discarding
+            if (pendingChanges && Object.keys(pendingChanges).length > 0) {
+                const discard = confirm('You have unsaved edits. Discard changes and exit edit mode?');
+                if (!discard) return; // stay in editor
+                // If user confirms, clear pendingChanges
+                pendingChanges = {};
             }
+
+            // Toggle edit mode directly (safer than simulating a click)
+            toggleEditMode();
         }
 
         function switchEditorTab(tabName) {
@@ -4699,18 +4886,24 @@
             });
         }
 
-        function disableMarkerDragging() {
-            if (!editMode) return;
+        function disableMarkerDragging(force = false) {
+            // Allow forced cleanup even when editMode has already been toggled off
+            if (!editMode && !force) return;
 
             markers.users.forEach(markerInfo => {
                 const marker = markerInfo.marker;
                 if (marker) {
-                    marker.setDraggable(false);
+                    try {
+                        marker.setDraggable(false);
+                    } catch (e) { /* ignore if marker removed */ }
+
                     // Reset icon and zIndex
                     updateMarkerIcon(marker);
-                    marker.setOptions({zIndex: markerInfo.zIndex}); // Restore original zIndex
+                    if (markerInfo && markerInfo.zIndex !== undefined) {
+                        marker.setOptions({zIndex: markerInfo.zIndex});
+                    }
 
-                    // Remove listeners to prevent memory leaks and duplicate listeners
+                    // Remove listeners safely
                     if (marker.__dragStartListener) {
                         google.maps.event.removeListener(marker.__dragStartListener);
                         delete marker.__dragStartListener;
@@ -4725,6 +4918,12 @@
                     }
                 }
             });
+
+            // reset any drag state
+            draggedMarker = null;
+            draggedUserData = null;
+            draggedFromRouteIndex = null;
+            dragOverRouteIndex = null;
         }
 
         function findNearestRoute(lat, lng) {
@@ -4846,7 +5045,7 @@
             if (users.length <= 1) return users;
 
             const optimized = [];
-            const remaining = [...users];
+            const remaining = users.slice(); // Fixed: copy array properly
             let currentPos = driverPos;
 
             while (remaining.length > 0) {
@@ -4904,10 +5103,11 @@
 
             const renderer = routeRenderers[routeIndex];
             if (renderer && renderer._outline) {
+                const color = renderer.color || ROUTE_COLORS[routeIndex % ROUTE_COLORS.length];
                 renderer._outline.setOptions({
                     strokeWeight: 14,
                     strokeOpacity: 0.7,
-                    strokeColor: '#00FF00'
+                    strokeColor: '#00FF00' // Bright green for highlighting
                 });
             }
         }
@@ -4949,18 +5149,24 @@
         }
 
         function showNotification(message, type = 'info') {
-            const alertClass = type === 'error' ? 'alert-error' :
-                type === 'warning' ? 'alert-warning' : 'alert-success';
-
-            const alertHtml = `<div class="alert ${alertClass}">
-                <i class="fas fa= ${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i> ${message}
-            </div>`;
-
             const container = document.getElementById('alertsContainer');
-            container.innerHTML = alertHtml;
+            if (!container) return;
 
+            const alertClass = type === 'error' ? 'alert-error' :
+                           type === 'warning' ? 'alert-warning' : 'alert-success';
+            const icon = type === 'error' ? 'exclamation-circle' :
+                     type === 'warning' ? 'exclamation-triangle' : 'check-circle';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass}`;
+            alertDiv.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+
+            // Append, don't overwrite
+            container.appendChild(alertDiv);
+
+            // Remove just this alert after 3s
             setTimeout(() => {
-                container.innerHTML = '';
+                if (alertDiv.parentElement) alertDiv.parentElement.removeChild(alertDiv);
             }, 3000);
         }
 
