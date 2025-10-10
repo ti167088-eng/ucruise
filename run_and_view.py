@@ -17,8 +17,7 @@ CHOICE = " " # Example choice parameter (use "1" to match main.py behavior)
 
 def start_fastapi():
     """Start the FastAPI server"""
-    print("🚀 Starting FastAPI on 0.0.0.0:5000")
-    subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload", "--log-level", "info"])
+    subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"])
 
 def launch_browser():
     """Launch browser after server starts"""
