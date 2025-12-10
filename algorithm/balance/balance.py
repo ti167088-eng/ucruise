@@ -808,7 +808,7 @@ def fill_remaining_seats_with_cluster_check(routes, unassigned_users_df, office_
             )
 
             if is_on_way:
-                candidates.append((distance, user, reason))
+                candidates.append((dist_to_route, user, reason))
 
         # Fill with best candidates
         candidates.sort(key=lambda x: x[0])
@@ -2303,7 +2303,16 @@ def run_balance_assignment_simplified(source_id: str, parameter: int = 1, string
         users = data.get('users', [])
         if not users:
             logger.warning("⚠️ No users found")
-            return {"status": "true", "data": [], "unassignedUsers": [], "unassignedDrivers": []}
+            from algorithm.response.response_builder import build_standard_response
+            return build_standard_response(
+                status="true",
+                execution_time=0.0,
+                routes=[],
+                unassigned_users=[],
+                unassigned_drivers=[],
+                optimization_mode="simplified_balance",
+                parameter=parameter
+            )
 
         # Get all drivers
         all_drivers = []
@@ -2316,8 +2325,17 @@ def run_balance_assignment_simplified(source_id: str, parameter: int = 1, string
 
         if not all_drivers:
             logger.warning("⚠️ No drivers available")
+            from algorithm.response.response_builder import build_standard_response
             unassigned_users = _convert_users_to_unassigned_format(users)
-            return {"status": "true", "data": [], "unassignedUsers": unassigned_users, "unassignedDrivers": []}
+            return build_standard_response(
+                status="true",
+                execution_time=0.0,
+                routes=[],
+                unassigned_users=unassigned_users,
+                unassigned_drivers=[],
+                optimization_mode="simplified_balance",
+                parameter=parameter
+            )
 
         logger.info(f"📥 Data loaded - Users: {len(users)}, Drivers: {len(all_drivers)}")
 
@@ -2599,22 +2617,47 @@ def run_balance_assignment_simplified(source_id: str, parameter: int = 1, string
             except Exception as e:
                 logger.error(f"Failed to save result to cache: {e}")
 
-        return {
-            "status": "true",
-            "execution_time": execution_time,
-            "company": company_info,
-            "shift": shift_info,
-            "data": enhanced_routes,
-            "unassignedUsers": enhanced_unassigned_users,
-            "unassignedDrivers": enhanced_unassigned_drivers,
-            "clustering_analysis": {"method": "simplified_geographic", "clusters": len(user_df['geo_cluster'].unique())},
-            "optimization_mode": "simplified_balance",
-            "parameter": parameter,
-        }
+        # Import the standardized response builder
+        from algorithm.response.response_builder import (
+            build_standard_response,
+            save_standardized_response,
+            log_response_metrics
+        )
+
+        # Build standardized response (clustering_analysis is removed as per new standards)
+        result = build_standard_response(
+            status="true",
+            execution_time=execution_time,
+            routes=enhanced_routes,
+            unassigned_users=enhanced_unassigned_users,
+            unassigned_drivers=enhanced_unassigned_drivers,
+            optimization_mode="simplified_balance",
+            parameter=parameter,
+            company=company_info,
+            shift=shift_info,
+            string_param=string_param,
+            choice=choice
+        )
+
+        # Save standardized response
+        save_standardized_response(result, "drivers_and_routes.json")
+
+        # Log metrics for monitoring
+        log_response_metrics(result, "simplified_balance")
+
+        return result
 
     except Exception as e:
         logger.error(f"Simplified assignment failed: {e}", exc_info=True)
-        return {"status": "false", "details": str(e), "data": []}
+        from algorithm.response.response_builder import create_error_response
+        return create_error_response(
+            error_message=f"Simplified assignment failed: {e}",
+            execution_time=time.time() - start_time,
+            optimization_mode="simplified_balance",
+            parameter=parameter,
+            string_param=string_param,
+            choice=choice
+        )
 
 # Entry point function
 def run_assignment_balance(source_id: str, parameter: int = 1, string_param: str = "", choice: str = ""):

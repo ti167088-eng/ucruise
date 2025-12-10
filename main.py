@@ -143,10 +143,10 @@ def assign_drivers(source_id: str, parameter: int, string_param: str,
         if result["status"] == "true":
             print(f"✅ Assignment successful. Routes: {len(result['data'])}")
 
-            # Save to the main file for /routes endpoint
+            # Save the complete standardized response to the main file for /routes endpoint
             try:
                 with open("drivers_and_routes.json", "w") as f:
-                    json.dump(result["data"], f, indent=2)
+                    json.dump(result, f, indent=2)
                 print("💾 Results saved to drivers_and_routes.json")
             except Exception as save_error:
                 print(f"⚠️ Failed to save results: {save_error}")
@@ -179,15 +179,23 @@ def get_routes():
         try:
             with open("drivers_and_routes.json", 'r') as f:
                 data = json.load(f)
-                # Ensure data is valid
+                # Handle both old format (list) and new standardized format (object with data)
                 if isinstance(data, list):
+                    # Old format - return directly
                     return FileResponse("drivers_and_routes.json",
                                         media_type="application/json")
+                elif isinstance(data, dict) and "data" in data:
+                    # New standardized format - return the data array
+                    return {
+                        "status": "true",
+                        "data": data["data"] if data["data"] else [],
+                        "message": "Data loaded from drivers_and_routes.json"
+                    }
                 else:
                     return {
                         "status": "true",
-                        "data": data if data else [],
-                        "message": "Data loaded from drivers_and_routes.json"
+                        "data": [],
+                        "message": "No valid data found in drivers_and_routes.json"
                     }
         except (json.JSONDecodeError, Exception) as e:
             print(f"Error reading drivers_and_routes.json: {e}")

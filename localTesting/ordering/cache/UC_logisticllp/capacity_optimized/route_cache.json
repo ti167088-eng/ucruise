@@ -1,0 +1,317 @@
+{
+  "route_cache": {
+    "821a225f175780bd8ce519d3be4db1c9": {
+      "driver_id": "345010",
+      "user_ids": [
+        "344851",
+        "344858",
+        "344860",
+        "344871",
+        "344948"
+      ],
+      "ordered_user_ids": [
+        "344948",
+        "344851",
+        "344858",
+        "344871",
+        "344860"
+      ],
+      "pickup_sequence": [
+        1,
+        2,
+        5,
+        4,
+        3
+      ],
+      "total_distance_km": 6.77,
+      "total_duration_min": 16.3,
+      "calculated_date": "2025-12-10T10:49:55.458034",
+      "algorithm": "google_directions_api"
+    },
+    "03d37466c6d91e35e1518d9c54e5df4c": {
+      "driver_id": "345009",
+      "user_ids": [
+        "344779",
+        "344826",
+        "344843",
+        "344857",
+        "344930"
+      ],
+      "ordered_user_ids": [
+        "344826",
+        "344779",
+        "344843",
+        "344857",
+        "344930"
+      ],
+      "pickup_sequence": [
+        2,
+        1,
+        5,
+        4,
+        3
+      ],
+      "total_distance_km": 6.7,
+      "total_duration_min": 16.6,
+      "calculated_date": "2025-12-10T10:49:56.270099",
+      "algorithm": "google_directions_api"
+    },
+    "8f5b806275c773070e888ff36385957f": {
+      "driver_id": "345016",
+      "user_ids": [
+        "344783",
+        "344853",
+        "344856",
+        "344874",
+        "345056",
+        "345057"
+      ],
+      "ordered_user_ids": [
+        "344853",
+        "344874",
+        "345056",
+        "345057",
+        "344783",
+        "344856"
+      ],
+      "pickup_sequence": [
+        1,
+        5,
+        6,
+        2,
+        4,
+        3
+      ],
+      "total_distance_km": 8.24,
+      "total_duration_min": 20.9,
+      "calculated_date": "2025-12-10T10:49:56.896193",
+      "algorithm": "google_directions_api"
+    },
+    "8a022399b10d95e1c9ced02c6331fc60": {
+      "driver_id": "345008",
+      "user_ids": [
+        "344751",
+        "344778",
+        "344922",
+        "344947"
+      ],
+      "ordered_user_ids": [
+        "344778",
+        "344751",
+        "344922",
+        "344947"
+      ],
+      "pickup_sequence": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "total_distance_km": 8.4,
+      "total_duration_min": 20.8,
+      "calculated_date": "2025-12-10T10:49:57.504306",
+      "algorithm": "google_directions_api"
+    },
+    "3010e1a9ec2ca87c27b7a976e288c63e": {
+      "driver_id": "345024",
+      "user_ids": [
+        "344868"
+      ],
+      "ordered_user_ids": [
+        "344868"
+      ],
+      "pickup_sequence": [
+        1
+      ],
+      "total_distance_km": 5.53,
+      "total_duration_min": 663.0,
+      "calculated_date": "2025-12-10T10:49:57.505484",
+      "algorithm": "google_directions_api"
+    },
+    "294fddcf8c6677c0af960d9fa13fe66a": {
+      "driver_id": "345022",
+      "user_ids": [
+        "344757",
+        "344793",
+        "344844",
+        "344845",
+        "344906",
+        "344949"
+      ],
+      "ordered_user_ids": [
+        "344757",
+        "344793",
+        "344845",
+        "344949",
+        "344906",
+        "344844"
+      ],
+      "pickup_sequence": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "total_distance_km": 12.13,
+      "total_duration_min": 26.7,
+      "calculated_date": "2025-12-10T10:49:58.167333",
+      "algorithm": "google_directions_api"
+    },
+    "f2eb437e52d31a3ba35e19e474f06297": {
+      "driver_id": "345027",
+      "user_ids": [
+        "344849",
+        "344924",
+        "344941",
+        "344946",
+        "345083"
+      ],
+      "ordered_user_ids": [
+        "345083",
+        "344849",
+        "344946",
+        "344941",
+        "344924"
+      ],
+      "pickup_sequence": [
+        5,
+        4,
+        3,
+        1,
+        2
+      ],
+      "total_distance_km": 5.37,
+      "total_duration_min": 12.9,
+      "calculated_date": "2025-12-10T10:49:58.791726",
+      "algorithm": "google_directions_api"
+    },
+    "b587313c4d97cd368b9a2d78c3761289": {
+      "driver_id": "345023",
+      "user_ids": [
+        "344861"
+      ],
+      "ordered_user_ids": [
+        "344861"
+      ],
+      "pickup_sequence": [
+        1
+      ],
+      "total_distance_km": 2.75,
+      "total_duration_min": 330.0,
+      "calculated_date": "2025-12-10T10:49:58.792913",
+      "algorithm": "google_directions_api"
+    },
+    "8a83e7d86678a636202cb1b19dc41724": {
+      "driver_id": "345014",
+      "user_ids": [
+        "344916",
+        "344921",
+        "344937"
+      ],
+      "ordered_user_ids": [
+        "344937",
+        "344916",
+        "344921"
+      ],
+      "pickup_sequence": [
+        1,
+        2,
+        3
+      ],
+      "total_distance_km": 5.55,
+      "total_duration_min": 13.3,
+      "calculated_date": "2025-12-10T10:49:59.389206",
+      "algorithm": "google_directions_api"
+    },
+    "45a458018db88642cab7b6e027de1b93": {
+      "driver_id": "345019",
+      "user_ids": [
+        "344923"
+      ],
+      "ordered_user_ids": [
+        "344923"
+      ],
+      "pickup_sequence": [
+        1
+      ],
+      "total_distance_km": 19.9,
+      "total_duration_min": 2387.7,
+      "calculated_date": "2025-12-10T10:49:59.390579",
+      "algorithm": "google_directions_api"
+    },
+    "14ff4261e06df6ce68091614f6567d66": {
+      "driver_id": "345020",
+      "user_ids": [
+        "344770",
+        "344867"
+      ],
+      "ordered_user_ids": [
+        "344867",
+        "344770"
+      ],
+      "pickup_sequence": [
+        1,
+        2
+      ],
+      "total_distance_km": 14.05,
+      "total_duration_min": 31.3,
+      "calculated_date": "2025-12-10T10:49:59.908686",
+      "algorithm": "google_directions_api"
+    },
+    "e0263c731340d48ef1a5cda9b4a07f4b": {
+      "driver_id": "345026",
+      "user_ids": [
+        "344865",
+        "344927",
+        "344940",
+        "344943"
+      ],
+      "ordered_user_ids": [
+        "344940",
+        "344865",
+        "344943",
+        "344927"
+      ],
+      "pickup_sequence": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "total_distance_km": 3.05,
+      "total_duration_min": 8.7,
+      "calculated_date": "2025-12-10T10:50:00.545731",
+      "algorithm": "google_directions_api"
+    },
+    "b732a8d4858801e2841f316081e559e0": {
+      "driver_id": "345013",
+      "user_ids": [
+        "344847",
+        "344855",
+        "345084"
+      ],
+      "ordered_user_ids": [
+        "344855",
+        "345084",
+        "344847"
+      ],
+      "pickup_sequence": [
+        3,
+        2,
+        1
+      ],
+      "total_distance_km": 12.85,
+      "total_duration_min": 27.3,
+      "calculated_date": "2025-12-10T10:50:01.135191",
+      "algorithm": "google_directions_api"
+    }
+  },
+  "metadata": {
+    "last_cache_update": "2025-12-10T10:50:01.135198",
+    "total_cached_routes": 13,
+    "company_db": "UC_logisticllp",
+    "algorithm": "capacity_optimized"
+  }
+}

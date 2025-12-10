@@ -13,7 +13,7 @@ import urllib.parse
 sys.path.append('..')
 from logger import clear_logs
 
-SOURCE_ID = "UC_logistictest"  # <-- Replace with your real source_id
+SOURCE_ID = "UC_logisticllp"  # <-- Replace with your real source_id
 PARAMETER = 1  # Example numerical parameter
 STRING_PARAM = "Evening shift" # Example string parameter (no URL encoding)
 CHOICE = " " # Example choice parameter (use "1" to match main.py behavior)
@@ -121,7 +121,7 @@ def display_detailed_analytics(result, algorithm_name):
         print(f"   📊 System ready for user assignment when users are available")
         return
 
-    total_capacity = sum(route["vehicle_type"] for route in routes)
+    total_capacity = sum(int(route.get("capacity", 0)) for route in routes)
 
     # Enhanced Overview Section
     print(f"\n📈 SYSTEM OVERVIEW")
@@ -144,7 +144,7 @@ def display_detailed_analytics(result, algorithm_name):
 
     for i, route in enumerate(routes):
         assigned = len(route["assigned_users"])
-        capacity = route["vehicle_type"]
+        capacity = int(route.get("capacity", 0))
         utilization = assigned / capacity if capacity > 0 else 0
 
         # Efficiency categorization
@@ -218,14 +218,14 @@ if __name__ == "__main__":
     # Clear logs at the start
     clear_logs()
 
-    print("🚀 Starting Driver Assignment Dashboard...")
-    print(f"📍 Source ID: {args.source_id}")
-    print(f"📊 Parameter: {args.parameter}")
-    print(f"📝 String Parameter: {args.string_param}")
-    print(f"🎯 Choice: {args.choice}")
+    print("Starting Driver Assignment Dashboard...")
+    print(f"Source ID: {args.source_id}")
+    print(f"Parameter: {args.parameter}")
+    print(f"String Parameter: {args.string_param}")
+    print(f"Choice: {args.choice}")
 
     try:
-        print("\n🔧 Starting FastAPI Server...")
+        print("\nStarting FastAPI Server...")
 
         # Start server in background
         server_thread = threading.Thread(target=start_fastapi, daemon=True)

@@ -2690,25 +2690,88 @@
             showLoading();
             try {
                 const response = await fetch(API_URL);
-                const routes = await response.json();
+                const responseData = await response.json();
 
-                if (Array.isArray(routes)) {
-                    allRoutes = routes;
-                    hideLoading();
-                    updateUI();
-                    renderMap();
-                    // Initialize editor state if in edit mode
-                    if (editMode) {
-                        initializeEditorState();
-                    }
+                // Handle unified response format
+                let routes = [];
+                if (responseData && responseData.data && Array.isArray(responseData.data)) {
+                    routes = responseData.data;
+                    // Extract unassigned users and drivers if available
+                    unassignedUsers = responseData.unassignedUsers || [];
+                    unassignedDrivers = responseData.unassignedDrivers || [];
+                } else if (Array.isArray(responseData)) {
+                    // Backward compatibility for old format
+                    routes = responseData;
+                    unassignedUsers = [];
+                    unassignedDrivers = [];
                 } else {
                     throw new Error('Invalid route data format');
+                }
+
+                // Normalize user coordinate data to handle both lat/lng and latitude/longitude formats
+                routes = routes.map(route => ({
+                    ...route,
+                    assigned_users: route.assigned_users.map(user => normalizeUserData(user))
+                }));
+
+                // Also normalize unassigned users
+                unassignedUsers = unassignedUsers.map(user => normalizeUserData(user));
+
+                allRoutes = routes;
+                hideLoading();
+                updateUI();
+                renderMap();
+                // Initialize editor state if in edit mode
+                if (editMode) {
+                    initializeEditorState();
                 }
             } catch (error) {
                 console.error('Error loading route data:', error);
                 hideLoading();
                 showAlert('error', 'Failed to load route data. Please check if the server is running.');
             }
+        }
+
+        function prepareEditorData() {
+            // Clear current unassigned users array
+            unassignedUsers = [];
+
+            // The unassigned users should already be loaded from API response
+            // No need to process since they're already in the correct format
+
+            // Update UI
+            const unassignedCount = document.getElementById('unassignedCount');
+            if (unassignedCount) {
+                unassignedCount.textContent = unassignedUsers.length;
+            }
+        }
+
+        function loadRoutesIntoEditor() {
+            const container = document.getElementById('routeList');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            allRoutes.forEach((route, index) => {
+                const routeCard = createRouteCard(route, index);
+                if (routeCard) {
+                    container.appendChild(routeCard);
+                }
+            });
+        }
+
+        // Data normalization function to handle different coordinate field names
+        function normalizeUserData(user) {
+            return {
+                ...user,
+                lat: user.lat || user.latitude,
+                lng: user.lng || user.longitude
+            };
+        }
+
+        // Helper function to get vehicle capacity from different field names
+        function getVehicleCapacity(route) {
+            return route.capacity || getVehicleCapacity(route) || 4; // Default to 4 if not specified
         }
 
         function showLoading() {
@@ -3074,7 +3137,7 @@
             const content = document.getElementById('routeDetailsContent');
 
             const routeColor = colorForRoute(routeIndex, allRoutes.length);
-            const utilization = (route.assigned_users.length / route.vehicle_type).toFixed(1);
+            const utilization = (route.assigned_users.length / getVehicleCapacity(route)).toFixed(1);
 
             // Keep the route highlighted
             highlightRouteOnHover(routeIndex);
@@ -3123,13 +3186,13 @@
                         </svg>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-box-value">${route.assigned_users.length}/${route.vehicle_type}</div>
+                        <div class="metric-box-value">${route.assigned_users.length}/${getVehicleCapacity(route)}</div>
                         <div class="metric-box-label">Capacity</div>
                         <svg width="100%" height="40" viewBox="0 0 100 40" style="margin-top: 8px;">
-                            <rect x="0" y="15" width="${(route.assigned_users.length / route.vehicle_type * 100)}" height="10" fill="${routeColor}" rx="5"/>
-                            <rect x="${(route.assigned_users.length / route.vehicle_type * 100)}" y="15" width="${((route.vehicle_type - route.assigned_users.length) / route.vehicle_type * 100)}" height="10" fill="#334155" rx="5"/>
+                            <rect x="0" y="15" width="${(route.assigned_users.length / getVehicleCapacity(route) * 100)}" height="10" fill="${routeColor}" rx="5"/>
+                            <rect x="${(route.assigned_users.length / getVehicleCapacity(route) * 100)}" y="15" width="${((getVehicleCapacity(route) - route.assigned_users.length) / getVehicleCapacity(route) * 100)}" height="10" fill="#334155" rx="5"/>
                             <text x="2" y="12" fill="#94a3b8" font-size="8">Occupied</text>
-                            <text x="${(route.assigned_users.length / route.vehicle_type * 100) + 2}" y="12" fill="#64748b" font-size="8">Available</text>
+                            <text x="${(route.assigned_users.length / getVehicleCapacity(route) * 100) + 2}" y="12" fill="#64748b" font-size="8">Available</text>
                         </svg>
                     </div>
                 </div>
@@ -3179,7 +3242,7 @@
                         </div>
                         <div class="details-row">
                             <span class="details-label">Capacity</span>
-                            <span class="details-value">${route.vehicle_type} passengers</span>
+                            <span class="details-value">${getVehicleCapacity(route)} passengers</span>
                         </div>
                         <div class="details-row">
                             <span class="details-label">Color</span>
@@ -3286,7 +3349,7 @@
         function renderRoute(route, index, color) {
             const driverLat = parseFloat(route.latitude);
             const driverLng = parseFloat(route.longitude);
-            const utilization = route.assigned_users.length / route.vehicle_type;
+            const utilization = route.assigned_users.length / getVehicleCapacity(route);
 
             // Initialize visibility if not set
             if (routeVisibility[index] === undefined) {
@@ -3496,7 +3559,7 @@
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="color: #94a3b8; font-size: 11px;">📊 Capacity</span>
-                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${route.assigned_users.length}/${route.vehicle_type}</span>
+                            <span style="font-weight: 500; color: #f1f5f9; font-size: 11px;">${route.assigned_users.length}/${getVehicleCapacity(route)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="color: #94a3b8; font-size: 11px;">⚡ Efficiency</span>
@@ -3952,7 +4015,7 @@
             const totalUsers = allRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
             const totalDrivers = allRoutes.length;
 
-            const utilizations = allRoutes.map(route => route.assigned_users.length / route.vehicle_type);
+            const utilizations = allRoutes.map(route => route.assigned_users.length / getVehicleCapacity(route));
             const avgUtilization = utilizations.length ?
                 (utilizations.reduce((a, b) => a + b, 0) / utilizations.length * 100).toFixed(1) : 0;
 
@@ -3964,7 +4027,7 @@
 
         function updateAnalytics() {
             const totalUsers = allRoutes.reduce((sum, route) => sum + route.assigned_users.length, 0);
-            const totalCapacity = allRoutes.reduce((sum, route) => sum + route.vehicle_type, 0);
+            const totalCapacity = allRoutes.reduce((sum, route) => sum + getVehicleCapacity(route), 0);
 
             // Performance metrics
             const assignmentRate = totalUsers && totalCapacity ? Math.min(100, (totalUsers / totalCapacity * 100)).toFixed(1) : 0;
@@ -4206,7 +4269,7 @@
 
         function showRouteInfo(route, index, event) {
             const popup = document.getElementById('routeInfoPopup');
-            const utilization = (route.assigned_users.length / route.vehicle_type * 100).toFixed(1);
+            const utilization = (route.assigned_users.length / getVehicleCapacity(route) * 100).toFixed(1);
             const routeColor = colorForRoute(index, allRoutes.length);
 
             // Generate sparkline data (simulated occupancy trend)
@@ -4223,7 +4286,7 @@
                         <div class="inspector-title">
                             <span style="font-size: 14px;">🚗</span>
                             Route ${index + 1}
-                            <span class="inspector-badge">${route.assigned_users.length}/${route.vehicle_type}</span>
+                            <span class="inspector-badge">${route.assigned_users.length}/${getVehicleCapacity(route)}</span>
                         </div>
                     </div>
                     <div class="inspector-body">
@@ -4280,7 +4343,7 @@
         // Generate simulated sparkline data for occupancy trend
         function generateSparklineData(route) {
             const points = 12; // 12 data points for trend
-            const utilization = route.assigned_users.length / route.vehicle_type;
+            const utilization = route.assigned_users.length / getVehicleCapacity(route);
             const data = [];
 
             for (let i = 0; i < points; i++) {
@@ -4325,7 +4388,17 @@
 
                 fetch(API_URL)
                     .then(res => res.json())
-                    .then(routes => {
+                    .then(responseData => {
+                        // Handle unified response format
+                        let routes = [];
+                        if (responseData && responseData.data && Array.isArray(responseData.data)) {
+                            routes = responseData.data;
+                        } else if (Array.isArray(responseData)) {
+                            routes = responseData;
+                        } else {
+                            routes = responseData.data || [];
+                        }
+
                         const filtered = routes.filter(route =>
                             route.driver_id.toLowerCase().includes(query) ||
                             route.vehicle_id.toLowerCase().includes(query) ||
@@ -4354,7 +4427,17 @@
                 // Reload original data to ensure we have the correct route
                 fetch(API_URL)
                     .then(res => res.json())
-                    .then(routes => {
+                    .then(responseData => {
+                        // Handle unified response format
+                        let routes = [];
+                        if (responseData && responseData.data && Array.isArray(responseData.data)) {
+                            routes = responseData.data;
+                        } else if (Array.isArray(responseData)) {
+                            routes = responseData;
+                        } else {
+                            routes = responseData.data || [];
+                        }
+
                         if (routes && routes[parseInt(selectedValue)]) {
                             allRoutes = [routes[parseInt(selectedValue)]];
                             renderMap();
@@ -4378,9 +4461,21 @@
             // Reload original data to filter from
             fetch(API_URL)
                 .then(res => res.json())
-                .then(routes => {
+                .then(responseData => {
+                    // Handle unified response format
+                    let routes = [];
+                    if (responseData && responseData.data && Array.isArray(responseData.data)) {
+                        routes = responseData.data;
+                    } else if (Array.isArray(responseData)) {
+                        routes = responseData;
+                    } else {
+                        routes = responseData.data || [];
+                    }
+
                     const filtered = routes.filter(route => {
-                        const utilization = route.assigned_users.length / route.vehicle_type;
+                        // Use capacity instead of vehicle_type
+                        const capacity = route.capacity || getVehicleCapacity(route) || 4;
+                        const utilization = route.assigned_users.length / capacity;
                         return utilization >= minUtilization;
                     });
                     allRoutes = filtered;
@@ -4396,7 +4491,7 @@
         function showAllRoutes() {
             // Remove all highlights
             document.querySelectorAll('.cluster-color').forEach(el => el.classList.remove('active'));
-            
+
             // Highlight "All" button
             const allButton = document.querySelector('.cluster-color:first-child');
             if (allButton) {
@@ -4406,18 +4501,37 @@
             // Reload all routes
             fetch(API_URL)
                 .then(res => res.json())
-                .then(routes => {
-                    // Handle both array and all_modes format
-                    if (routes && routes.all_modes && routes.modes) {
-                        // Get first available mode's data
-                        const firstMode = Object.values(routes.modes)[0];
-                        allRoutes = firstMode?.data || [];
-                    } else if (Array.isArray(routes)) {
-                        allRoutes = routes;
+                .then(responseData => {
+                    // Handle unified response format
+                    let routes = [];
+                    if (responseData && responseData.data && Array.isArray(responseData.data)) {
+                        routes = responseData.data;
+                        unassignedUsers = responseData.unassignedUsers || [];
+                        unassignedDrivers = responseData.unassignedDrivers || [];
+                    } else if (responseData && responseData.all_modes && responseData.modes) {
+                        // Handle all_modes format
+                        const firstMode = Object.values(responseData.modes)[0];
+                        routes = firstMode?.data || [];
+                        unassignedUsers = [];
+                        unassignedDrivers = [];
+                    } else if (Array.isArray(responseData)) {
+                        routes = responseData;
+                        unassignedUsers = [];
+                        unassignedDrivers = [];
                     } else {
-                        allRoutes = routes.data || [];
+                        routes = responseData.data || [];
+                        unassignedUsers = [];
+                        unassignedDrivers = [];
                     }
-                    
+
+                    // Normalize user coordinate data
+                    routes = routes.map(route => ({
+                        ...route,
+                        assigned_users: route.assigned_users.map(user => normalizeUserData(user))
+                    }));
+                    unassignedUsers = unassignedUsers.map(user => normalizeUserData(user));
+
+                    allRoutes = routes;
                     renderMap();
                     updateStats();
                     // Also update dropdown
@@ -4612,11 +4726,11 @@
                 route_id: index + 1,
                 driver_id: route.driver_id,
                 vehicle_id: route.vehicle_id,
-                capacity: route.vehicle_type,
+                capacity: getVehicleCapacity(route),
                 assigned_users: route.assigned_users.length,
-                utilization_percent: ((route.assigned_users.length / route.vehicle_type) * 100).toFixed(2),
-                efficiency_rating: route.assigned_users.length / route.vehicle_type >= 0.8 ? 'High' :
-                    route.assigned_users.length / route.vehicle_type >= 0.5 ? 'Medium' : 'Low',
+                utilization_percent: ((route.assigned_users.length / getVehicleCapacity(route)) * 100).toFixed(2),
+                efficiency_rating: route.assigned_users.length / getVehicleCapacity(route) >= 0.8 ? 'High' :
+                    route.assigned_users.length / getVehicleCapacity(route) >= 0.5 ? 'Medium' : 'Low',
                 driver_lat: route.latitude,
                 driver_lng: route.longitude
             }));
@@ -4658,13 +4772,13 @@
                     driver_id: route.driver_id,
                     vehicle_info: {
                         vehicle_id: route.vehicle_id,
-                        capacity: route.vehicle_type
+                        capacity: getVehicleCapacity(route)
                     },
                     assignment_info: {
                         users_assigned: route.assigned_users.length,
-                        utilization_percent: ((route.assigned_users.length / route.vehicle_type) * 100).toFixed(2),
-                        efficiency_rating: route.assigned_users.length / route.vehicle_type >= 0.8 ? 'High' :
-                            route.assigned_users.length / route.vehicle_type >= 0.5 ? 'Medium' : 'Low'
+                        utilization_percent: ((route.assigned_users.length / getVehicleCapacity(route)) * 100).toFixed(2),
+                        efficiency_rating: route.assigned_users.length / getVehicleCapacity(route) >= 0.8 ? 'High' :
+                            route.assigned_users.length / getVehicleCapacity(route) >= 0.5 ? 'Medium' : 'Low'
                     },
                     location: {
                         latitude: route.latitude,
@@ -5053,7 +5167,7 @@
 
             // Update route metrics
             route.total_distance = calculateRouteTotalDistance(route, officePos);
-            route.utilization = route.assigned_users.length / route.vehicle_type;
+            route.utilization = route.assigned_users.length / getVehicleCapacity(route);
         }
 
         function optimizeUserSequence(users, driverPos, officePos) {

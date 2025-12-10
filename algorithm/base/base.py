@@ -3893,18 +3893,33 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
             except Exception as e:
                 logger.error(f"Failed to save result to cache: {e}")
 
-        result = {
-            "status": "true",
-            "execution_time": execution_time,
-            "company": company_info,
-            "shift": shift_info,
-            "data": enhanced_routes,
-            "unassignedUsers": enhanced_unassigned_users,
-            "unassignedDrivers": enhanced_unassigned_drivers,
-            "clustering_analysis": clustering_results,
-            "optimization_mode": "route_efficiency",
-            "parameter": parameter,
-        }
+        # Import the standardized response builder
+        from algorithm.response.response_builder import (
+            build_standard_response,
+            save_standardized_response,
+            log_response_metrics
+        )
+
+        # Build standardized response (clustering_analysis is removed as per new standards)
+        result = build_standard_response(
+            status="true",
+            execution_time=execution_time,
+            routes=enhanced_routes,
+            unassigned_users=enhanced_unassigned_users,
+            unassigned_drivers=enhanced_unassigned_drivers,
+            optimization_mode="route_efficiency",
+            parameter=parameter,
+            company=company_info,
+            shift=shift_info,
+            string_param=string_param,
+            choice=choice
+        )
+
+        # Save standardized response
+        save_standardized_response(result, "drivers_and_routes.json")
+
+        # Log metrics for monitoring
+        log_response_metrics(result, "route_efficiency")
 
         progress.show_final_summary(result)
         logger.info("Assignment session completed successfully")
@@ -3913,15 +3928,39 @@ def run_route_efficiency_assignment(source_id: str, parameter: int = 1, string_p
     except requests.exceptions.RequestException as req_err:
         logger.error(f"API request failed: {req_err}")
         progress.fail_assignment("API request failed")
-        return {"status": "false", "details": str(req_err), "data": []}
+        from algorithm.response.response_builder import create_error_response
+        return create_error_response(
+            error_message=f"API request failed: {req_err}",
+            execution_time=time.time() - start_time,
+            optimization_mode="route_efficiency",
+            parameter=parameter,
+            string_param=string_param,
+            choice=choice
+        )
     except ValueError as val_err:
         logger.error(f"Data validation error: {val_err}")
         progress.fail_assignment("Data validation error")
-        return {"status": "false", "details": str(val_err), "data": []}
+        from algorithm.response.response_builder import create_error_response
+        return create_error_response(
+            error_message=f"Data validation error: {val_err}",
+            execution_time=time.time() - start_time,
+            optimization_mode="route_efficiency",
+            parameter=parameter,
+            string_param=string_param,
+            choice=choice
+        )
     except Exception as e:
         logger.error(f"Assignment failed: {e}", exc_info=True)
         progress.fail_assignment("An unexpected error occurred")
-        return {"status": "false", "details": str(e), "data": []}
+        from algorithm.response.response_builder import create_error_response
+        return create_error_response(
+            error_message=f"Assignment failed: {e}",
+            execution_time=time.time() - start_time,
+            optimization_mode="route_efficiency",
+            parameter=parameter,
+            string_param=string_param,
+            choice=choice
+        )
 
 
 def _get_all_drivers_as_unassigned(data):

@@ -2340,7 +2340,16 @@ def run_safety_assignment_simplified(source_id: str, parameter: int = 1, string_
         users = data.get('users', [])
         if not users:
             logger.warning("No users found")
-            return {"status": "true", "data": [], "unassignedUsers": [], "unassignedDrivers": []}
+            from algorithm.response.response_builder import build_standard_response
+            return build_standard_response(
+                status="true",
+                execution_time=0.0,
+                routes=[],
+                unassigned_users=[],
+                unassigned_drivers=[],
+                optimization_mode="female_safety",
+                parameter=parameter
+            )
 
         # Get all drivers
         all_drivers = []
@@ -2353,8 +2362,17 @@ def run_safety_assignment_simplified(source_id: str, parameter: int = 1, string_
 
         if not all_drivers:
             logger.warning("No drivers available")
+            from algorithm.response.response_builder import build_standard_response
             unassigned_users = _convert_users_to_unassigned_format(users)
-            return {"status": "true", "data": [], "unassignedUsers": unassigned_users, "unassignedDrivers": []}
+            return build_standard_response(
+                status="true",
+                execution_time=0.0,
+                routes=[],
+                unassigned_users=unassigned_users,
+                unassigned_drivers=[],
+                optimization_mode="female_safety",
+                parameter=parameter
+            )
 
         logger.info(f"Data loaded - Users: {len(users)}, Drivers: {len(all_drivers)}")
 
@@ -2375,8 +2393,17 @@ def run_safety_assignment_simplified(source_id: str, parameter: int = 1, string_
         # SAFETY STEP 5: Handle edge case - no males available
         if males_df.empty and not females_df.empty:
             logger.warning("No male passengers available. All female passengers will remain unassigned for safety.")
+            from algorithm.response.response_builder import build_standard_response
             unassigned_users = _convert_users_to_unassigned_format(users)
-            return {"status": "true", "data": [], "unassignedUsers": unassigned_users, "unassignedDrivers": []}
+            return build_standard_response(
+                status="true",
+                execution_time=0.0,
+                routes=[],
+                unassigned_users=unassigned_users,
+                unassigned_drivers=[],
+                optimization_mode="female_safety",
+                parameter=parameter
+            )
 
         # SAFETY STEP 6: Validate clusters for safety and rescue unsafe females
         safe_user_df, unsafe_females_df = validate_and_fix_clusters_for_safety(user_df, office_lat, office_lon)
@@ -2668,22 +2695,47 @@ def run_safety_assignment_simplified(source_id: str, parameter: int = 1, string_
             except Exception as e:
                 logger.error(f"Failed to save result to cache: {e}")
 
-        return {
-            "status": "true",
-            "execution_time": execution_time,
-            "company": company_info,
-            "shift": shift_info,
-            "data": enhanced_routes,
-            "unassignedUsers": enhanced_unassigned_users,
-            "unassignedDrivers": enhanced_unassigned_drivers,
-            "clustering_analysis": {"method": "female_safety_geographic", "clusters": len(safe_user_df['geo_cluster'].unique())},
-            "optimization_mode": "female_safety",
-            "parameter": parameter,
-        }
+        # Import the standardized response builder
+        from algorithm.response.response_builder import (
+            build_standard_response,
+            save_standardized_response,
+            log_response_metrics
+        )
+
+        # Build standardized response (clustering_analysis is removed as per new standards)
+        result = build_standard_response(
+            status="true",
+            execution_time=execution_time,
+            routes=enhanced_routes,
+            unassigned_users=enhanced_unassigned_users,
+            unassigned_drivers=enhanced_unassigned_drivers,
+            optimization_mode="female_safety",
+            parameter=parameter,
+            company=company_info,
+            shift=shift_info,
+            string_param=string_param,
+            choice=choice
+        )
+
+        # Save standardized response
+        save_standardized_response(result, "drivers_and_routes.json")
+
+        # Log metrics for monitoring
+        log_response_metrics(result, "female_safety")
+
+        return result
 
     except Exception as e:
         logger.error(f"Female safety assignment failed: {e}", exc_info=True)
-        return {"status": "false", "details": str(e), "data": []}
+        from algorithm.response.response_builder import create_error_response
+        return create_error_response(
+            error_message=f"Female safety assignment failed: {e}",
+            execution_time=time.time() - start_time,
+            optimization_mode="female_safety",
+            parameter=parameter,
+            string_param=string_param,
+            choice=choice
+        )
 
 # Entry point function
 def run_assignment_safety(source_id: str, parameter: int = 1, string_param: str = "", choice: str = ""):
