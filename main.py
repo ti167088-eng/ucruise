@@ -1,10 +1,12 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field, validator
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from typing import List, Optional, Dict, Any
 import os
 import json
+import traceback
 
 app = FastAPI()
 
@@ -19,6 +21,264 @@ app.add_middleware(
 
 class AssignmentRequest(BaseModel):
     source_id: str
+
+
+# Pydantic models for pickup order recalculation API
+class UserWithPickupOrder(BaseModel):
+    user_id: str
+    latitude: float = Field(..., description="User latitude - accepts string or float")
+    longitude: float = Field(..., description="User longitude - accepts string or float")
+    office_distance: Optional[float] = None
+    first_name: Optional[str] = None
+    last_name: Optional[Any] = None  # Can be null
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    employee_shift: Optional[str] = None
+    shift_type: Optional[str] = None
+    route_no: Optional[int] = None
+    pickup_order: Optional[int] = None
+
+    @validator('latitude', 'longitude', pre=True)
+    def parse_coordinates(cls, v):
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except ValueError:
+                raise ValueError(f"Invalid coordinate value: {v}")
+        return v
+
+    class Config:
+        extra = "allow"
+
+
+class DriverWithRoutes(BaseModel):
+    driver_id: str
+    vehicle_id: Optional[str] = None
+    latitude: float = Field(..., description="Driver latitude - accepts string or float")
+    longitude: float = Field(..., description="Driver longitude - accepts string or float")
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    vehicle_name: Optional[str] = None
+    vehicle_no: Optional[str] = None
+    capacity: Optional[int] = None
+    chasis_no: Optional[str] = None
+    color: Optional[str] = None
+    registration_no: Optional[str] = None
+    shift_type_id: Optional[int] = None
+    route_no: Optional[int] = None
+    assigned_users: List[UserWithPickupOrder] = []
+
+    @validator('latitude', 'longitude', pre=True)
+    def parse_coordinates(cls, v):
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except ValueError:
+                raise ValueError(f"Invalid coordinate value: {v}")
+        return v
+
+    class Config:
+        extra = "allow"
+
+
+class CompanyInfo(BaseModel):
+    id: int
+    address: Optional[str] = None
+    latitude: float = Field(..., description="Company latitude - accepts string or float")
+    longitude: float = Field(..., description="Company longitude - accepts string or float")
+
+    @validator('latitude', 'longitude', pre=True)
+    def parse_coordinates(cls, v):
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except ValueError:
+                raise ValueError(f"Invalid coordinate value: {v}")
+        return v
+
+    class Config:
+        extra = "allow"
+
+
+class DataPayload(BaseModel):
+    company: CompanyInfo
+    routes: List[DriverWithRoutes]
+
+
+class RecalculatePickupOrderRequest(BaseModel):
+    data: DataPayload
+
+
+class RecalculatePickupOrderResponse(BaseModel):
+    status: str
+    message: str
+    data: DataPayload
+    optimization_summary: Optional[Dict[str, Any]] = None
+
+
+# Helper functions for pickup order recalculation
+def transform_routes_to_google_format(routes: List[DriverWithRoutes]) -> List[Dict[str, Any]]:
+    """
+    Transform Pydantic route models to dictionary format expected by Google API
+    """
+    transformed_routes = []
+    for route in routes:
+        route_dict = route.dict()
+
+        # Transform assigned_users to expected format
+        transformed_users = []
+        for user in route.assigned_users:
+            user_dict = user.dict()
+            # Ensure lat/lng fields are consistent with what Google API expects
+            transformed_users.append(user_dict)
+
+        route_dict['assigned_users'] = transformed_users
+        # Ensure vehicle_type is present for compatibility
+        if 'vehicle_type' not in route_dict and route_dict.get('capacity'):
+            route_dict['vehicle_type'] = route_dict['capacity']
+
+        transformed_routes.append(route_dict)
+
+    return transformed_routes
+
+
+def apply_google_ordering_to_routes(routes: List[Dict[str, Any]],
+                                   office_lat: float,
+                                   office_lon: float,
+                                   company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Apply Google Maps API ordering to routes and update pickup_order
+    """
+    try:
+        from ordering.order_integration import OrderIntegration
+
+        # Initialize OrderIntegration with company ID for caching
+        db_name = str(company_id) if company_id else "default"
+        order_integration = OrderIntegration(db_name=db_name, algorithm_name="pickup_order_api")
+
+        # Apply Google ordering
+        optimized_routes = order_integration.apply_optimal_ordering(
+            routes, office_lat, office_lon
+        )
+
+        # Ensure pickup_order is properly set
+        for route in optimized_routes:
+            for idx, user in enumerate(route.get('assigned_users', [])):
+                user['pickup_order'] = idx + 1
+
+        return optimized_routes
+
+    except ImportError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Google Maps ordering system not available: {str(e)}"
+        )
+    except Exception as e:
+        # Handle Google API errors
+        error_msg = str(e).lower()
+        if "api key" in error_msg:
+            raise HTTPException(
+                status_code=503,
+                detail="Google Maps API key not configured or invalid"
+            )
+        elif "quota" in error_msg or "rate limit" in error_msg:
+            raise HTTPException(
+                status_code=503,
+                detail="Google Maps API quota exceeded or rate limited"
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Google Maps API error: {str(e)}"
+            )
+
+
+@app.post(
+    "/pickup_order",
+    summary="Pickup Order",
+    description="Recalculate pickup orders for drivers with assigned users using Google Maps API"
+)
+async def pickup_order(request: RecalculatePickupOrderRequest):
+    """
+    Recalculate pickup orders for drivers with assigned users using Google Maps API.
+    Updates pickup_order field while preserving all other data.
+    """
+    try:
+        print(f"🚗 Starting pickup order recalculation for {len(request.data.routes)} drivers")
+
+        # Validate input
+        if not request.data.routes:
+            raise HTTPException(status_code=400, detail="No routes provided in request")
+
+        # Extract office coordinates from company data
+        office_lat = request.data.company.latitude
+        office_lon = request.data.company.longitude
+
+        print(f"📍 Office coordinates: {office_lat}, {office_lon}")
+
+        # Transform Pydantic models to dictionary format
+        transformed_routes = transform_routes_to_google_format(request.data.routes)
+
+        # Apply Google Maps API ordering
+        optimized_routes = apply_google_ordering_to_routes(
+            transformed_routes,
+            office_lat,
+            office_lon,
+            request.data.company.id
+        )
+
+        # Convert back to Pydantic models
+        response_routes = []
+        for route_dict in optimized_routes:
+            # Remove ordering_source field if present
+            route_dict.pop('ordering_source', None)
+
+            # Create DriverWithRoutes model
+            route_model = DriverWithRoutes(**route_dict)
+            response_routes.append(route_model)
+
+        # Create response data payload
+        response_data = DataPayload(
+            company=request.data.company,
+            routes=response_routes
+        )
+
+        # Generate optimization summary
+        total_users = sum(len(route.assigned_users) for route in response_routes)
+        optimization_summary = {
+            "total_drivers": len(response_routes),
+            "total_users": total_users,
+            "google_api_used": True,
+            "office_coordinates": {
+                "latitude": office_lat,
+                "longitude": office_lon
+            }
+        }
+
+        print(f"✅ Pickup order recalculation successful")
+        print(f"   - Total drivers: {len(response_routes)}")
+        print(f"   - Total users: {total_users}")
+
+        return RecalculatePickupOrderResponse(
+            status="true",
+            message="Pickup orders recalculated successfully using Google Maps API",
+            data=response_data,
+            optimization_summary=optimization_summary
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"❌ Error in pickup order recalculation: {str(e)}")
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @app.get("/health")
@@ -260,6 +520,7 @@ def root():
         "Driver Assignment API with Multiple Optimization Modes",
         "endpoints": [
             "/assign-drivers/{source_id}/{parameter}/{string_param}/{choice}",
+            "/pickup_order",
             "/routes", "/visualize", "/health"
         ],
         "optimization_modes": {
@@ -273,6 +534,12 @@ def root():
             "Road-Aware Routing (assign_route.py) - Uses road network data",
             "default":
             "Route Efficiency (assignment.py) - Prioritizes straight routes"
+        },
+        "pickup_order_api": {
+            "endpoint": "/pickup_order",
+            "method": "POST",
+            "description": "Recalculates pickup orders using Google Maps API",
+            "note": "Accepts company data with routes and returns optimized pickup sequences"
         },
         "usage":
         "Algorithm is automatically selected from API response _algorithm_priority value"
